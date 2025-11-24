@@ -1,10 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm init:*)",
-      "Bash(npm install:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(npm test:*)",
+      "Bash(for file in region.repo.test.ts tile.repo.test.ts structure.repo.test.ts river.repo.test.ts)",
+      "Bash(do sed -i \"6 a import { FIXED_TIMESTAMP } from ''../fixtures'';\" \"$file\")",
+      "Bash(done)",
+      "Bash(for file in region.repo.test.ts tile.repo.test.ts structure.repo.test.ts river.repo.test.ts character.repo.test.ts encounter.repo.test.ts patch.repo.test.ts)",
+      "Bash(do sed -i \"s/new Date()\\.toISOString()/FIXED_TIMESTAMP/g\" \"$file\")"
     ],
     "deny": [],
     "ask": []
