@@ -1,4 +1,4 @@
-import { CalculationResult } from './schemas';
+import { CalculationResult } from './schemas.js';
 
 export class PhysicsEngine {
 

@@ -1,5 +1,5 @@
-import { GeneratedWorld } from '../worldgen/index';
-import { PatchCommand, CommandType } from './schema';
+import { GeneratedWorld } from '../worldgen/index.js';
+import { PatchCommand, CommandType } from './schema.js';
 
 /**
  * Applies a list of patch commands to a generated world.

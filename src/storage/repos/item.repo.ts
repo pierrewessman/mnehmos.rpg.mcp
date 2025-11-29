@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { Item, ItemSchema } from '../../schema/inventory';
+import { Item, ItemSchema } from '../../schema/inventory.js';
 
 export class ItemRepository {
     constructor(private db: Database.Database) { }

@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { DiceEngine } from '../math/dice';
-import { ProbabilityEngine } from '../math/probability';
-import { AlgebraEngine } from '../math/algebra';
-import { PhysicsEngine } from '../math/physics';
-import { ExportEngine } from '../math/export';
-import { CalculationRepository, StoredCalculation } from '../storage/repos/calculation.repo';
-import { getDb } from '../storage';
-import { ProbabilityQuerySchema, ExportFormatSchema, CalculationResult } from '../math/schemas';
+import { DiceEngine } from '../math/dice.js';
+import { ProbabilityEngine } from '../math/probability.js';
+import { AlgebraEngine } from '../math/algebra.js';
+import { PhysicsEngine } from '../math/physics.js';
+import { ExportEngine } from '../math/export.js';
+import { CalculationRepository, StoredCalculation } from '../storage/repos/calculation.repo.js';
+import { getDb } from '../storage/index.js';
+import { ProbabilityQuerySchema, ExportFormatSchema, CalculationResult } from '../math/schemas.js';
 import { randomUUID } from 'crypto';
 
 function getRepo() {
@@ -29,7 +29,7 @@ function logCalculationEvent(db: any, calculationId: string, type: string, sessi
 export const MathTools = {
     DICE_ROLL: {
         name: 'dice_roll',
-        description: 'Roll dice using standard notation (e.g., "2d6+3", "1d20", "4d6dl1"). Supports advantage/disadvantage and exploding dice.',
+        description: 'Roll dice using standard notation. Supports: basic rolls (2d6+3), drop lowest (4d6dl1), drop highest (4d6dh1), keep lowest (2d20kl1), keep highest (2d20kh1), advantage/disadvantage, and exploding dice (2d6!).',
         inputSchema: z.object({
             expression: z.string(),
             seed: z.string().optional(),

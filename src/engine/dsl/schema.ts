@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { StructureType } from '../../schema/structure';
-import { BiomeType } from '../../schema/biome';
+import { StructureType } from '../../schema/structure.js';
+import { BiomeType } from '../../schema/biome.js';
 
 /**
  * Command Types

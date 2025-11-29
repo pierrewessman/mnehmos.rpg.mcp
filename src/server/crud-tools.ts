@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { WorldRepository } from '../storage/repos/world.repo';
-import { CharacterRepository } from '../storage/repos/character.repo';
-import { World, WorldSchema } from '../schema/world';
-import { Character, CharacterSchema, NPC, NPCSchema } from '../schema/character';
+import { WorldRepository } from '../storage/repos/world.repo.js';
+import { CharacterRepository } from '../storage/repos/character.repo.js';
+import { World, WorldSchema } from '../schema/world.js';
+import { Character, NPC, NPCSchema } from '../schema/character.js';
 
-import { getDb, closeDb } from '../storage';
-import { SessionContext } from './types';
+import { getDb, closeDb } from '../storage/index.js';
+import { SessionContext } from './types.js';
 
 function ensureDb() {
     const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');
@@ -65,10 +65,9 @@ Example:
   "level": 1,
   "stats": { "str": 16, "dex": 14, "con": 14, "int": 10, "wis": 12, "cha": 10 }
 }`,
-        inputSchema: z.union([
-            NPCSchema.omit({ id: true, createdAt: true, updatedAt: true }),
-            CharacterSchema.omit({ id: true, createdAt: true, updatedAt: true })
-        ])
+        // Use NPCSchema as the base since it includes all fields (Character + faction/behavior)
+        // Make NPC fields optional which they already are in NPCSchema
+        inputSchema: NPCSchema.omit({ id: true, createdAt: true, updatedAt: true })
     },
     GET_CHARACTER: {
         name: 'get_character',

@@ -1,4 +1,4 @@
-import { CalculationResult, ExportFormat } from './schemas';
+import { CalculationResult, ExportFormat } from './schemas.js';
 import nerdamer from 'nerdamer';
 
 export class ExportEngine {

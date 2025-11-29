@@ -1,8 +1,8 @@
 import nerdamer from 'nerdamer';
-import 'nerdamer/Solve'; // Load solve plugin
-import 'nerdamer/Algebra'; // Load algebra plugin
-import 'nerdamer/Calculus'; // Load calculus plugin just in case
-import { CalculationResult } from './schemas';
+import 'nerdamer/Solve.js'; // Load solve plugin
+import 'nerdamer/Algebra.js'; // Load algebra plugin
+import 'nerdamer/Calculus.js'; // Load calculus plugin just in case
+import { CalculationResult } from './schemas.js';
 
 export class AlgebraEngine {
 

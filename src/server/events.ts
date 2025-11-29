@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { PubSub } from '../engine/pubsub';
+import { PubSub } from '../engine/pubsub.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { withSession } from './types';
+import { withSession } from './types.js';
 
 export const EventTools = {
     SUBSCRIBE: {

@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { CalculationResult, CalculationResultSchema } from '../../math/schemas';
+import { CalculationResult, CalculationResultSchema } from '../../math/schemas.js';
 
 interface CalculationRow {
     id: string;

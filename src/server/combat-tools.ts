@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { CombatEngine, CombatParticipant } from '../engine/combat/engine';
+import { CombatEngine, CombatParticipant } from '../engine/combat/engine.js';
 
-import { PubSub } from '../engine/pubsub';
+import { PubSub } from '../engine/pubsub.js';
 
-import { getCombatManager } from './state/combat-manager';
-import { getDb } from '../storage';
-import { EncounterRepository } from '../storage/repos/encounter.repo';
-import { SessionContext } from './types';
+import { getCombatManager } from './state/combat-manager.js';
+import { getDb } from '../storage/index.js';
+import { EncounterRepository } from '../storage/repos/encounter.repo.js';
+import { SessionContext } from './types.js';
 
 // Global combat state (in-memory for MVP)
 let pubsub: PubSub | null = null;

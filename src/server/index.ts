@@ -1,16 +1,16 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { Tools, handleGenerateWorld, handleGetWorldState, handleApplyMapPatch, handleGetWorldMapOverview, handleGetRegionMap, handlePreviewMapPatch, setWorldPubSub } from './tools';
-import { CombatTools, handleCreateEncounter, handleGetEncounterState, handleExecuteCombatAction, handleAdvanceTurn, handleEndEncounter, handleLoadEncounter, setCombatPubSub } from './combat-tools';
-import { CRUDTools, handleCreateWorld, handleGetWorld, handleListWorlds, handleDeleteWorld, handleCreateCharacter, handleGetCharacter, handleUpdateCharacter, handleListCharacters, handleDeleteCharacter } from './crud-tools';
-import { InventoryTools, handleCreateItemTemplate, handleGiveItem, handleRemoveItem, handleEquipItem, handleUnequipItem, handleGetInventory } from './inventory-tools';
-import { QuestTools, handleCreateQuest, handleAssignQuest, handleUpdateObjective, handleCompleteQuest, handleGetQuestLog } from './quest-tools';
-import { MathTools, handleDiceRoll, handleProbabilityCalculate, handleAlgebraSolve, handleAlgebraSimplify, handlePhysicsProjectile } from './math-tools';
-import { PubSub } from '../engine/pubsub';
-import { registerEventTools } from './events';
-import { AuditLogger } from './audit';
-import { withSession } from './types';
+import { Tools, handleGenerateWorld, handleGetWorldState, handleApplyMapPatch, handleGetWorldMapOverview, handleGetRegionMap, handlePreviewMapPatch, setWorldPubSub } from './tools.js';
+import { CombatTools, handleCreateEncounter, handleGetEncounterState, handleExecuteCombatAction, handleAdvanceTurn, handleEndEncounter, handleLoadEncounter, setCombatPubSub } from './combat-tools.js';
+import { CRUDTools, handleCreateWorld, handleGetWorld, handleListWorlds, handleDeleteWorld, handleCreateCharacter, handleGetCharacter, handleUpdateCharacter, handleListCharacters, handleDeleteCharacter } from './crud-tools.js';
+import { InventoryTools, handleCreateItemTemplate, handleGiveItem, handleRemoveItem, handleEquipItem, handleUnequipItem, handleGetInventory } from './inventory-tools.js';
+import { QuestTools, handleCreateQuest, handleAssignQuest, handleUpdateObjective, handleCompleteQuest, handleGetQuestLog } from './quest-tools.js';
+import { MathTools, handleDiceRoll, handleProbabilityCalculate, handleAlgebraSolve, handleAlgebraSimplify, handlePhysicsProjectile } from './math-tools.js';
+import { PubSub } from '../engine/pubsub.js';
+import { registerEventTools } from './events.js';
+import { AuditLogger } from './audit.js';
+import { withSession } from './types.js';
 
 async function main() {
     // Create server instance
@@ -148,9 +148,7 @@ async function main() {
     server.tool(
         CRUDTools.CREATE_CHARACTER.name,
         CRUDTools.CREATE_CHARACTER.description,
-        // For union types, we can't easily extend. We'll cast to any for schema registration.
-        // withSession will handle the intersection internally.
-        (z.intersection(CRUDTools.CREATE_CHARACTER.inputSchema, z.object({ sessionId: z.string().optional() })) as any),
+        CRUDTools.CREATE_CHARACTER.inputSchema.extend({ sessionId: z.string().optional() }).shape,
         auditLogger.wrapHandler(CRUDTools.CREATE_CHARACTER.name, withSession(CRUDTools.CREATE_CHARACTER.inputSchema, handleCreateCharacter))
     );
 

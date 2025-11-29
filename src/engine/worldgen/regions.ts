@@ -1,5 +1,5 @@
 import seedrandom from 'seedrandom';
-import { BiomeType } from '../../schema/biome';
+import { BiomeType } from '../../schema/biome.js';
 
 export interface Region {
     id: number;

@@ -1,5 +1,5 @@
-import { AuditRepository } from '../storage/audit.repo';
-import { getDb } from '../storage';
+import { AuditRepository } from '../storage/audit.repo.js';
+import { getDb } from '../storage/index.js';
 
 export class AuditLogger {
     private repo: AuditRepository;

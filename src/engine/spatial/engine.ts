@@ -1,4 +1,4 @@
-import { MinHeap } from './heap';
+import { MinHeap } from './heap.js';
 
 export interface Point {
     x: number;

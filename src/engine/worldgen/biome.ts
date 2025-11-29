@@ -1,4 +1,4 @@
-import { BiomeType } from '../../schema/biome';
+import { BiomeType } from '../../schema/biome.js';
 
 /**
  * Biome Mapper

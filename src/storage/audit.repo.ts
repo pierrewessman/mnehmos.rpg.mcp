@@ -1,5 +1,5 @@
 import { Database } from 'better-sqlite3';
-import { AuditLog, AuditLogSchema } from '../schema/audit';
+import { AuditLog, AuditLogSchema } from '../schema/audit.js';
 
 export class AuditRepository {
     constructor(private db: Database) { }

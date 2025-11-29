@@ -1,5 +1,5 @@
-import { DiceEngine } from './dice';
-import { CalculationResult } from './schemas';
+import { DiceEngine } from './dice.js';
+import { CalculationResult } from './schemas.js';
 
 export class CombatEngine {
     private diceEngine: DiceEngine;

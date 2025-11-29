@@ -1,5 +1,5 @@
-import { DiceExpression } from './schemas';
-import { DiceEngine } from './dice';
+import { DiceExpression } from './schemas.js';
+import { DiceEngine } from './dice.js';
 
 type Distribution = Map<number, number>; // Value -> Probability
 

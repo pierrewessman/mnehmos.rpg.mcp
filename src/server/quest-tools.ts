@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { QuestRepository } from '../storage/repos/quest.repo';
-import { CharacterRepository } from '../storage/repos/character.repo';
-import { InventoryRepository } from '../storage/repos/inventory.repo';
-import { QuestSchema } from '../schema/quest';
-import { getDb } from '../storage';
-import { SessionContext } from './types';
+import { QuestRepository } from '../storage/repos/quest.repo.js';
+import { CharacterRepository } from '../storage/repos/character.repo.js';
+import { InventoryRepository } from '../storage/repos/inventory.repo.js';
+import { QuestSchema } from '../schema/quest.js';
+import { getDb } from '../storage/index.js';
+import { SessionContext } from './types.js';
 
 function ensureDb() {
     const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');

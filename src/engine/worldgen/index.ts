@@ -5,20 +5,20 @@
  * Follows TDD principles with deterministic, seed-based generation.
  */
 
-export * from './heightmap';
-export * from './climate';
-export * from './biome';
-export * from './river';
-export * from './regions';
-export * from './structures';
+export * from './heightmap.js';
+export * from './climate.js';
+export * from './biome.js';
+export * from './river.js';
+export * from './regions.js';
+export * from './structures.js';
 
-import { generateHeightmap } from './heightmap';
-import { generateClimateMap } from './climate';
-import { generateBiomeMap } from './biome';
-import { generateRivers } from './river';
-import { generateRegions, Region } from './regions';
-import { placeStructures, StructureLocation } from './structures';
-import { BiomeType } from '../../schema/biome';
+import { generateHeightmap } from './heightmap.js';
+import { generateClimateMap } from './climate.js';
+import { generateBiomeMap } from './biome.js';
+import { generateRivers } from './river.js';
+import { generateRegions, Region } from './regions.js';
+import { placeStructures, StructureLocation } from './structures.js';
+import { BiomeType } from '../../schema/biome.js';
 
 /**
  * Complete world generation output

@@ -1,5 +1,5 @@
-import { CombatRNG } from './rng';
-import { Condition, ConditionType, DurationType, Ability, CONDITION_EFFECTS } from './conditions';
+import { CombatRNG } from './rng.js';
+import { Condition, ConditionType, DurationType, Ability, CONDITION_EFFECTS } from './conditions.js';
 
 /**
  * Character interface for combat participants

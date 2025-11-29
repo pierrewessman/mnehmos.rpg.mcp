@@ -1,4 +1,4 @@
-import { PatchCommand, PatchCommandSchema } from './schema';
+import { PatchCommand, PatchCommandSchema } from './schema.js';
 
 /**
  * Parse a DSL script into a list of commands.

@@ -1,13 +1,13 @@
 import { z } from 'zod';
-import { generateWorld } from '../engine/worldgen/index';
+import { generateWorld } from '../engine/worldgen/index.js';
 
-import { PubSub } from '../engine/pubsub';
+import { PubSub } from '../engine/pubsub.js';
 
 import { randomUUID } from 'crypto';
-import { getWorldManager } from './state/world-manager';
-import { SessionContext } from './types';
-import { WorldRepository } from '../storage/repos/world.repo';
-import { getDb } from '../storage';
+import { getWorldManager } from './state/world-manager.js';
+import { SessionContext } from './types.js';
+import { WorldRepository } from '../storage/repos/world.repo.js';
+import { getDb } from '../storage/index.js';
 
 // Global state for the server (in-memory for MVP)
 let pubsub: PubSub | null = null;
@@ -128,18 +128,45 @@ export async function handleGenerateWorld(args: unknown, ctx: SessionContext) {
     };
 }
 
+// Helper to get world from memory or restore from DB
+async function getOrRestoreWorld(worldId: string, sessionId: string) {
+    const manager = getWorldManager();
+    const sessionKey = `${sessionId}:${worldId}`;
+
+    // Try memory first
+    let world = manager.get(sessionKey);
+    if (world) return world;
+
+    // Try DB
+    const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');
+    const worldRepo = new WorldRepository(db);
+    const storedWorld = worldRepo.findById(worldId);
+
+    if (!storedWorld) {
+        return null;
+    }
+
+    // Re-generate world
+    console.error(`Restoring world ${worldId} from seed ${storedWorld.seed}`);
+    world = generateWorld({
+        seed: storedWorld.seed,
+        width: storedWorld.width,
+        height: storedWorld.height
+    });
+
+    // Store in memory
+    manager.create(sessionKey, world);
+    return world;
+}
+
 export async function handleGetWorldState(args: unknown, ctx: SessionContext) {
     const parsed = Tools.GET_WORLD_STATE.inputSchema.parse(args);
-    // Retrieve with session namespace
-    const currentWorld = getWorldManager().get(`${ctx.sessionId}:${parsed.worldId}`);
+    const currentWorld = await getOrRestoreWorld(parsed.worldId, ctx.sessionId);
 
     if (!currentWorld) {
         throw new Error(`World ${parsed.worldId} not found.`);
     }
 
-    // Return a summary to avoid overwhelming the context window
-    // In a real app, we might return specific chunks or a compressed representation
-    console.log('Current World State:', JSON.stringify(currentWorld, null, 2));
     return {
         content: [
             {
@@ -158,12 +185,12 @@ export async function handleGetWorldState(args: unknown, ctx: SessionContext) {
     };
 }
 
-import { parseDSL } from '../engine/dsl/parser';
-import { applyPatch } from '../engine/dsl/engine';
+import { parseDSL } from '../engine/dsl/parser.js';
+import { applyPatch } from '../engine/dsl/engine.js';
 
 export async function handleApplyMapPatch(args: unknown, ctx: SessionContext) {
     const parsed = Tools.APPLY_MAP_PATCH.inputSchema.parse(args);
-    const currentWorld = getWorldManager().get(`${ctx.sessionId}:${parsed.worldId}`);
+    const currentWorld = await getOrRestoreWorld(parsed.worldId, ctx.sessionId);
 
     if (!currentWorld) {
         throw new Error(`World ${parsed.worldId} not found.`);
@@ -205,7 +232,7 @@ export async function handleApplyMapPatch(args: unknown, ctx: SessionContext) {
 
 export async function handleGetWorldMapOverview(args: unknown, ctx: SessionContext) {
     const parsed = Tools.GET_WORLD_MAP_OVERVIEW.inputSchema.parse(args);
-    const currentWorld = getWorldManager().get(`${ctx.sessionId}:${parsed.worldId}`);
+    const currentWorld = await getOrRestoreWorld(parsed.worldId, ctx.sessionId);
 
     if (!currentWorld) {
         throw new Error(`World ${parsed.worldId} not found.`);
@@ -249,7 +276,7 @@ export async function handleGetWorldMapOverview(args: unknown, ctx: SessionConte
 
 export async function handleGetRegionMap(args: unknown, ctx: SessionContext) {
     const parsed = Tools.GET_REGION_MAP.inputSchema.parse(args);
-    const currentWorld = getWorldManager().get(`${ctx.sessionId}:${parsed.worldId}`);
+    const currentWorld = await getOrRestoreWorld(parsed.worldId, ctx.sessionId);
 
     if (!currentWorld) {
         throw new Error(`World ${parsed.worldId} not found.`);
@@ -309,7 +336,7 @@ export async function handleGetRegionMap(args: unknown, ctx: SessionContext) {
 
 export async function handlePreviewMapPatch(args: unknown, ctx: SessionContext) {
     const parsed = Tools.PREVIEW_MAP_PATCH.inputSchema.parse(args);
-    const currentWorld = getWorldManager().get(`${ctx.sessionId}:${parsed.worldId}`);
+    const currentWorld = await getOrRestoreWorld(parsed.worldId, ctx.sessionId);
 
     if (!currentWorld) {
         throw new Error(`World ${parsed.worldId} not found.`);

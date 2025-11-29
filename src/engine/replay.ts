@@ -1,4 +1,4 @@
-import { AuditRepository } from '../storage/audit.repo';
+import { AuditRepository } from '../storage/audit.repo.js';
 
 export class ReplayEngine {
     constructor(
@@ -12,7 +12,7 @@ export class ReplayEngine {
 
         // Sort by timestamp ascending (oldest first)
         logs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        console.log(`Replaying ${logs.length} logs`);
+        console.error(`Replaying ${logs.length} logs`);
 
         const results = [];
 

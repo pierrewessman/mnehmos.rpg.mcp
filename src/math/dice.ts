@@ -1,5 +1,5 @@
 import seedrandom from 'seedrandom';
-import { DiceExpression, CalculationResult } from './schemas';
+import { DiceExpression, CalculationResult } from './schemas.js';
 
 export class DiceEngine {
     private rng: seedrandom.PRNG;
@@ -12,24 +12,33 @@ export class DiceEngine {
 
     // Parse string "2d6+4" into DiceExpression object
     parse(expression: string): DiceExpression {
-        // Simple regex parse
-        // Supports: NdX, NdX+M, NdX-M, NdX!
-        const match = expression.match(/^(\d+)d(\d+)(?:([+-]\d+))?(!)?$/);
+        // Regex supports: NdX, NdX+M, NdXdl1, NdXkh2, NdXdl1+5, NdX!
+        const match = expression.match(/^(\d+)d(\d+)(?:(dl|dh|kl|kh)(\d+))?([+-]\d+)?(!)?$/);
         if (!match) {
             throw new Error(`Invalid dice expression: ${expression}`);
         }
 
         const count = parseInt(match[1], 10);
         const sides = parseInt(match[2], 10);
-        const modifier = match[3] ? parseInt(match[3], 10) : 0;
-        const explode = !!match[4];
+        const modifierType = match[3]; // dl, dh, kl, kh
+        const modifierCount = match[4] ? parseInt(match[4], 10) : 0;
+        const modifier = match[5] ? parseInt(match[5], 10) : 0;
+        const explode = !!match[6];
 
-        return {
+        const result: DiceExpression = {
             count,
             sides,
             modifier,
             explode
         };
+
+        // Add drop/keep modifiers
+        if (modifierType === 'dl') result.dropLowest = modifierCount;
+        else if (modifierType === 'dh') result.dropHighest = modifierCount;
+        else if (modifierType === 'kl') result.keepLowest = modifierCount;
+        else if (modifierType === 'kh') result.keepHighest = modifierCount;
+
+        return result;
     }
 
     roll(expression: string | DiceExpression): CalculationResult {
@@ -69,6 +78,13 @@ export class DiceEngine {
             rolls.push(...set.rolls);
             total = set.sum + expr.modifier;
             steps.push(`Rolled ${expr.count}d${expr.sides}: [${set.rolls.join(', ')}]`);
+
+            // Show kept/dropped dice if applicable
+            if (set.dropped && set.dropped.length > 0) {
+                steps.push(`Kept: [${set.kept?.join(', ')}], Dropped: [${set.dropped.join(', ')}]`);
+                steps.push(`Sum of kept dice: ${set.sum}`);
+            }
+
             if (expr.modifier !== 0) {
                 steps.push(`Modifier: ${expr.modifier}`);
                 steps.push(`Total: ${set.sum} + ${expr.modifier} = ${total}`);
@@ -87,14 +103,12 @@ export class DiceEngine {
         };
     }
 
-    private rollSet(expr: DiceExpression): { rolls: number[], sum: number } {
+    private rollSet(expr: DiceExpression): { rolls: number[], sum: number, kept?: number[], dropped?: number[] } {
         const rolls: number[] = [];
-        let sum = 0;
 
         for (let i = 0; i < expr.count; i++) {
             let roll = Math.floor(this.rng() * expr.sides) + 1;
             rolls.push(roll);
-            sum += roll;
 
             if (expr.explode && roll === expr.sides) {
                 // Explode!
@@ -102,10 +116,33 @@ export class DiceEngine {
                 while (exploded === expr.sides) {
                     exploded = Math.floor(this.rng() * expr.sides) + 1;
                     rolls.push(exploded);
-                    sum += exploded;
                 }
             }
         }
-        return { rolls, sum };
+
+        // Apply drop/keep modifiers
+        let keptRolls = [...rolls];
+        let droppedRolls: number[] = [];
+
+        if (expr.dropLowest && expr.dropLowest > 0) {
+            const sorted = [...rolls].sort((a, b) => a - b);
+            droppedRolls = sorted.slice(0, expr.dropLowest);
+            keptRolls = sorted.slice(expr.dropLowest);
+        } else if (expr.dropHighest && expr.dropHighest > 0) {
+            const sorted = [...rolls].sort((a, b) => b - a);
+            droppedRolls = sorted.slice(0, expr.dropHighest);
+            keptRolls = sorted.slice(expr.dropHighest);
+        } else if (expr.keepLowest && expr.keepLowest > 0) {
+            const sorted = [...rolls].sort((a, b) => a - b);
+            keptRolls = sorted.slice(0, expr.keepLowest);
+            droppedRolls = sorted.slice(expr.keepLowest);
+        } else if (expr.keepHighest && expr.keepHighest > 0) {
+            const sorted = [...rolls].sort((a, b) => b - a);
+            keptRolls = sorted.slice(0, expr.keepHighest);
+            droppedRolls = sorted.slice(expr.keepHighest);
+        }
+
+        const sum = keptRolls.reduce((acc, val) => acc + val, 0);
+        return { rolls, sum, kept: keptRolls, dropped: droppedRolls.length > 0 ? droppedRolls : undefined };
     }
 }

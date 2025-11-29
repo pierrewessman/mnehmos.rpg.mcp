@@ -1,6 +1,6 @@
 import seedrandom from 'seedrandom';
-import { BiomeType } from '../../schema/biome';
-import { StructureType } from '../../schema/structure';
+import { BiomeType } from '../../schema/biome.js';
+import { StructureType } from '../../schema/structure.js';
 
 export interface StructureLocation {
     type: StructureType;

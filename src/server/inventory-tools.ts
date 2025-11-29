@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
-import { ItemRepository } from '../storage/repos/item.repo';
-import { InventoryRepository } from '../storage/repos/inventory.repo';
-import { ItemSchema } from '../schema/inventory';
-import { getDb } from '../storage';
-import { SessionContext } from './types';
+import { ItemRepository } from '../storage/repos/item.repo.js';
+import { InventoryRepository } from '../storage/repos/inventory.repo.js';
+import { ItemSchema } from '../schema/inventory.js';
+import { getDb } from '../storage/index.js';
+import { SessionContext } from './types.js';
 
 function ensureDb() {
     const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');
