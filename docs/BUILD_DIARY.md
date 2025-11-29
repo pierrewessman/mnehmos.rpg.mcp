@@ -4,7 +4,7 @@ This document serves as the master index for the development of the RPG-MCP Serv
 
 ## 1. The Master Plan
 - **[Task Map](diary/TASK_MAP.md)**: The comprehensive checklist that guided the entire development process. Tracks every feature from World Generation to Packaging.
-- **[Math Engine Task Map](../MATH_TASK_MAP.md)**: Detailed roadmap for the Math Engine implementation (9 phases, all complete).
+- **[Math Engine Task Map](diary/MATH_TASK_MAP.md)**: Detailed roadmap for the Math Engine implementation (9 phases, all complete).
 
 ## 2. Development Progress
 - **[World Generation Progress](diary/WORLDGEN_PROGRESS.md)**: Detailed log of the procedural generation algorithms, including Perlin noise implementation, river generation, and biome mapping.
