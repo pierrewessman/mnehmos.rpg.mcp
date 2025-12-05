@@ -42,6 +42,11 @@ export interface CombatParticipant {
         wisdom: number;
         charisma: number;
     };
+    // MED-003: Death Saving Throw tracking
+    deathSaveSuccesses?: number;  // 0-3, 3 = stabilized
+    deathSaveFailures?: number;   // 0-3, 3 = dead
+    isStabilized?: boolean;       // Unconscious but won't die
+    isDead?: boolean;             // Permanently defeated
 }
 
 /**
@@ -99,6 +104,21 @@ export interface LegendaryResistanceResult {
     success: boolean;
     remaining: number;
     error?: string;
+}
+
+/**
+ * MED-003: Result of a death saving throw
+ */
+export interface DeathSaveResult {
+    roll: number;           // d20 result
+    isNat20: boolean;       // Regain 1 HP
+    isNat1: boolean;        // Counts as 2 failures
+    success: boolean;       // 10+ = success
+    successes: number;      // Total successes (0-3)
+    failures: number;       // Total failures (0-3)
+    isStabilized: boolean;  // 3 successes
+    isDead: boolean;        // 3 failures
+    regainedHp: boolean;    // Nat 20 - character is conscious again
 }
 
 export interface EventEmitter {
@@ -626,13 +646,23 @@ export class CombatEngine {
 
     /**
      * Heal a participant
+     * MED-003: Also resets death saves if healing from 0 HP
      */
     heal(participantId: string, amount: number): void {
         if (!this.state) return;
 
         const participant = this.state.participants.find(p => p.id === participantId);
         if (participant) {
+            const wasAtZero = participant.hp === 0;
             participant.hp = Math.min(participant.maxHp, participant.hp + amount);
+
+            // MED-003: Reset death saves when healed from 0 HP
+            if (wasAtZero && participant.hp > 0) {
+                participant.deathSaveSuccesses = 0;
+                participant.deathSaveFailures = 0;
+                participant.isStabilized = false;
+            }
+
             this.emitter?.publish('combat', {
                 type: 'healed',
                 participantId,
@@ -640,6 +670,132 @@ export class CombatEngine {
                 newHp: participant.hp
             });
         }
+    }
+
+    /**
+     * MED-003: Roll a death saving throw for a participant at 0 HP
+     * D&D 5e Rules:
+     * - Roll d20
+     * - 10+ = success
+     * - 9 or less = failure
+     * - Natural 20 = regain 1 HP (conscious again)
+     * - Natural 1 = counts as 2 failures
+     * - 3 successes = stabilized (unconscious but won't die)
+     * - 3 failures = dead
+     */
+    rollDeathSave(participantId: string): DeathSaveResult | null {
+        if (!this.state) return null;
+
+        const participant = this.state.participants.find(p => p.id === participantId);
+        if (!participant) return null;
+
+        // Can only roll death saves at 0 HP
+        if (participant.hp > 0) {
+            return null;
+        }
+
+        // Already dead - can't roll
+        if (participant.isDead) {
+            return null;
+        }
+
+        // Already stabilized - no need to roll
+        if (participant.isStabilized) {
+            return null;
+        }
+
+        // Initialize death save counters if needed
+        if (participant.deathSaveSuccesses === undefined) {
+            participant.deathSaveSuccesses = 0;
+        }
+        if (participant.deathSaveFailures === undefined) {
+            participant.deathSaveFailures = 0;
+        }
+
+        // Roll the d20
+        const roll = Math.floor(Math.random() * 20) + 1;
+        const isNat20 = roll === 20;
+        const isNat1 = roll === 1;
+        const success = roll >= 10;
+
+        // Apply results
+        if (isNat20) {
+            // Natural 20: regain 1 HP, reset death saves
+            participant.hp = 1;
+            participant.deathSaveSuccesses = 0;
+            participant.deathSaveFailures = 0;
+            participant.isStabilized = false;
+        } else if (isNat1) {
+            // Natural 1: counts as 2 failures
+            participant.deathSaveFailures = Math.min(3, participant.deathSaveFailures + 2);
+        } else if (success) {
+            participant.deathSaveSuccesses = Math.min(3, participant.deathSaveSuccesses + 1);
+        } else {
+            participant.deathSaveFailures = Math.min(3, participant.deathSaveFailures + 1);
+        }
+
+        // Check for stabilization or death
+        if (participant.deathSaveSuccesses >= 3) {
+            participant.isStabilized = true;
+        }
+        if (participant.deathSaveFailures >= 3) {
+            participant.isDead = true;
+        }
+
+        const result: DeathSaveResult = {
+            roll,
+            isNat20,
+            isNat1,
+            success,
+            successes: participant.deathSaveSuccesses,
+            failures: participant.deathSaveFailures,
+            isStabilized: participant.isStabilized ?? false,
+            isDead: participant.isDead ?? false,
+            regainedHp: isNat20
+        };
+
+        this.emitter?.publish('combat', {
+            type: 'death_save',
+            participantId,
+            result
+        });
+
+        return result;
+    }
+
+    /**
+     * MED-003: Apply damage at 0 HP (causes automatic death save failures)
+     * D&D 5e Rules: Taking damage at 0 HP = 1 failure (crit = 2 failures)
+     */
+    applyDamageAtZeroHp(participantId: string, isCritical: boolean = false): void {
+        if (!this.state) return;
+
+        const participant = this.state.participants.find(p => p.id === participantId);
+        if (!participant || participant.hp > 0 || participant.isDead) return;
+
+        // Initialize if needed
+        if (participant.deathSaveFailures === undefined) {
+            participant.deathSaveFailures = 0;
+        }
+
+        // Critical hits cause 2 failures, normal hits cause 1
+        const failures = isCritical ? 2 : 1;
+        participant.deathSaveFailures = Math.min(3, participant.deathSaveFailures + failures);
+
+        if (participant.deathSaveFailures >= 3) {
+            participant.isDead = true;
+        }
+
+        // No longer stabilized if taking damage
+        participant.isStabilized = false;
+
+        this.emitter?.publish('combat', {
+            type: 'death_save_failure',
+            participantId,
+            failures,
+            total: participant.deathSaveFailures,
+            isDead: participant.isDead
+        });
     }
 
     /**

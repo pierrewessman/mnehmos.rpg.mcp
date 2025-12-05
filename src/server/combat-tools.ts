@@ -442,6 +442,25 @@ Examples:
             encounterId: z.string().describe('The ID of the encounter to load')
         })
     },
+    ROLL_DEATH_SAVE: {
+        name: 'roll_death_save',
+        description: `Roll a death saving throw for a character at 0 HP.
+
+D&D 5e Death Saving Throw Rules:
+- Roll d20 at the start of each turn when at 0 HP
+- 10+ = success
+- 9 or less = failure
+- Natural 20 = regain 1 HP and become conscious
+- Natural 1 = counts as 2 failures
+- 3 successes = stabilized (unconscious but won't die)
+- 3 failures = dead
+
+Only valid for characters at 0 HP who are not stabilized or dead.`,
+        inputSchema: z.object({
+            encounterId: z.string().describe('The ID of the encounter'),
+            characterId: z.string().describe('The ID of the character at 0 HP')
+        })
+    },
     EXECUTE_LAIR_ACTION: {
         name: 'execute_lair_action',
         description: `Execute a lair action when it's initiative 20 (the lair's turn).
@@ -1074,6 +1093,97 @@ export async function handleLoadEncounter(args: unknown, ctx: SessionContext) {
     let output = `📥 ENCOUNTER LOADED\nEncounter ID: ${parsed.encounterId}\n`;
     output += formatCombatStateText(state);
     output += `\n\n<!-- STATE_JSON\n${JSON.stringify(stateJson)}\nSTATE_JSON -->`;
+
+    return {
+        content: [{
+            type: 'text' as const,
+            text: output
+        }]
+    };
+}
+
+/**
+ * MED-003: Roll a death saving throw for a character at 0 HP
+ */
+export async function handleRollDeathSave(args: unknown, ctx: SessionContext) {
+    const parsed = CombatTools.ROLL_DEATH_SAVE.inputSchema.parse(args);
+    const engine = getCombatManager().get(`${ctx.sessionId}:${parsed.encounterId}`);
+
+    if (!engine) {
+        throw new Error(`No active encounter with ID ${parsed.encounterId}`);
+    }
+
+    const state = engine.getState();
+    if (!state) {
+        throw new Error('Encounter has no active state');
+    }
+
+    const participant = state.participants.find(p => p.id === parsed.characterId);
+    if (!participant) {
+        throw new Error(`Participant ${parsed.characterId} not found in encounter`);
+    }
+
+    // Validate state
+    if (participant.hp > 0) {
+        throw new Error(`${participant.name} is not at 0 HP and cannot make death saving throws`);
+    }
+
+    if (participant.isDead) {
+        throw new Error(`${participant.name} is already dead`);
+    }
+
+    if (participant.isStabilized) {
+        return {
+            content: [{
+                type: 'text' as const,
+                text: `${participant.name} is already stabilized and does not need to make death saving throws.`
+            }]
+        };
+    }
+
+    // Roll the death save
+    const result = engine.rollDeathSave(parsed.characterId);
+
+    if (!result) {
+        throw new Error('Failed to roll death save');
+    }
+
+    // Build output
+    let output = `\n┌─────────────────────────────────────────┐\n`;
+    output += `│ 💀 DEATH SAVING THROW\n`;
+    output += `└─────────────────────────────────────────┘\n\n`;
+    output += `${participant.name} makes a death saving throw...\n\n`;
+
+    output += `🎲 Roll: d20 = ${result.roll}`;
+
+    if (result.isNat20) {
+        output += ` ⭐ NATURAL 20!\n\n`;
+        output += `✨ ${participant.name} regains 1 HP and is conscious again!\n`;
+    } else if (result.isNat1) {
+        output += ` 💥 NATURAL 1! (Counts as 2 failures)\n\n`;
+    } else if (result.success) {
+        output += ` ✓ SUCCESS (10+)\n\n`;
+    } else {
+        output += ` ✗ FAILURE (9 or less)\n\n`;
+    }
+
+    // Status summary
+    const successMarkers = '●'.repeat(result.successes) + '○'.repeat(3 - result.successes);
+    const failureMarkers = '●'.repeat(result.failures) + '○'.repeat(3 - result.failures);
+
+    output += `Successes: [${successMarkers}] ${result.successes}/3\n`;
+    output += `Failures:  [${failureMarkers}] ${result.failures}/3\n\n`;
+
+    if (result.isStabilized) {
+        output += `🛡️ ${participant.name} is STABILIZED! (Unconscious but no longer dying)\n`;
+    } else if (result.isDead) {
+        output += `☠️ ${participant.name} has DIED!\n`;
+    }
+
+    // Save state
+    const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');
+    const repo = new EncounterRepository(db);
+    repo.saveState(parsed.encounterId, engine.getState()!);
 
     return {
         content: [{
