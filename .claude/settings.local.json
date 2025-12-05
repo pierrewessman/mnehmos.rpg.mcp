@@ -17,7 +17,7 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(npx tsc:*)",
-      "Skill(quest-keeper-master)"
+      "Bash(npx vitest run:*)"
     ],
     "deny": [],
     "ask": []
