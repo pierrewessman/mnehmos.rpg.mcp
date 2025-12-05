@@ -13,6 +13,8 @@ import { SecretTools, handleCreateSecret, handleGetSecret, handleListSecrets, ha
 import { PartyTools, handleCreateParty, handleGetParty, handleListParties, handleUpdateParty, handleDeleteParty, handleAddPartyMember, handleRemovePartyMember, handleUpdatePartyMember, handleSetPartyLeader, handleSetActiveCharacter, handleGetPartyMembers, handleGetPartyContext, handleGetUnassignedCharacters, handleMoveParty, handleGetPartyPosition, handleGetPartiesInRegion } from './party-tools.js';
 import { RestTools, handleTakeLongRest, handleTakeShortRest } from './rest-tools.js';
 import { NpcMemoryTools, handleGetNpcRelationship, handleUpdateNpcRelationship, handleRecordConversationMemory, handleGetConversationHistory, handleGetRecentInteractions, handleGetNpcContext } from './npc-memory-tools.js';
+import { TheftTools, handleStealItem, handleCheckItemStolen, handleCheckStolenItemsOnCharacter, handleCheckItemRecognition, handleSellToFence, handleRegisterFence, handleReportTheft, handleAdvanceHeatDecay, handleGetFence, handleListFences } from './theft-tools.js';
+import { CorpseTools, handleGetCorpse, handleGetCorpseByCharacter, handleListCorpsesInEncounter, handleListCorpsesNearby, handleLootCorpse, handleHarvestCorpse, handleCreateCorpse, handleGenerateLoot, handleGetCorpseInventory, handleCreateLootTable, handleGetLootTable, handleListLootTables, handleAdvanceCorpseDecay, handleCleanupCorpses } from './corpse-tools.js';
 import { PubSub } from '../engine/pubsub.js';
 import { registerEventTools } from './events.js';
 import { AuditLogger } from './audit.js';
@@ -796,6 +798,176 @@ async function main() {
         NpcMemoryTools.GET_NPC_CONTEXT.description,
         NpcMemoryTools.GET_NPC_CONTEXT.inputSchema.extend({ sessionId: z.string().optional() }).shape,
         auditLogger.wrapHandler(NpcMemoryTools.GET_NPC_CONTEXT.name, withSession(NpcMemoryTools.GET_NPC_CONTEXT.inputSchema, handleGetNpcContext))
+    );
+
+    // Register Theft Tools (HIGH-008: Stolen Item Tracking System)
+    server.tool(
+        TheftTools.STEAL_ITEM.name,
+        TheftTools.STEAL_ITEM.description,
+        TheftTools.STEAL_ITEM.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.STEAL_ITEM.name, withSession(TheftTools.STEAL_ITEM.inputSchema, handleStealItem))
+    );
+
+    server.tool(
+        TheftTools.CHECK_ITEM_STOLEN.name,
+        TheftTools.CHECK_ITEM_STOLEN.description,
+        TheftTools.CHECK_ITEM_STOLEN.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.CHECK_ITEM_STOLEN.name, withSession(TheftTools.CHECK_ITEM_STOLEN.inputSchema, handleCheckItemStolen))
+    );
+
+    server.tool(
+        TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.name,
+        TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.description,
+        TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.name, withSession(TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.inputSchema, handleCheckStolenItemsOnCharacter))
+    );
+
+    server.tool(
+        TheftTools.CHECK_ITEM_RECOGNITION.name,
+        TheftTools.CHECK_ITEM_RECOGNITION.description,
+        TheftTools.CHECK_ITEM_RECOGNITION.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.CHECK_ITEM_RECOGNITION.name, withSession(TheftTools.CHECK_ITEM_RECOGNITION.inputSchema, handleCheckItemRecognition))
+    );
+
+    server.tool(
+        TheftTools.SELL_TO_FENCE.name,
+        TheftTools.SELL_TO_FENCE.description,
+        TheftTools.SELL_TO_FENCE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.SELL_TO_FENCE.name, withSession(TheftTools.SELL_TO_FENCE.inputSchema, handleSellToFence))
+    );
+
+    server.tool(
+        TheftTools.REGISTER_FENCE.name,
+        TheftTools.REGISTER_FENCE.description,
+        TheftTools.REGISTER_FENCE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.REGISTER_FENCE.name, withSession(TheftTools.REGISTER_FENCE.inputSchema, handleRegisterFence))
+    );
+
+    server.tool(
+        TheftTools.REPORT_THEFT.name,
+        TheftTools.REPORT_THEFT.description,
+        TheftTools.REPORT_THEFT.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.REPORT_THEFT.name, withSession(TheftTools.REPORT_THEFT.inputSchema, handleReportTheft))
+    );
+
+    server.tool(
+        TheftTools.ADVANCE_HEAT_DECAY.name,
+        TheftTools.ADVANCE_HEAT_DECAY.description,
+        TheftTools.ADVANCE_HEAT_DECAY.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.ADVANCE_HEAT_DECAY.name, withSession(TheftTools.ADVANCE_HEAT_DECAY.inputSchema, handleAdvanceHeatDecay))
+    );
+
+    server.tool(
+        TheftTools.GET_FENCE.name,
+        TheftTools.GET_FENCE.description,
+        TheftTools.GET_FENCE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.GET_FENCE.name, withSession(TheftTools.GET_FENCE.inputSchema, handleGetFence))
+    );
+
+    server.tool(
+        TheftTools.LIST_FENCES.name,
+        TheftTools.LIST_FENCES.description,
+        TheftTools.LIST_FENCES.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(TheftTools.LIST_FENCES.name, withSession(TheftTools.LIST_FENCES.inputSchema, handleListFences))
+    );
+
+    // Register Corpse/Loot Tools (FAILED-004: Loot & Corpse System)
+    server.tool(
+        CorpseTools.GET_CORPSE.name,
+        CorpseTools.GET_CORPSE.description,
+        CorpseTools.GET_CORPSE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.GET_CORPSE.name, withSession(CorpseTools.GET_CORPSE.inputSchema, handleGetCorpse))
+    );
+
+    server.tool(
+        CorpseTools.GET_CORPSE_BY_CHARACTER.name,
+        CorpseTools.GET_CORPSE_BY_CHARACTER.description,
+        CorpseTools.GET_CORPSE_BY_CHARACTER.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.GET_CORPSE_BY_CHARACTER.name, withSession(CorpseTools.GET_CORPSE_BY_CHARACTER.inputSchema, handleGetCorpseByCharacter))
+    );
+
+    server.tool(
+        CorpseTools.LIST_CORPSES_IN_ENCOUNTER.name,
+        CorpseTools.LIST_CORPSES_IN_ENCOUNTER.description,
+        CorpseTools.LIST_CORPSES_IN_ENCOUNTER.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.LIST_CORPSES_IN_ENCOUNTER.name, withSession(CorpseTools.LIST_CORPSES_IN_ENCOUNTER.inputSchema, handleListCorpsesInEncounter))
+    );
+
+    server.tool(
+        CorpseTools.LIST_CORPSES_NEARBY.name,
+        CorpseTools.LIST_CORPSES_NEARBY.description,
+        CorpseTools.LIST_CORPSES_NEARBY.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.LIST_CORPSES_NEARBY.name, withSession(CorpseTools.LIST_CORPSES_NEARBY.inputSchema, handleListCorpsesNearby))
+    );
+
+    server.tool(
+        CorpseTools.LOOT_CORPSE.name,
+        CorpseTools.LOOT_CORPSE.description,
+        CorpseTools.LOOT_CORPSE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.LOOT_CORPSE.name, withSession(CorpseTools.LOOT_CORPSE.inputSchema, handleLootCorpse))
+    );
+
+    server.tool(
+        CorpseTools.HARVEST_CORPSE.name,
+        CorpseTools.HARVEST_CORPSE.description,
+        CorpseTools.HARVEST_CORPSE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.HARVEST_CORPSE.name, withSession(CorpseTools.HARVEST_CORPSE.inputSchema, handleHarvestCorpse))
+    );
+
+    server.tool(
+        CorpseTools.CREATE_CORPSE.name,
+        CorpseTools.CREATE_CORPSE.description,
+        CorpseTools.CREATE_CORPSE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.CREATE_CORPSE.name, withSession(CorpseTools.CREATE_CORPSE.inputSchema, handleCreateCorpse))
+    );
+
+    server.tool(
+        CorpseTools.GENERATE_LOOT.name,
+        CorpseTools.GENERATE_LOOT.description,
+        CorpseTools.GENERATE_LOOT.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.GENERATE_LOOT.name, withSession(CorpseTools.GENERATE_LOOT.inputSchema, handleGenerateLoot))
+    );
+
+    server.tool(
+        CorpseTools.GET_CORPSE_INVENTORY.name,
+        CorpseTools.GET_CORPSE_INVENTORY.description,
+        CorpseTools.GET_CORPSE_INVENTORY.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.GET_CORPSE_INVENTORY.name, withSession(CorpseTools.GET_CORPSE_INVENTORY.inputSchema, handleGetCorpseInventory))
+    );
+
+    server.tool(
+        CorpseTools.CREATE_LOOT_TABLE.name,
+        CorpseTools.CREATE_LOOT_TABLE.description,
+        CorpseTools.CREATE_LOOT_TABLE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.CREATE_LOOT_TABLE.name, withSession(CorpseTools.CREATE_LOOT_TABLE.inputSchema, handleCreateLootTable))
+    );
+
+    server.tool(
+        CorpseTools.GET_LOOT_TABLE.name,
+        CorpseTools.GET_LOOT_TABLE.description,
+        CorpseTools.GET_LOOT_TABLE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.GET_LOOT_TABLE.name, withSession(CorpseTools.GET_LOOT_TABLE.inputSchema, handleGetLootTable))
+    );
+
+    server.tool(
+        CorpseTools.LIST_LOOT_TABLES.name,
+        CorpseTools.LIST_LOOT_TABLES.description,
+        CorpseTools.LIST_LOOT_TABLES.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.LIST_LOOT_TABLES.name, withSession(CorpseTools.LIST_LOOT_TABLES.inputSchema, handleListLootTables))
+    );
+
+    server.tool(
+        CorpseTools.ADVANCE_CORPSE_DECAY.name,
+        CorpseTools.ADVANCE_CORPSE_DECAY.description,
+        CorpseTools.ADVANCE_CORPSE_DECAY.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.ADVANCE_CORPSE_DECAY.name, withSession(CorpseTools.ADVANCE_CORPSE_DECAY.inputSchema, handleAdvanceCorpseDecay))
+    );
+
+    server.tool(
+        CorpseTools.CLEANUP_CORPSES.name,
+        CorpseTools.CLEANUP_CORPSES.description,
+        CorpseTools.CLEANUP_CORPSES.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(CorpseTools.CLEANUP_CORPSES.name, withSession(CorpseTools.CLEANUP_CORPSES.inputSchema, handleCleanupCorpses))
     );
 
     // Connect transport

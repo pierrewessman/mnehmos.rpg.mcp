@@ -343,6 +343,116 @@ export function migrate(db: Database.Database) {
   CREATE INDEX IF NOT EXISTS idx_npc_relationships_npc ON npc_relationships(npc_id);
   CREATE INDEX IF NOT EXISTS idx_conversation_memories_char_npc ON conversation_memories(character_id, npc_id);
   CREATE INDEX IF NOT EXISTS idx_conversation_memories_importance ON conversation_memories(importance);
+
+  -- HIGH-008: Stolen Items System
+  CREATE TABLE IF NOT EXISTS stolen_items(
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    stolen_from TEXT NOT NULL,
+    stolen_by TEXT NOT NULL,
+    stolen_at TEXT NOT NULL,
+    stolen_location TEXT,
+
+    heat_level TEXT NOT NULL DEFAULT 'burning' CHECK (heat_level IN ('burning', 'hot', 'warm', 'cool', 'cold')),
+    heat_updated_at TEXT NOT NULL,
+
+    reported_to_guards INTEGER NOT NULL DEFAULT 0,
+    bounty INTEGER NOT NULL DEFAULT 0,
+    witnesses TEXT NOT NULL DEFAULT '[]',
+
+    recovered INTEGER NOT NULL DEFAULT 0,
+    recovered_at TEXT,
+    fenced INTEGER NOT NULL DEFAULT 0,
+    fenced_at TEXT,
+    fenced_to TEXT,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+
+    FOREIGN KEY(item_id) REFERENCES items(id) ON DELETE CASCADE,
+    FOREIGN KEY(stolen_from) REFERENCES characters(id),
+    FOREIGN KEY(stolen_by) REFERENCES characters(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_item ON stolen_items(item_id);
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_thief ON stolen_items(stolen_by);
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_victim ON stolen_items(stolen_from);
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_heat ON stolen_items(heat_level);
+
+  CREATE TABLE IF NOT EXISTS fence_npcs(
+    npc_id TEXT PRIMARY KEY,
+    faction_id TEXT,
+    buy_rate REAL NOT NULL DEFAULT 0.4,
+    max_heat_level TEXT NOT NULL DEFAULT 'hot',
+    daily_heat_capacity INTEGER NOT NULL DEFAULT 100,
+    current_daily_heat INTEGER NOT NULL DEFAULT 0,
+    last_reset_at TEXT NOT NULL,
+    specializations TEXT NOT NULL DEFAULT '[]',
+    cooldown_days INTEGER NOT NULL DEFAULT 7,
+    reputation INTEGER NOT NULL DEFAULT 50,
+    FOREIGN KEY(npc_id) REFERENCES characters(id) ON DELETE CASCADE
+  );
+
+  -- FAILED-004: Corpse/Loot System
+  CREATE TABLE IF NOT EXISTS corpses(
+    id TEXT PRIMARY KEY,
+    character_id TEXT NOT NULL,
+    character_name TEXT NOT NULL,
+    character_type TEXT NOT NULL,
+    creature_type TEXT,
+    cr REAL,
+
+    world_id TEXT,
+    region_id TEXT,
+    position_x INTEGER,
+    position_y INTEGER,
+    encounter_id TEXT,
+
+    state TEXT NOT NULL DEFAULT 'fresh' CHECK (state IN ('fresh', 'decaying', 'skeletal', 'gone')),
+    state_updated_at TEXT NOT NULL,
+
+    loot_generated INTEGER NOT NULL DEFAULT 0,
+    looted INTEGER NOT NULL DEFAULT 0,
+    looted_by TEXT,
+    looted_at TEXT,
+
+    harvestable INTEGER NOT NULL DEFAULT 0,
+    harvestable_resources TEXT NOT NULL DEFAULT '[]',
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_corpses_encounter ON corpses(encounter_id);
+  CREATE INDEX IF NOT EXISTS idx_corpses_world_position ON corpses(world_id, position_x, position_y);
+  CREATE INDEX IF NOT EXISTS idx_corpses_state ON corpses(state);
+  CREATE INDEX IF NOT EXISTS idx_corpses_character ON corpses(character_id);
+
+  CREATE TABLE IF NOT EXISTS corpse_inventory(
+    corpse_id TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    looted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(corpse_id, item_id),
+    FOREIGN KEY(corpse_id) REFERENCES corpses(id) ON DELETE CASCADE,
+    FOREIGN KEY(item_id) REFERENCES items(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS loot_tables(
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    creature_types TEXT NOT NULL DEFAULT '[]',
+    cr_min REAL,
+    cr_max REAL,
+    guaranteed_drops TEXT NOT NULL DEFAULT '[]',
+    random_drops TEXT NOT NULL DEFAULT '[]',
+    currency_range TEXT,
+    harvestable_resources TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_loot_tables_name ON loot_tables(name);
   `);
 
   // Run migrations for existing databases that don't have the new columns
