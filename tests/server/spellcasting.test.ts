@@ -17,6 +17,8 @@ import { EncounterRepository } from '../../src/storage/repos/encounter.repo.js';
 import { handleExecuteCombatAction, handleCreateEncounter, handleEndEncounter, clearCombatState } from '../../src/server/combat-tools.js';
 import { handleTakeLongRest, handleTakeShortRest } from '../../src/server/rest-tools.js';
 import { closeDb, getDb } from '../../src/storage/index.js';
+import { getInitialSpellSlots, getMaxSpellLevel } from '../../src/engine/magic/spell-validator.js';
+import type { CharacterClass } from '../../src/schema/spell.js';
 
 // Test utilities - using shared global database
 let charRepo: CharacterRepository;
@@ -95,31 +97,62 @@ async function createTestCharacter(overrides: CharacterOptions = {}) {
 }
 
 async function createWizard(level: number, overrides: CharacterOptions = {}) {
+    // Default wizard spells if not provided
+    const defaultKnownSpells = overrides.knownSpells || ['Magic Missile', 'Shield', 'Fireball'];
+    const defaultPreparedSpells = overrides.preparedSpells || defaultKnownSpells;
+    const defaultCantrips = overrides.cantripsKnown || ['Fire Bolt'];
+
     return createTestCharacter({
         name: `Test Wizard L${level}`,
         characterClass: 'wizard',
         level,
         stats: { str: 8, dex: 14, con: 12, int: 18, wis: 10, cha: 10 },
+        knownSpells: defaultKnownSpells,
+        preparedSpells: defaultPreparedSpells,
+        cantripsKnown: defaultCantrips,
+        spellSlots: getInitialSpellSlots('wizard' as CharacterClass, level),
         ...overrides
     });
 }
 
 async function createCleric(level: number, overrides: CharacterOptions = {}) {
+    // Default cleric spells if not provided
+    const defaultKnownSpells = overrides.knownSpells || ['Cure Wounds', 'Bless', 'Guiding Bolt'];
+    const defaultPreparedSpells = overrides.preparedSpells || defaultKnownSpells;
+    const defaultCantrips = overrides.cantripsKnown || ['Sacred Flame'];
+
     return createTestCharacter({
         name: `Test Cleric L${level}`,
         characterClass: 'cleric',
         level,
         stats: { str: 14, dex: 10, con: 14, int: 10, wis: 18, cha: 12 },
+        knownSpells: defaultKnownSpells,
+        preparedSpells: defaultPreparedSpells,
+        cantripsKnown: defaultCantrips,
+        spellSlots: getInitialSpellSlots('cleric' as CharacterClass, level),
         ...overrides
     });
 }
 
 async function createWarlock(level: number, overrides: CharacterOptions = {}) {
+    // Default warlock spells if not provided
+    const defaultKnownSpells = overrides.knownSpells || ['Hex', 'Eldritch Blast', 'Hold Person'];
+    const defaultCantrips = overrides.cantripsKnown || ['Eldritch Blast'];
+
     return createTestCharacter({
         name: `Test Warlock L${level}`,
         characterClass: 'warlock',
         level,
         stats: { str: 8, dex: 14, con: 14, int: 10, wis: 10, cha: 18 },
+        knownSpells: defaultKnownSpells,
+        preparedSpells: defaultKnownSpells, // Warlocks don't prepare
+        cantripsKnown: defaultCantrips,
+        // Warlocks use pact magic instead
+        pactMagicSlots: {
+            current: level < 2 ? 1 : 2,
+            max: level < 2 ? 1 : 2,
+            slotLevel: Math.min(5, Math.ceil(level / 2))
+        },
         ...overrides
     });
 }
