@@ -32,6 +32,4104 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
+// node_modules/zod/v3/helpers/util.js
+var util, objectUtil, ZodParsedType, getParsedType;
+var init_util = __esm({
+  "node_modules/zod/v3/helpers/util.js"() {
+    (function(util2) {
+      util2.assertEqual = (_) => {
+      };
+      function assertIs2(_arg) {
+      }
+      util2.assertIs = assertIs2;
+      function assertNever2(_x) {
+        throw new Error();
+      }
+      util2.assertNever = assertNever2;
+      util2.arrayToEnum = (items) => {
+        const obj = {};
+        for (const item of items) {
+          obj[item] = item;
+        }
+        return obj;
+      };
+      util2.getValidEnumValues = (obj) => {
+        const validKeys = util2.objectKeys(obj).filter((k) => typeof obj[obj[k]] !== "number");
+        const filtered = {};
+        for (const k of validKeys) {
+          filtered[k] = obj[k];
+        }
+        return util2.objectValues(filtered);
+      };
+      util2.objectValues = (obj) => {
+        return util2.objectKeys(obj).map(function(e) {
+          return obj[e];
+        });
+      };
+      util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
+        const keys = [];
+        for (const key in object3) {
+          if (Object.prototype.hasOwnProperty.call(object3, key)) {
+            keys.push(key);
+          }
+        }
+        return keys;
+      };
+      util2.find = (arr, checker) => {
+        for (const item of arr) {
+          if (checker(item))
+            return item;
+        }
+        return void 0;
+      };
+      util2.isInteger = typeof Number.isInteger === "function" ? (val) => Number.isInteger(val) : (val) => typeof val === "number" && Number.isFinite(val) && Math.floor(val) === val;
+      function joinValues2(array2, separator = " | ") {
+        return array2.map((val) => typeof val === "string" ? `'${val}'` : val).join(separator);
+      }
+      util2.joinValues = joinValues2;
+      util2.jsonStringifyReplacer = (_, value) => {
+        if (typeof value === "bigint") {
+          return value.toString();
+        }
+        return value;
+      };
+    })(util || (util = {}));
+    (function(objectUtil2) {
+      objectUtil2.mergeShapes = (first, second) => {
+        return {
+          ...first,
+          ...second
+          // second overwrites first
+        };
+      };
+    })(objectUtil || (objectUtil = {}));
+    ZodParsedType = util.arrayToEnum([
+      "string",
+      "nan",
+      "number",
+      "integer",
+      "float",
+      "boolean",
+      "date",
+      "bigint",
+      "symbol",
+      "function",
+      "undefined",
+      "null",
+      "array",
+      "object",
+      "unknown",
+      "promise",
+      "void",
+      "never",
+      "map",
+      "set"
+    ]);
+    getParsedType = (data) => {
+      const t = typeof data;
+      switch (t) {
+        case "undefined":
+          return ZodParsedType.undefined;
+        case "string":
+          return ZodParsedType.string;
+        case "number":
+          return Number.isNaN(data) ? ZodParsedType.nan : ZodParsedType.number;
+        case "boolean":
+          return ZodParsedType.boolean;
+        case "function":
+          return ZodParsedType.function;
+        case "bigint":
+          return ZodParsedType.bigint;
+        case "symbol":
+          return ZodParsedType.symbol;
+        case "object":
+          if (Array.isArray(data)) {
+            return ZodParsedType.array;
+          }
+          if (data === null) {
+            return ZodParsedType.null;
+          }
+          if (data.then && typeof data.then === "function" && data.catch && typeof data.catch === "function") {
+            return ZodParsedType.promise;
+          }
+          if (typeof Map !== "undefined" && data instanceof Map) {
+            return ZodParsedType.map;
+          }
+          if (typeof Set !== "undefined" && data instanceof Set) {
+            return ZodParsedType.set;
+          }
+          if (typeof Date !== "undefined" && data instanceof Date) {
+            return ZodParsedType.date;
+          }
+          return ZodParsedType.object;
+        default:
+          return ZodParsedType.unknown;
+      }
+    };
+  }
+});
+
+// node_modules/zod/v3/ZodError.js
+var ZodIssueCode, quotelessJson, ZodError;
+var init_ZodError = __esm({
+  "node_modules/zod/v3/ZodError.js"() {
+    init_util();
+    ZodIssueCode = util.arrayToEnum([
+      "invalid_type",
+      "invalid_literal",
+      "custom",
+      "invalid_union",
+      "invalid_union_discriminator",
+      "invalid_enum_value",
+      "unrecognized_keys",
+      "invalid_arguments",
+      "invalid_return_type",
+      "invalid_date",
+      "invalid_string",
+      "too_small",
+      "too_big",
+      "invalid_intersection_types",
+      "not_multiple_of",
+      "not_finite"
+    ]);
+    quotelessJson = (obj) => {
+      const json = JSON.stringify(obj, null, 2);
+      return json.replace(/"([^"]+)":/g, "$1:");
+    };
+    ZodError = class _ZodError extends Error {
+      get errors() {
+        return this.issues;
+      }
+      constructor(issues) {
+        super();
+        this.issues = [];
+        this.addIssue = (sub) => {
+          this.issues = [...this.issues, sub];
+        };
+        this.addIssues = (subs = []) => {
+          this.issues = [...this.issues, ...subs];
+        };
+        const actualProto = new.target.prototype;
+        if (Object.setPrototypeOf) {
+          Object.setPrototypeOf(this, actualProto);
+        } else {
+          this.__proto__ = actualProto;
+        }
+        this.name = "ZodError";
+        this.issues = issues;
+      }
+      format(_mapper) {
+        const mapper = _mapper || function(issue2) {
+          return issue2.message;
+        };
+        const fieldErrors = { _errors: [] };
+        const processError = (error) => {
+          for (const issue2 of error.issues) {
+            if (issue2.code === "invalid_union") {
+              issue2.unionErrors.map(processError);
+            } else if (issue2.code === "invalid_return_type") {
+              processError(issue2.returnTypeError);
+            } else if (issue2.code === "invalid_arguments") {
+              processError(issue2.argumentsError);
+            } else if (issue2.path.length === 0) {
+              fieldErrors._errors.push(mapper(issue2));
+            } else {
+              let curr = fieldErrors;
+              let i = 0;
+              while (i < issue2.path.length) {
+                const el = issue2.path[i];
+                const terminal = i === issue2.path.length - 1;
+                if (!terminal) {
+                  curr[el] = curr[el] || { _errors: [] };
+                } else {
+                  curr[el] = curr[el] || { _errors: [] };
+                  curr[el]._errors.push(mapper(issue2));
+                }
+                curr = curr[el];
+                i++;
+              }
+            }
+          }
+        };
+        processError(this);
+        return fieldErrors;
+      }
+      static assert(value) {
+        if (!(value instanceof _ZodError)) {
+          throw new Error(`Not a ZodError: ${value}`);
+        }
+      }
+      toString() {
+        return this.message;
+      }
+      get message() {
+        return JSON.stringify(this.issues, util.jsonStringifyReplacer, 2);
+      }
+      get isEmpty() {
+        return this.issues.length === 0;
+      }
+      flatten(mapper = (issue2) => issue2.message) {
+        const fieldErrors = {};
+        const formErrors = [];
+        for (const sub of this.issues) {
+          if (sub.path.length > 0) {
+            const firstEl = sub.path[0];
+            fieldErrors[firstEl] = fieldErrors[firstEl] || [];
+            fieldErrors[firstEl].push(mapper(sub));
+          } else {
+            formErrors.push(mapper(sub));
+          }
+        }
+        return { formErrors, fieldErrors };
+      }
+      get formErrors() {
+        return this.flatten();
+      }
+    };
+    ZodError.create = (issues) => {
+      const error = new ZodError(issues);
+      return error;
+    };
+  }
+});
+
+// node_modules/zod/v3/locales/en.js
+var errorMap, en_default;
+var init_en = __esm({
+  "node_modules/zod/v3/locales/en.js"() {
+    init_ZodError();
+    init_util();
+    errorMap = (issue2, _ctx) => {
+      let message;
+      switch (issue2.code) {
+        case ZodIssueCode.invalid_type:
+          if (issue2.received === ZodParsedType.undefined) {
+            message = "Required";
+          } else {
+            message = `Expected ${issue2.expected}, received ${issue2.received}`;
+          }
+          break;
+        case ZodIssueCode.invalid_literal:
+          message = `Invalid literal value, expected ${JSON.stringify(issue2.expected, util.jsonStringifyReplacer)}`;
+          break;
+        case ZodIssueCode.unrecognized_keys:
+          message = `Unrecognized key(s) in object: ${util.joinValues(issue2.keys, ", ")}`;
+          break;
+        case ZodIssueCode.invalid_union:
+          message = `Invalid input`;
+          break;
+        case ZodIssueCode.invalid_union_discriminator:
+          message = `Invalid discriminator value. Expected ${util.joinValues(issue2.options)}`;
+          break;
+        case ZodIssueCode.invalid_enum_value:
+          message = `Invalid enum value. Expected ${util.joinValues(issue2.options)}, received '${issue2.received}'`;
+          break;
+        case ZodIssueCode.invalid_arguments:
+          message = `Invalid function arguments`;
+          break;
+        case ZodIssueCode.invalid_return_type:
+          message = `Invalid function return type`;
+          break;
+        case ZodIssueCode.invalid_date:
+          message = `Invalid date`;
+          break;
+        case ZodIssueCode.invalid_string:
+          if (typeof issue2.validation === "object") {
+            if ("includes" in issue2.validation) {
+              message = `Invalid input: must include "${issue2.validation.includes}"`;
+              if (typeof issue2.validation.position === "number") {
+                message = `${message} at one or more positions greater than or equal to ${issue2.validation.position}`;
+              }
+            } else if ("startsWith" in issue2.validation) {
+              message = `Invalid input: must start with "${issue2.validation.startsWith}"`;
+            } else if ("endsWith" in issue2.validation) {
+              message = `Invalid input: must end with "${issue2.validation.endsWith}"`;
+            } else {
+              util.assertNever(issue2.validation);
+            }
+          } else if (issue2.validation !== "regex") {
+            message = `Invalid ${issue2.validation}`;
+          } else {
+            message = "Invalid";
+          }
+          break;
+        case ZodIssueCode.too_small:
+          if (issue2.type === "array")
+            message = `Array must contain ${issue2.exact ? "exactly" : issue2.inclusive ? `at least` : `more than`} ${issue2.minimum} element(s)`;
+          else if (issue2.type === "string")
+            message = `String must contain ${issue2.exact ? "exactly" : issue2.inclusive ? `at least` : `over`} ${issue2.minimum} character(s)`;
+          else if (issue2.type === "number")
+            message = `Number must be ${issue2.exact ? `exactly equal to ` : issue2.inclusive ? `greater than or equal to ` : `greater than `}${issue2.minimum}`;
+          else if (issue2.type === "bigint")
+            message = `Number must be ${issue2.exact ? `exactly equal to ` : issue2.inclusive ? `greater than or equal to ` : `greater than `}${issue2.minimum}`;
+          else if (issue2.type === "date")
+            message = `Date must be ${issue2.exact ? `exactly equal to ` : issue2.inclusive ? `greater than or equal to ` : `greater than `}${new Date(Number(issue2.minimum))}`;
+          else
+            message = "Invalid input";
+          break;
+        case ZodIssueCode.too_big:
+          if (issue2.type === "array")
+            message = `Array must contain ${issue2.exact ? `exactly` : issue2.inclusive ? `at most` : `less than`} ${issue2.maximum} element(s)`;
+          else if (issue2.type === "string")
+            message = `String must contain ${issue2.exact ? `exactly` : issue2.inclusive ? `at most` : `under`} ${issue2.maximum} character(s)`;
+          else if (issue2.type === "number")
+            message = `Number must be ${issue2.exact ? `exactly` : issue2.inclusive ? `less than or equal to` : `less than`} ${issue2.maximum}`;
+          else if (issue2.type === "bigint")
+            message = `BigInt must be ${issue2.exact ? `exactly` : issue2.inclusive ? `less than or equal to` : `less than`} ${issue2.maximum}`;
+          else if (issue2.type === "date")
+            message = `Date must be ${issue2.exact ? `exactly` : issue2.inclusive ? `smaller than or equal to` : `smaller than`} ${new Date(Number(issue2.maximum))}`;
+          else
+            message = "Invalid input";
+          break;
+        case ZodIssueCode.custom:
+          message = `Invalid input`;
+          break;
+        case ZodIssueCode.invalid_intersection_types:
+          message = `Intersection results could not be merged`;
+          break;
+        case ZodIssueCode.not_multiple_of:
+          message = `Number must be a multiple of ${issue2.multipleOf}`;
+          break;
+        case ZodIssueCode.not_finite:
+          message = "Number must be finite";
+          break;
+        default:
+          message = _ctx.defaultError;
+          util.assertNever(issue2);
+      }
+      return { message };
+    };
+    en_default = errorMap;
+  }
+});
+
+// node_modules/zod/v3/errors.js
+function setErrorMap(map) {
+  overrideErrorMap = map;
+}
+function getErrorMap() {
+  return overrideErrorMap;
+}
+var overrideErrorMap;
+var init_errors = __esm({
+  "node_modules/zod/v3/errors.js"() {
+    init_en();
+    overrideErrorMap = en_default;
+  }
+});
+
+// node_modules/zod/v3/helpers/parseUtil.js
+function addIssueToContext(ctx, issueData) {
+  const overrideMap = getErrorMap();
+  const issue2 = makeIssue({
+    issueData,
+    data: ctx.data,
+    path: ctx.path,
+    errorMaps: [
+      ctx.common.contextualErrorMap,
+      // contextual error map is first priority
+      ctx.schemaErrorMap,
+      // then schema-bound map if available
+      overrideMap,
+      // then global override map
+      overrideMap === en_default ? void 0 : en_default
+      // then global default map
+    ].filter((x) => !!x)
+  });
+  ctx.common.issues.push(issue2);
+}
+var makeIssue, EMPTY_PATH, ParseStatus, INVALID, DIRTY, OK, isAborted, isDirty, isValid, isAsync;
+var init_parseUtil = __esm({
+  "node_modules/zod/v3/helpers/parseUtil.js"() {
+    init_errors();
+    init_en();
+    makeIssue = (params) => {
+      const { data, path, errorMaps, issueData } = params;
+      const fullPath = [...path, ...issueData.path || []];
+      const fullIssue = {
+        ...issueData,
+        path: fullPath
+      };
+      if (issueData.message !== void 0) {
+        return {
+          ...issueData,
+          path: fullPath,
+          message: issueData.message
+        };
+      }
+      let errorMessage = "";
+      const maps = errorMaps.filter((m) => !!m).slice().reverse();
+      for (const map of maps) {
+        errorMessage = map(fullIssue, { data, defaultError: errorMessage }).message;
+      }
+      return {
+        ...issueData,
+        path: fullPath,
+        message: errorMessage
+      };
+    };
+    EMPTY_PATH = [];
+    ParseStatus = class _ParseStatus {
+      constructor() {
+        this.value = "valid";
+      }
+      dirty() {
+        if (this.value === "valid")
+          this.value = "dirty";
+      }
+      abort() {
+        if (this.value !== "aborted")
+          this.value = "aborted";
+      }
+      static mergeArray(status, results) {
+        const arrayValue = [];
+        for (const s of results) {
+          if (s.status === "aborted")
+            return INVALID;
+          if (s.status === "dirty")
+            status.dirty();
+          arrayValue.push(s.value);
+        }
+        return { status: status.value, value: arrayValue };
+      }
+      static async mergeObjectAsync(status, pairs) {
+        const syncPairs = [];
+        for (const pair of pairs) {
+          const key = await pair.key;
+          const value = await pair.value;
+          syncPairs.push({
+            key,
+            value
+          });
+        }
+        return _ParseStatus.mergeObjectSync(status, syncPairs);
+      }
+      static mergeObjectSync(status, pairs) {
+        const finalObject = {};
+        for (const pair of pairs) {
+          const { key, value } = pair;
+          if (key.status === "aborted")
+            return INVALID;
+          if (value.status === "aborted")
+            return INVALID;
+          if (key.status === "dirty")
+            status.dirty();
+          if (value.status === "dirty")
+            status.dirty();
+          if (key.value !== "__proto__" && (typeof value.value !== "undefined" || pair.alwaysSet)) {
+            finalObject[key.value] = value.value;
+          }
+        }
+        return { status: status.value, value: finalObject };
+      }
+    };
+    INVALID = Object.freeze({
+      status: "aborted"
+    });
+    DIRTY = (value) => ({ status: "dirty", value });
+    OK = (value) => ({ status: "valid", value });
+    isAborted = (x) => x.status === "aborted";
+    isDirty = (x) => x.status === "dirty";
+    isValid = (x) => x.status === "valid";
+    isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
+  }
+});
+
+// node_modules/zod/v3/helpers/typeAliases.js
+var init_typeAliases = __esm({
+  "node_modules/zod/v3/helpers/typeAliases.js"() {
+  }
+});
+
+// node_modules/zod/v3/helpers/errorUtil.js
+var errorUtil;
+var init_errorUtil = __esm({
+  "node_modules/zod/v3/helpers/errorUtil.js"() {
+    (function(errorUtil2) {
+      errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
+      errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
+    })(errorUtil || (errorUtil = {}));
+  }
+});
+
+// node_modules/zod/v3/types.js
+function processCreateParams(params) {
+  if (!params)
+    return {};
+  const { errorMap: errorMap2, invalid_type_error, required_error, description } = params;
+  if (errorMap2 && (invalid_type_error || required_error)) {
+    throw new Error(`Can't use "invalid_type_error" or "required_error" in conjunction with custom error map.`);
+  }
+  if (errorMap2)
+    return { errorMap: errorMap2, description };
+  const customMap = (iss, ctx) => {
+    const { message } = params;
+    if (iss.code === "invalid_enum_value") {
+      return { message: message ?? ctx.defaultError };
+    }
+    if (typeof ctx.data === "undefined") {
+      return { message: message ?? required_error ?? ctx.defaultError };
+    }
+    if (iss.code !== "invalid_type")
+      return { message: ctx.defaultError };
+    return { message: message ?? invalid_type_error ?? ctx.defaultError };
+  };
+  return { errorMap: customMap, description };
+}
+function timeRegexSource(args) {
+  let secondsRegexSource = `[0-5]\\d`;
+  if (args.precision) {
+    secondsRegexSource = `${secondsRegexSource}\\.\\d{${args.precision}}`;
+  } else if (args.precision == null) {
+    secondsRegexSource = `${secondsRegexSource}(\\.\\d+)?`;
+  }
+  const secondsQuantifier = args.precision ? "+" : "?";
+  return `([01]\\d|2[0-3]):[0-5]\\d(:${secondsRegexSource})${secondsQuantifier}`;
+}
+function timeRegex(args) {
+  return new RegExp(`^${timeRegexSource(args)}$`);
+}
+function datetimeRegex(args) {
+  let regex = `${dateRegexSource}T${timeRegexSource(args)}`;
+  const opts = [];
+  opts.push(args.local ? `Z?` : `Z`);
+  if (args.offset)
+    opts.push(`([+-]\\d{2}:?\\d{2})`);
+  regex = `${regex}(${opts.join("|")})`;
+  return new RegExp(`^${regex}$`);
+}
+function isValidIP(ip, version2) {
+  if ((version2 === "v4" || !version2) && ipv4Regex.test(ip)) {
+    return true;
+  }
+  if ((version2 === "v6" || !version2) && ipv6Regex.test(ip)) {
+    return true;
+  }
+  return false;
+}
+function isValidJWT(jwt, alg) {
+  if (!jwtRegex.test(jwt))
+    return false;
+  try {
+    const [header] = jwt.split(".");
+    if (!header)
+      return false;
+    const base642 = header.replace(/-/g, "+").replace(/_/g, "/").padEnd(header.length + (4 - header.length % 4) % 4, "=");
+    const decoded = JSON.parse(atob(base642));
+    if (typeof decoded !== "object" || decoded === null)
+      return false;
+    if ("typ" in decoded && decoded?.typ !== "JWT")
+      return false;
+    if (!decoded.alg)
+      return false;
+    if (alg && decoded.alg !== alg)
+      return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+function isValidCidr(ip, version2) {
+  if ((version2 === "v4" || !version2) && ipv4CidrRegex.test(ip)) {
+    return true;
+  }
+  if ((version2 === "v6" || !version2) && ipv6CidrRegex.test(ip)) {
+    return true;
+  }
+  return false;
+}
+function floatSafeRemainder(val, step) {
+  const valDecCount = (val.toString().split(".")[1] || "").length;
+  const stepDecCount = (step.toString().split(".")[1] || "").length;
+  const decCount = valDecCount > stepDecCount ? valDecCount : stepDecCount;
+  const valInt = Number.parseInt(val.toFixed(decCount).replace(".", ""));
+  const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
+  return valInt % stepInt / 10 ** decCount;
+}
+function deepPartialify(schema) {
+  if (schema instanceof ZodObject) {
+    const newShape = {};
+    for (const key in schema.shape) {
+      const fieldSchema = schema.shape[key];
+      newShape[key] = ZodOptional.create(deepPartialify(fieldSchema));
+    }
+    return new ZodObject({
+      ...schema._def,
+      shape: () => newShape
+    });
+  } else if (schema instanceof ZodArray) {
+    return new ZodArray({
+      ...schema._def,
+      type: deepPartialify(schema.element)
+    });
+  } else if (schema instanceof ZodOptional) {
+    return ZodOptional.create(deepPartialify(schema.unwrap()));
+  } else if (schema instanceof ZodNullable) {
+    return ZodNullable.create(deepPartialify(schema.unwrap()));
+  } else if (schema instanceof ZodTuple) {
+    return ZodTuple.create(schema.items.map((item) => deepPartialify(item)));
+  } else {
+    return schema;
+  }
+}
+function mergeValues(a, b) {
+  const aType = getParsedType(a);
+  const bType = getParsedType(b);
+  if (a === b) {
+    return { valid: true, data: a };
+  } else if (aType === ZodParsedType.object && bType === ZodParsedType.object) {
+    const bKeys = util.objectKeys(b);
+    const sharedKeys = util.objectKeys(a).filter((key) => bKeys.indexOf(key) !== -1);
+    const newObj = { ...a, ...b };
+    for (const key of sharedKeys) {
+      const sharedValue = mergeValues(a[key], b[key]);
+      if (!sharedValue.valid) {
+        return { valid: false };
+      }
+      newObj[key] = sharedValue.data;
+    }
+    return { valid: true, data: newObj };
+  } else if (aType === ZodParsedType.array && bType === ZodParsedType.array) {
+    if (a.length !== b.length) {
+      return { valid: false };
+    }
+    const newArray = [];
+    for (let index = 0; index < a.length; index++) {
+      const itemA = a[index];
+      const itemB = b[index];
+      const sharedValue = mergeValues(itemA, itemB);
+      if (!sharedValue.valid) {
+        return { valid: false };
+      }
+      newArray.push(sharedValue.data);
+    }
+    return { valid: true, data: newArray };
+  } else if (aType === ZodParsedType.date && bType === ZodParsedType.date && +a === +b) {
+    return { valid: true, data: a };
+  } else {
+    return { valid: false };
+  }
+}
+function createZodEnum(values, params) {
+  return new ZodEnum({
+    values,
+    typeName: ZodFirstPartyTypeKind.ZodEnum,
+    ...processCreateParams(params)
+  });
+}
+function cleanParams(params, data) {
+  const p = typeof params === "function" ? params(data) : typeof params === "string" ? { message: params } : params;
+  const p2 = typeof p === "string" ? { message: p } : p;
+  return p2;
+}
+function custom(check2, _params = {}, fatal) {
+  if (check2)
+    return ZodAny.create().superRefine((data, ctx) => {
+      const r = check2(data);
+      if (r instanceof Promise) {
+        return r.then((r2) => {
+          if (!r2) {
+            const params = cleanParams(_params, data);
+            const _fatal = params.fatal ?? fatal ?? true;
+            ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+          }
+        });
+      }
+      if (!r) {
+        const params = cleanParams(_params, data);
+        const _fatal = params.fatal ?? fatal ?? true;
+        ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+      }
+      return;
+    });
+  return ZodAny.create();
+}
+var ParseInputLazyPath, handleResult, ZodType, cuidRegex, cuid2Regex, ulidRegex, uuidRegex, nanoidRegex, jwtRegex, durationRegex, emailRegex, _emojiRegex, emojiRegex, ipv4Regex, ipv4CidrRegex, ipv6Regex, ipv6CidrRegex, base64Regex, base64urlRegex, dateRegexSource, dateRegex, ZodString, ZodNumber, ZodBigInt, ZodBoolean, ZodDate, ZodSymbol, ZodUndefined, ZodNull, ZodAny, ZodUnknown, ZodNever, ZodVoid, ZodArray, ZodObject, ZodUnion, getDiscriminator, ZodDiscriminatedUnion, ZodIntersection, ZodTuple, ZodRecord, ZodMap, ZodSet, ZodFunction, ZodLazy, ZodLiteral, ZodEnum, ZodNativeEnum, ZodPromise, ZodEffects, ZodOptional, ZodNullable, ZodDefault, ZodCatch, ZodNaN, BRAND, ZodBranded, ZodPipeline, ZodReadonly, late, ZodFirstPartyTypeKind, instanceOfType, stringType, numberType, nanType, bigIntType, booleanType, dateType, symbolType, undefinedType, nullType, anyType, unknownType, neverType, voidType, arrayType, objectType, strictObjectType, unionType, discriminatedUnionType, intersectionType, tupleType, recordType, mapType, setType, functionType, lazyType, literalType, enumType, nativeEnumType, promiseType, effectsType, optionalType, nullableType, preprocessType, pipelineType, ostring, onumber, oboolean, coerce, NEVER;
+var init_types = __esm({
+  "node_modules/zod/v3/types.js"() {
+    init_ZodError();
+    init_errors();
+    init_errorUtil();
+    init_parseUtil();
+    init_util();
+    ParseInputLazyPath = class {
+      constructor(parent, value, path, key) {
+        this._cachedPath = [];
+        this.parent = parent;
+        this.data = value;
+        this._path = path;
+        this._key = key;
+      }
+      get path() {
+        if (!this._cachedPath.length) {
+          if (Array.isArray(this._key)) {
+            this._cachedPath.push(...this._path, ...this._key);
+          } else {
+            this._cachedPath.push(...this._path, this._key);
+          }
+        }
+        return this._cachedPath;
+      }
+    };
+    handleResult = (ctx, result) => {
+      if (isValid(result)) {
+        return { success: true, data: result.value };
+      } else {
+        if (!ctx.common.issues.length) {
+          throw new Error("Validation failed but no issues detected.");
+        }
+        return {
+          success: false,
+          get error() {
+            if (this._error)
+              return this._error;
+            const error = new ZodError(ctx.common.issues);
+            this._error = error;
+            return this._error;
+          }
+        };
+      }
+    };
+    ZodType = class {
+      get description() {
+        return this._def.description;
+      }
+      _getType(input) {
+        return getParsedType(input.data);
+      }
+      _getOrReturnCtx(input, ctx) {
+        return ctx || {
+          common: input.parent.common,
+          data: input.data,
+          parsedType: getParsedType(input.data),
+          schemaErrorMap: this._def.errorMap,
+          path: input.path,
+          parent: input.parent
+        };
+      }
+      _processInputParams(input) {
+        return {
+          status: new ParseStatus(),
+          ctx: {
+            common: input.parent.common,
+            data: input.data,
+            parsedType: getParsedType(input.data),
+            schemaErrorMap: this._def.errorMap,
+            path: input.path,
+            parent: input.parent
+          }
+        };
+      }
+      _parseSync(input) {
+        const result = this._parse(input);
+        if (isAsync(result)) {
+          throw new Error("Synchronous parse encountered promise.");
+        }
+        return result;
+      }
+      _parseAsync(input) {
+        const result = this._parse(input);
+        return Promise.resolve(result);
+      }
+      parse(data, params) {
+        const result = this.safeParse(data, params);
+        if (result.success)
+          return result.data;
+        throw result.error;
+      }
+      safeParse(data, params) {
+        const ctx = {
+          common: {
+            issues: [],
+            async: params?.async ?? false,
+            contextualErrorMap: params?.errorMap
+          },
+          path: params?.path || [],
+          schemaErrorMap: this._def.errorMap,
+          parent: null,
+          data,
+          parsedType: getParsedType(data)
+        };
+        const result = this._parseSync({ data, path: ctx.path, parent: ctx });
+        return handleResult(ctx, result);
+      }
+      "~validate"(data) {
+        const ctx = {
+          common: {
+            issues: [],
+            async: !!this["~standard"].async
+          },
+          path: [],
+          schemaErrorMap: this._def.errorMap,
+          parent: null,
+          data,
+          parsedType: getParsedType(data)
+        };
+        if (!this["~standard"].async) {
+          try {
+            const result = this._parseSync({ data, path: [], parent: ctx });
+            return isValid(result) ? {
+              value: result.value
+            } : {
+              issues: ctx.common.issues
+            };
+          } catch (err) {
+            if (err?.message?.toLowerCase()?.includes("encountered")) {
+              this["~standard"].async = true;
+            }
+            ctx.common = {
+              issues: [],
+              async: true
+            };
+          }
+        }
+        return this._parseAsync({ data, path: [], parent: ctx }).then((result) => isValid(result) ? {
+          value: result.value
+        } : {
+          issues: ctx.common.issues
+        });
+      }
+      async parseAsync(data, params) {
+        const result = await this.safeParseAsync(data, params);
+        if (result.success)
+          return result.data;
+        throw result.error;
+      }
+      async safeParseAsync(data, params) {
+        const ctx = {
+          common: {
+            issues: [],
+            contextualErrorMap: params?.errorMap,
+            async: true
+          },
+          path: params?.path || [],
+          schemaErrorMap: this._def.errorMap,
+          parent: null,
+          data,
+          parsedType: getParsedType(data)
+        };
+        const maybeAsyncResult = this._parse({ data, path: ctx.path, parent: ctx });
+        const result = await (isAsync(maybeAsyncResult) ? maybeAsyncResult : Promise.resolve(maybeAsyncResult));
+        return handleResult(ctx, result);
+      }
+      refine(check2, message) {
+        const getIssueProperties = (val) => {
+          if (typeof message === "string" || typeof message === "undefined") {
+            return { message };
+          } else if (typeof message === "function") {
+            return message(val);
+          } else {
+            return message;
+          }
+        };
+        return this._refinement((val, ctx) => {
+          const result = check2(val);
+          const setError = () => ctx.addIssue({
+            code: ZodIssueCode.custom,
+            ...getIssueProperties(val)
+          });
+          if (typeof Promise !== "undefined" && result instanceof Promise) {
+            return result.then((data) => {
+              if (!data) {
+                setError();
+                return false;
+              } else {
+                return true;
+              }
+            });
+          }
+          if (!result) {
+            setError();
+            return false;
+          } else {
+            return true;
+          }
+        });
+      }
+      refinement(check2, refinementData) {
+        return this._refinement((val, ctx) => {
+          if (!check2(val)) {
+            ctx.addIssue(typeof refinementData === "function" ? refinementData(val, ctx) : refinementData);
+            return false;
+          } else {
+            return true;
+          }
+        });
+      }
+      _refinement(refinement) {
+        return new ZodEffects({
+          schema: this,
+          typeName: ZodFirstPartyTypeKind.ZodEffects,
+          effect: { type: "refinement", refinement }
+        });
+      }
+      superRefine(refinement) {
+        return this._refinement(refinement);
+      }
+      constructor(def) {
+        this.spa = this.safeParseAsync;
+        this._def = def;
+        this.parse = this.parse.bind(this);
+        this.safeParse = this.safeParse.bind(this);
+        this.parseAsync = this.parseAsync.bind(this);
+        this.safeParseAsync = this.safeParseAsync.bind(this);
+        this.spa = this.spa.bind(this);
+        this.refine = this.refine.bind(this);
+        this.refinement = this.refinement.bind(this);
+        this.superRefine = this.superRefine.bind(this);
+        this.optional = this.optional.bind(this);
+        this.nullable = this.nullable.bind(this);
+        this.nullish = this.nullish.bind(this);
+        this.array = this.array.bind(this);
+        this.promise = this.promise.bind(this);
+        this.or = this.or.bind(this);
+        this.and = this.and.bind(this);
+        this.transform = this.transform.bind(this);
+        this.brand = this.brand.bind(this);
+        this.default = this.default.bind(this);
+        this.catch = this.catch.bind(this);
+        this.describe = this.describe.bind(this);
+        this.pipe = this.pipe.bind(this);
+        this.readonly = this.readonly.bind(this);
+        this.isNullable = this.isNullable.bind(this);
+        this.isOptional = this.isOptional.bind(this);
+        this["~standard"] = {
+          version: 1,
+          vendor: "zod",
+          validate: (data) => this["~validate"](data)
+        };
+      }
+      optional() {
+        return ZodOptional.create(this, this._def);
+      }
+      nullable() {
+        return ZodNullable.create(this, this._def);
+      }
+      nullish() {
+        return this.nullable().optional();
+      }
+      array() {
+        return ZodArray.create(this);
+      }
+      promise() {
+        return ZodPromise.create(this, this._def);
+      }
+      or(option) {
+        return ZodUnion.create([this, option], this._def);
+      }
+      and(incoming) {
+        return ZodIntersection.create(this, incoming, this._def);
+      }
+      transform(transform2) {
+        return new ZodEffects({
+          ...processCreateParams(this._def),
+          schema: this,
+          typeName: ZodFirstPartyTypeKind.ZodEffects,
+          effect: { type: "transform", transform: transform2 }
+        });
+      }
+      default(def) {
+        const defaultValueFunc = typeof def === "function" ? def : () => def;
+        return new ZodDefault({
+          ...processCreateParams(this._def),
+          innerType: this,
+          defaultValue: defaultValueFunc,
+          typeName: ZodFirstPartyTypeKind.ZodDefault
+        });
+      }
+      brand() {
+        return new ZodBranded({
+          typeName: ZodFirstPartyTypeKind.ZodBranded,
+          type: this,
+          ...processCreateParams(this._def)
+        });
+      }
+      catch(def) {
+        const catchValueFunc = typeof def === "function" ? def : () => def;
+        return new ZodCatch({
+          ...processCreateParams(this._def),
+          innerType: this,
+          catchValue: catchValueFunc,
+          typeName: ZodFirstPartyTypeKind.ZodCatch
+        });
+      }
+      describe(description) {
+        const This = this.constructor;
+        return new This({
+          ...this._def,
+          description
+        });
+      }
+      pipe(target) {
+        return ZodPipeline.create(this, target);
+      }
+      readonly() {
+        return ZodReadonly.create(this);
+      }
+      isOptional() {
+        return this.safeParse(void 0).success;
+      }
+      isNullable() {
+        return this.safeParse(null).success;
+      }
+    };
+    cuidRegex = /^c[^\s-]{8,}$/i;
+    cuid2Regex = /^[0-9a-z]+$/;
+    ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
+    uuidRegex = /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/i;
+    nanoidRegex = /^[a-z0-9_-]{21}$/i;
+    jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/;
+    durationRegex = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
+    emailRegex = /^(?!\.)(?!.*\.\.)([A-Z0-9_'+\-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i;
+    _emojiRegex = `^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$`;
+    ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
+    ipv4CidrRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/(3[0-2]|[12]?[0-9])$/;
+    ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
+    ipv6CidrRegex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/;
+    base64Regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+    base64urlRegex = /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/;
+    dateRegexSource = `((\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-((0[13578]|1[02])-(0[1-9]|[12]\\d|3[01])|(0[469]|11)-(0[1-9]|[12]\\d|30)|(02)-(0[1-9]|1\\d|2[0-8])))`;
+    dateRegex = new RegExp(`^${dateRegexSource}$`);
+    ZodString = class _ZodString2 extends ZodType {
+      _parse(input) {
+        if (this._def.coerce) {
+          input.data = String(input.data);
+        }
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.string) {
+          const ctx2 = this._getOrReturnCtx(input);
+          addIssueToContext(ctx2, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.string,
+            received: ctx2.parsedType
+          });
+          return INVALID;
+        }
+        const status = new ParseStatus();
+        let ctx = void 0;
+        for (const check2 of this._def.checks) {
+          if (check2.kind === "min") {
+            if (input.data.length < check2.value) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_small,
+                minimum: check2.value,
+                type: "string",
+                inclusive: true,
+                exact: false,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "max") {
+            if (input.data.length > check2.value) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_big,
+                maximum: check2.value,
+                type: "string",
+                inclusive: true,
+                exact: false,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "length") {
+            const tooBig = input.data.length > check2.value;
+            const tooSmall = input.data.length < check2.value;
+            if (tooBig || tooSmall) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              if (tooBig) {
+                addIssueToContext(ctx, {
+                  code: ZodIssueCode.too_big,
+                  maximum: check2.value,
+                  type: "string",
+                  inclusive: true,
+                  exact: true,
+                  message: check2.message
+                });
+              } else if (tooSmall) {
+                addIssueToContext(ctx, {
+                  code: ZodIssueCode.too_small,
+                  minimum: check2.value,
+                  type: "string",
+                  inclusive: true,
+                  exact: true,
+                  message: check2.message
+                });
+              }
+              status.dirty();
+            }
+          } else if (check2.kind === "email") {
+            if (!emailRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "email",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "emoji") {
+            if (!emojiRegex) {
+              emojiRegex = new RegExp(_emojiRegex, "u");
+            }
+            if (!emojiRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "emoji",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "uuid") {
+            if (!uuidRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "uuid",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "nanoid") {
+            if (!nanoidRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "nanoid",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "cuid") {
+            if (!cuidRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "cuid",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "cuid2") {
+            if (!cuid2Regex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "cuid2",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "ulid") {
+            if (!ulidRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "ulid",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "url") {
+            try {
+              new URL(input.data);
+            } catch {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "url",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "regex") {
+            check2.regex.lastIndex = 0;
+            const testResult = check2.regex.test(input.data);
+            if (!testResult) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "regex",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "trim") {
+            input.data = input.data.trim();
+          } else if (check2.kind === "includes") {
+            if (!input.data.includes(check2.value, check2.position)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.invalid_string,
+                validation: { includes: check2.value, position: check2.position },
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "toLowerCase") {
+            input.data = input.data.toLowerCase();
+          } else if (check2.kind === "toUpperCase") {
+            input.data = input.data.toUpperCase();
+          } else if (check2.kind === "startsWith") {
+            if (!input.data.startsWith(check2.value)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.invalid_string,
+                validation: { startsWith: check2.value },
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "endsWith") {
+            if (!input.data.endsWith(check2.value)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.invalid_string,
+                validation: { endsWith: check2.value },
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "datetime") {
+            const regex = datetimeRegex(check2);
+            if (!regex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.invalid_string,
+                validation: "datetime",
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "date") {
+            const regex = dateRegex;
+            if (!regex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.invalid_string,
+                validation: "date",
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "time") {
+            const regex = timeRegex(check2);
+            if (!regex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.invalid_string,
+                validation: "time",
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "duration") {
+            if (!durationRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "duration",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "ip") {
+            if (!isValidIP(input.data, check2.version)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "ip",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "jwt") {
+            if (!isValidJWT(input.data, check2.alg)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "jwt",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "cidr") {
+            if (!isValidCidr(input.data, check2.version)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "cidr",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "base64") {
+            if (!base64Regex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "base64",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "base64url") {
+            if (!base64urlRegex.test(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                validation: "base64url",
+                code: ZodIssueCode.invalid_string,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else {
+            util.assertNever(check2);
+          }
+        }
+        return { status: status.value, value: input.data };
+      }
+      _regex(regex, validation, message) {
+        return this.refinement((data) => regex.test(data), {
+          validation,
+          code: ZodIssueCode.invalid_string,
+          ...errorUtil.errToObj(message)
+        });
+      }
+      _addCheck(check2) {
+        return new _ZodString2({
+          ...this._def,
+          checks: [...this._def.checks, check2]
+        });
+      }
+      email(message) {
+        return this._addCheck({ kind: "email", ...errorUtil.errToObj(message) });
+      }
+      url(message) {
+        return this._addCheck({ kind: "url", ...errorUtil.errToObj(message) });
+      }
+      emoji(message) {
+        return this._addCheck({ kind: "emoji", ...errorUtil.errToObj(message) });
+      }
+      uuid(message) {
+        return this._addCheck({ kind: "uuid", ...errorUtil.errToObj(message) });
+      }
+      nanoid(message) {
+        return this._addCheck({ kind: "nanoid", ...errorUtil.errToObj(message) });
+      }
+      cuid(message) {
+        return this._addCheck({ kind: "cuid", ...errorUtil.errToObj(message) });
+      }
+      cuid2(message) {
+        return this._addCheck({ kind: "cuid2", ...errorUtil.errToObj(message) });
+      }
+      ulid(message) {
+        return this._addCheck({ kind: "ulid", ...errorUtil.errToObj(message) });
+      }
+      base64(message) {
+        return this._addCheck({ kind: "base64", ...errorUtil.errToObj(message) });
+      }
+      base64url(message) {
+        return this._addCheck({
+          kind: "base64url",
+          ...errorUtil.errToObj(message)
+        });
+      }
+      jwt(options) {
+        return this._addCheck({ kind: "jwt", ...errorUtil.errToObj(options) });
+      }
+      ip(options) {
+        return this._addCheck({ kind: "ip", ...errorUtil.errToObj(options) });
+      }
+      cidr(options) {
+        return this._addCheck({ kind: "cidr", ...errorUtil.errToObj(options) });
+      }
+      datetime(options) {
+        if (typeof options === "string") {
+          return this._addCheck({
+            kind: "datetime",
+            precision: null,
+            offset: false,
+            local: false,
+            message: options
+          });
+        }
+        return this._addCheck({
+          kind: "datetime",
+          precision: typeof options?.precision === "undefined" ? null : options?.precision,
+          offset: options?.offset ?? false,
+          local: options?.local ?? false,
+          ...errorUtil.errToObj(options?.message)
+        });
+      }
+      date(message) {
+        return this._addCheck({ kind: "date", message });
+      }
+      time(options) {
+        if (typeof options === "string") {
+          return this._addCheck({
+            kind: "time",
+            precision: null,
+            message: options
+          });
+        }
+        return this._addCheck({
+          kind: "time",
+          precision: typeof options?.precision === "undefined" ? null : options?.precision,
+          ...errorUtil.errToObj(options?.message)
+        });
+      }
+      duration(message) {
+        return this._addCheck({ kind: "duration", ...errorUtil.errToObj(message) });
+      }
+      regex(regex, message) {
+        return this._addCheck({
+          kind: "regex",
+          regex,
+          ...errorUtil.errToObj(message)
+        });
+      }
+      includes(value, options) {
+        return this._addCheck({
+          kind: "includes",
+          value,
+          position: options?.position,
+          ...errorUtil.errToObj(options?.message)
+        });
+      }
+      startsWith(value, message) {
+        return this._addCheck({
+          kind: "startsWith",
+          value,
+          ...errorUtil.errToObj(message)
+        });
+      }
+      endsWith(value, message) {
+        return this._addCheck({
+          kind: "endsWith",
+          value,
+          ...errorUtil.errToObj(message)
+        });
+      }
+      min(minLength, message) {
+        return this._addCheck({
+          kind: "min",
+          value: minLength,
+          ...errorUtil.errToObj(message)
+        });
+      }
+      max(maxLength, message) {
+        return this._addCheck({
+          kind: "max",
+          value: maxLength,
+          ...errorUtil.errToObj(message)
+        });
+      }
+      length(len, message) {
+        return this._addCheck({
+          kind: "length",
+          value: len,
+          ...errorUtil.errToObj(message)
+        });
+      }
+      /**
+       * Equivalent to `.min(1)`
+       */
+      nonempty(message) {
+        return this.min(1, errorUtil.errToObj(message));
+      }
+      trim() {
+        return new _ZodString2({
+          ...this._def,
+          checks: [...this._def.checks, { kind: "trim" }]
+        });
+      }
+      toLowerCase() {
+        return new _ZodString2({
+          ...this._def,
+          checks: [...this._def.checks, { kind: "toLowerCase" }]
+        });
+      }
+      toUpperCase() {
+        return new _ZodString2({
+          ...this._def,
+          checks: [...this._def.checks, { kind: "toUpperCase" }]
+        });
+      }
+      get isDatetime() {
+        return !!this._def.checks.find((ch) => ch.kind === "datetime");
+      }
+      get isDate() {
+        return !!this._def.checks.find((ch) => ch.kind === "date");
+      }
+      get isTime() {
+        return !!this._def.checks.find((ch) => ch.kind === "time");
+      }
+      get isDuration() {
+        return !!this._def.checks.find((ch) => ch.kind === "duration");
+      }
+      get isEmail() {
+        return !!this._def.checks.find((ch) => ch.kind === "email");
+      }
+      get isURL() {
+        return !!this._def.checks.find((ch) => ch.kind === "url");
+      }
+      get isEmoji() {
+        return !!this._def.checks.find((ch) => ch.kind === "emoji");
+      }
+      get isUUID() {
+        return !!this._def.checks.find((ch) => ch.kind === "uuid");
+      }
+      get isNANOID() {
+        return !!this._def.checks.find((ch) => ch.kind === "nanoid");
+      }
+      get isCUID() {
+        return !!this._def.checks.find((ch) => ch.kind === "cuid");
+      }
+      get isCUID2() {
+        return !!this._def.checks.find((ch) => ch.kind === "cuid2");
+      }
+      get isULID() {
+        return !!this._def.checks.find((ch) => ch.kind === "ulid");
+      }
+      get isIP() {
+        return !!this._def.checks.find((ch) => ch.kind === "ip");
+      }
+      get isCIDR() {
+        return !!this._def.checks.find((ch) => ch.kind === "cidr");
+      }
+      get isBase64() {
+        return !!this._def.checks.find((ch) => ch.kind === "base64");
+      }
+      get isBase64url() {
+        return !!this._def.checks.find((ch) => ch.kind === "base64url");
+      }
+      get minLength() {
+        let min = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "min") {
+            if (min === null || ch.value > min)
+              min = ch.value;
+          }
+        }
+        return min;
+      }
+      get maxLength() {
+        let max = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "max") {
+            if (max === null || ch.value < max)
+              max = ch.value;
+          }
+        }
+        return max;
+      }
+    };
+    ZodString.create = (params) => {
+      return new ZodString({
+        checks: [],
+        typeName: ZodFirstPartyTypeKind.ZodString,
+        coerce: params?.coerce ?? false,
+        ...processCreateParams(params)
+      });
+    };
+    ZodNumber = class _ZodNumber extends ZodType {
+      constructor() {
+        super(...arguments);
+        this.min = this.gte;
+        this.max = this.lte;
+        this.step = this.multipleOf;
+      }
+      _parse(input) {
+        if (this._def.coerce) {
+          input.data = Number(input.data);
+        }
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.number) {
+          const ctx2 = this._getOrReturnCtx(input);
+          addIssueToContext(ctx2, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.number,
+            received: ctx2.parsedType
+          });
+          return INVALID;
+        }
+        let ctx = void 0;
+        const status = new ParseStatus();
+        for (const check2 of this._def.checks) {
+          if (check2.kind === "int") {
+            if (!util.isInteger(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.invalid_type,
+                expected: "integer",
+                received: "float",
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "min") {
+            const tooSmall = check2.inclusive ? input.data < check2.value : input.data <= check2.value;
+            if (tooSmall) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_small,
+                minimum: check2.value,
+                type: "number",
+                inclusive: check2.inclusive,
+                exact: false,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "max") {
+            const tooBig = check2.inclusive ? input.data > check2.value : input.data >= check2.value;
+            if (tooBig) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_big,
+                maximum: check2.value,
+                type: "number",
+                inclusive: check2.inclusive,
+                exact: false,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "multipleOf") {
+            if (floatSafeRemainder(input.data, check2.value) !== 0) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.not_multiple_of,
+                multipleOf: check2.value,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "finite") {
+            if (!Number.isFinite(input.data)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.not_finite,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else {
+            util.assertNever(check2);
+          }
+        }
+        return { status: status.value, value: input.data };
+      }
+      gte(value, message) {
+        return this.setLimit("min", value, true, errorUtil.toString(message));
+      }
+      gt(value, message) {
+        return this.setLimit("min", value, false, errorUtil.toString(message));
+      }
+      lte(value, message) {
+        return this.setLimit("max", value, true, errorUtil.toString(message));
+      }
+      lt(value, message) {
+        return this.setLimit("max", value, false, errorUtil.toString(message));
+      }
+      setLimit(kind, value, inclusive, message) {
+        return new _ZodNumber({
+          ...this._def,
+          checks: [
+            ...this._def.checks,
+            {
+              kind,
+              value,
+              inclusive,
+              message: errorUtil.toString(message)
+            }
+          ]
+        });
+      }
+      _addCheck(check2) {
+        return new _ZodNumber({
+          ...this._def,
+          checks: [...this._def.checks, check2]
+        });
+      }
+      int(message) {
+        return this._addCheck({
+          kind: "int",
+          message: errorUtil.toString(message)
+        });
+      }
+      positive(message) {
+        return this._addCheck({
+          kind: "min",
+          value: 0,
+          inclusive: false,
+          message: errorUtil.toString(message)
+        });
+      }
+      negative(message) {
+        return this._addCheck({
+          kind: "max",
+          value: 0,
+          inclusive: false,
+          message: errorUtil.toString(message)
+        });
+      }
+      nonpositive(message) {
+        return this._addCheck({
+          kind: "max",
+          value: 0,
+          inclusive: true,
+          message: errorUtil.toString(message)
+        });
+      }
+      nonnegative(message) {
+        return this._addCheck({
+          kind: "min",
+          value: 0,
+          inclusive: true,
+          message: errorUtil.toString(message)
+        });
+      }
+      multipleOf(value, message) {
+        return this._addCheck({
+          kind: "multipleOf",
+          value,
+          message: errorUtil.toString(message)
+        });
+      }
+      finite(message) {
+        return this._addCheck({
+          kind: "finite",
+          message: errorUtil.toString(message)
+        });
+      }
+      safe(message) {
+        return this._addCheck({
+          kind: "min",
+          inclusive: true,
+          value: Number.MIN_SAFE_INTEGER,
+          message: errorUtil.toString(message)
+        })._addCheck({
+          kind: "max",
+          inclusive: true,
+          value: Number.MAX_SAFE_INTEGER,
+          message: errorUtil.toString(message)
+        });
+      }
+      get minValue() {
+        let min = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "min") {
+            if (min === null || ch.value > min)
+              min = ch.value;
+          }
+        }
+        return min;
+      }
+      get maxValue() {
+        let max = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "max") {
+            if (max === null || ch.value < max)
+              max = ch.value;
+          }
+        }
+        return max;
+      }
+      get isInt() {
+        return !!this._def.checks.find((ch) => ch.kind === "int" || ch.kind === "multipleOf" && util.isInteger(ch.value));
+      }
+      get isFinite() {
+        let max = null;
+        let min = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "finite" || ch.kind === "int" || ch.kind === "multipleOf") {
+            return true;
+          } else if (ch.kind === "min") {
+            if (min === null || ch.value > min)
+              min = ch.value;
+          } else if (ch.kind === "max") {
+            if (max === null || ch.value < max)
+              max = ch.value;
+          }
+        }
+        return Number.isFinite(min) && Number.isFinite(max);
+      }
+    };
+    ZodNumber.create = (params) => {
+      return new ZodNumber({
+        checks: [],
+        typeName: ZodFirstPartyTypeKind.ZodNumber,
+        coerce: params?.coerce || false,
+        ...processCreateParams(params)
+      });
+    };
+    ZodBigInt = class _ZodBigInt extends ZodType {
+      constructor() {
+        super(...arguments);
+        this.min = this.gte;
+        this.max = this.lte;
+      }
+      _parse(input) {
+        if (this._def.coerce) {
+          try {
+            input.data = BigInt(input.data);
+          } catch {
+            return this._getInvalidInput(input);
+          }
+        }
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.bigint) {
+          return this._getInvalidInput(input);
+        }
+        let ctx = void 0;
+        const status = new ParseStatus();
+        for (const check2 of this._def.checks) {
+          if (check2.kind === "min") {
+            const tooSmall = check2.inclusive ? input.data < check2.value : input.data <= check2.value;
+            if (tooSmall) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_small,
+                type: "bigint",
+                minimum: check2.value,
+                inclusive: check2.inclusive,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "max") {
+            const tooBig = check2.inclusive ? input.data > check2.value : input.data >= check2.value;
+            if (tooBig) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_big,
+                type: "bigint",
+                maximum: check2.value,
+                inclusive: check2.inclusive,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "multipleOf") {
+            if (input.data % check2.value !== BigInt(0)) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.not_multiple_of,
+                multipleOf: check2.value,
+                message: check2.message
+              });
+              status.dirty();
+            }
+          } else {
+            util.assertNever(check2);
+          }
+        }
+        return { status: status.value, value: input.data };
+      }
+      _getInvalidInput(input) {
+        const ctx = this._getOrReturnCtx(input);
+        addIssueToContext(ctx, {
+          code: ZodIssueCode.invalid_type,
+          expected: ZodParsedType.bigint,
+          received: ctx.parsedType
+        });
+        return INVALID;
+      }
+      gte(value, message) {
+        return this.setLimit("min", value, true, errorUtil.toString(message));
+      }
+      gt(value, message) {
+        return this.setLimit("min", value, false, errorUtil.toString(message));
+      }
+      lte(value, message) {
+        return this.setLimit("max", value, true, errorUtil.toString(message));
+      }
+      lt(value, message) {
+        return this.setLimit("max", value, false, errorUtil.toString(message));
+      }
+      setLimit(kind, value, inclusive, message) {
+        return new _ZodBigInt({
+          ...this._def,
+          checks: [
+            ...this._def.checks,
+            {
+              kind,
+              value,
+              inclusive,
+              message: errorUtil.toString(message)
+            }
+          ]
+        });
+      }
+      _addCheck(check2) {
+        return new _ZodBigInt({
+          ...this._def,
+          checks: [...this._def.checks, check2]
+        });
+      }
+      positive(message) {
+        return this._addCheck({
+          kind: "min",
+          value: BigInt(0),
+          inclusive: false,
+          message: errorUtil.toString(message)
+        });
+      }
+      negative(message) {
+        return this._addCheck({
+          kind: "max",
+          value: BigInt(0),
+          inclusive: false,
+          message: errorUtil.toString(message)
+        });
+      }
+      nonpositive(message) {
+        return this._addCheck({
+          kind: "max",
+          value: BigInt(0),
+          inclusive: true,
+          message: errorUtil.toString(message)
+        });
+      }
+      nonnegative(message) {
+        return this._addCheck({
+          kind: "min",
+          value: BigInt(0),
+          inclusive: true,
+          message: errorUtil.toString(message)
+        });
+      }
+      multipleOf(value, message) {
+        return this._addCheck({
+          kind: "multipleOf",
+          value,
+          message: errorUtil.toString(message)
+        });
+      }
+      get minValue() {
+        let min = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "min") {
+            if (min === null || ch.value > min)
+              min = ch.value;
+          }
+        }
+        return min;
+      }
+      get maxValue() {
+        let max = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "max") {
+            if (max === null || ch.value < max)
+              max = ch.value;
+          }
+        }
+        return max;
+      }
+    };
+    ZodBigInt.create = (params) => {
+      return new ZodBigInt({
+        checks: [],
+        typeName: ZodFirstPartyTypeKind.ZodBigInt,
+        coerce: params?.coerce ?? false,
+        ...processCreateParams(params)
+      });
+    };
+    ZodBoolean = class extends ZodType {
+      _parse(input) {
+        if (this._def.coerce) {
+          input.data = Boolean(input.data);
+        }
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.boolean) {
+          const ctx = this._getOrReturnCtx(input);
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.boolean,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        return OK(input.data);
+      }
+    };
+    ZodBoolean.create = (params) => {
+      return new ZodBoolean({
+        typeName: ZodFirstPartyTypeKind.ZodBoolean,
+        coerce: params?.coerce || false,
+        ...processCreateParams(params)
+      });
+    };
+    ZodDate = class _ZodDate extends ZodType {
+      _parse(input) {
+        if (this._def.coerce) {
+          input.data = new Date(input.data);
+        }
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.date) {
+          const ctx2 = this._getOrReturnCtx(input);
+          addIssueToContext(ctx2, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.date,
+            received: ctx2.parsedType
+          });
+          return INVALID;
+        }
+        if (Number.isNaN(input.data.getTime())) {
+          const ctx2 = this._getOrReturnCtx(input);
+          addIssueToContext(ctx2, {
+            code: ZodIssueCode.invalid_date
+          });
+          return INVALID;
+        }
+        const status = new ParseStatus();
+        let ctx = void 0;
+        for (const check2 of this._def.checks) {
+          if (check2.kind === "min") {
+            if (input.data.getTime() < check2.value) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_small,
+                message: check2.message,
+                inclusive: true,
+                exact: false,
+                minimum: check2.value,
+                type: "date"
+              });
+              status.dirty();
+            }
+          } else if (check2.kind === "max") {
+            if (input.data.getTime() > check2.value) {
+              ctx = this._getOrReturnCtx(input, ctx);
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.too_big,
+                message: check2.message,
+                inclusive: true,
+                exact: false,
+                maximum: check2.value,
+                type: "date"
+              });
+              status.dirty();
+            }
+          } else {
+            util.assertNever(check2);
+          }
+        }
+        return {
+          status: status.value,
+          value: new Date(input.data.getTime())
+        };
+      }
+      _addCheck(check2) {
+        return new _ZodDate({
+          ...this._def,
+          checks: [...this._def.checks, check2]
+        });
+      }
+      min(minDate, message) {
+        return this._addCheck({
+          kind: "min",
+          value: minDate.getTime(),
+          message: errorUtil.toString(message)
+        });
+      }
+      max(maxDate, message) {
+        return this._addCheck({
+          kind: "max",
+          value: maxDate.getTime(),
+          message: errorUtil.toString(message)
+        });
+      }
+      get minDate() {
+        let min = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "min") {
+            if (min === null || ch.value > min)
+              min = ch.value;
+          }
+        }
+        return min != null ? new Date(min) : null;
+      }
+      get maxDate() {
+        let max = null;
+        for (const ch of this._def.checks) {
+          if (ch.kind === "max") {
+            if (max === null || ch.value < max)
+              max = ch.value;
+          }
+        }
+        return max != null ? new Date(max) : null;
+      }
+    };
+    ZodDate.create = (params) => {
+      return new ZodDate({
+        checks: [],
+        coerce: params?.coerce || false,
+        typeName: ZodFirstPartyTypeKind.ZodDate,
+        ...processCreateParams(params)
+      });
+    };
+    ZodSymbol = class extends ZodType {
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.symbol) {
+          const ctx = this._getOrReturnCtx(input);
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.symbol,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        return OK(input.data);
+      }
+    };
+    ZodSymbol.create = (params) => {
+      return new ZodSymbol({
+        typeName: ZodFirstPartyTypeKind.ZodSymbol,
+        ...processCreateParams(params)
+      });
+    };
+    ZodUndefined = class extends ZodType {
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.undefined) {
+          const ctx = this._getOrReturnCtx(input);
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.undefined,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        return OK(input.data);
+      }
+    };
+    ZodUndefined.create = (params) => {
+      return new ZodUndefined({
+        typeName: ZodFirstPartyTypeKind.ZodUndefined,
+        ...processCreateParams(params)
+      });
+    };
+    ZodNull = class extends ZodType {
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.null) {
+          const ctx = this._getOrReturnCtx(input);
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.null,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        return OK(input.data);
+      }
+    };
+    ZodNull.create = (params) => {
+      return new ZodNull({
+        typeName: ZodFirstPartyTypeKind.ZodNull,
+        ...processCreateParams(params)
+      });
+    };
+    ZodAny = class extends ZodType {
+      constructor() {
+        super(...arguments);
+        this._any = true;
+      }
+      _parse(input) {
+        return OK(input.data);
+      }
+    };
+    ZodAny.create = (params) => {
+      return new ZodAny({
+        typeName: ZodFirstPartyTypeKind.ZodAny,
+        ...processCreateParams(params)
+      });
+    };
+    ZodUnknown = class extends ZodType {
+      constructor() {
+        super(...arguments);
+        this._unknown = true;
+      }
+      _parse(input) {
+        return OK(input.data);
+      }
+    };
+    ZodUnknown.create = (params) => {
+      return new ZodUnknown({
+        typeName: ZodFirstPartyTypeKind.ZodUnknown,
+        ...processCreateParams(params)
+      });
+    };
+    ZodNever = class extends ZodType {
+      _parse(input) {
+        const ctx = this._getOrReturnCtx(input);
+        addIssueToContext(ctx, {
+          code: ZodIssueCode.invalid_type,
+          expected: ZodParsedType.never,
+          received: ctx.parsedType
+        });
+        return INVALID;
+      }
+    };
+    ZodNever.create = (params) => {
+      return new ZodNever({
+        typeName: ZodFirstPartyTypeKind.ZodNever,
+        ...processCreateParams(params)
+      });
+    };
+    ZodVoid = class extends ZodType {
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.undefined) {
+          const ctx = this._getOrReturnCtx(input);
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.void,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        return OK(input.data);
+      }
+    };
+    ZodVoid.create = (params) => {
+      return new ZodVoid({
+        typeName: ZodFirstPartyTypeKind.ZodVoid,
+        ...processCreateParams(params)
+      });
+    };
+    ZodArray = class _ZodArray extends ZodType {
+      _parse(input) {
+        const { ctx, status } = this._processInputParams(input);
+        const def = this._def;
+        if (ctx.parsedType !== ZodParsedType.array) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.array,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        if (def.exactLength !== null) {
+          const tooBig = ctx.data.length > def.exactLength.value;
+          const tooSmall = ctx.data.length < def.exactLength.value;
+          if (tooBig || tooSmall) {
+            addIssueToContext(ctx, {
+              code: tooBig ? ZodIssueCode.too_big : ZodIssueCode.too_small,
+              minimum: tooSmall ? def.exactLength.value : void 0,
+              maximum: tooBig ? def.exactLength.value : void 0,
+              type: "array",
+              inclusive: true,
+              exact: true,
+              message: def.exactLength.message
+            });
+            status.dirty();
+          }
+        }
+        if (def.minLength !== null) {
+          if (ctx.data.length < def.minLength.value) {
+            addIssueToContext(ctx, {
+              code: ZodIssueCode.too_small,
+              minimum: def.minLength.value,
+              type: "array",
+              inclusive: true,
+              exact: false,
+              message: def.minLength.message
+            });
+            status.dirty();
+          }
+        }
+        if (def.maxLength !== null) {
+          if (ctx.data.length > def.maxLength.value) {
+            addIssueToContext(ctx, {
+              code: ZodIssueCode.too_big,
+              maximum: def.maxLength.value,
+              type: "array",
+              inclusive: true,
+              exact: false,
+              message: def.maxLength.message
+            });
+            status.dirty();
+          }
+        }
+        if (ctx.common.async) {
+          return Promise.all([...ctx.data].map((item, i) => {
+            return def.type._parseAsync(new ParseInputLazyPath(ctx, item, ctx.path, i));
+          })).then((result2) => {
+            return ParseStatus.mergeArray(status, result2);
+          });
+        }
+        const result = [...ctx.data].map((item, i) => {
+          return def.type._parseSync(new ParseInputLazyPath(ctx, item, ctx.path, i));
+        });
+        return ParseStatus.mergeArray(status, result);
+      }
+      get element() {
+        return this._def.type;
+      }
+      min(minLength, message) {
+        return new _ZodArray({
+          ...this._def,
+          minLength: { value: minLength, message: errorUtil.toString(message) }
+        });
+      }
+      max(maxLength, message) {
+        return new _ZodArray({
+          ...this._def,
+          maxLength: { value: maxLength, message: errorUtil.toString(message) }
+        });
+      }
+      length(len, message) {
+        return new _ZodArray({
+          ...this._def,
+          exactLength: { value: len, message: errorUtil.toString(message) }
+        });
+      }
+      nonempty(message) {
+        return this.min(1, message);
+      }
+    };
+    ZodArray.create = (schema, params) => {
+      return new ZodArray({
+        type: schema,
+        minLength: null,
+        maxLength: null,
+        exactLength: null,
+        typeName: ZodFirstPartyTypeKind.ZodArray,
+        ...processCreateParams(params)
+      });
+    };
+    ZodObject = class _ZodObject extends ZodType {
+      constructor() {
+        super(...arguments);
+        this._cached = null;
+        this.nonstrict = this.passthrough;
+        this.augment = this.extend;
+      }
+      _getCached() {
+        if (this._cached !== null)
+          return this._cached;
+        const shape = this._def.shape();
+        const keys = util.objectKeys(shape);
+        this._cached = { shape, keys };
+        return this._cached;
+      }
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.object) {
+          const ctx2 = this._getOrReturnCtx(input);
+          addIssueToContext(ctx2, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.object,
+            received: ctx2.parsedType
+          });
+          return INVALID;
+        }
+        const { status, ctx } = this._processInputParams(input);
+        const { shape, keys: shapeKeys } = this._getCached();
+        const extraKeys = [];
+        if (!(this._def.catchall instanceof ZodNever && this._def.unknownKeys === "strip")) {
+          for (const key in ctx.data) {
+            if (!shapeKeys.includes(key)) {
+              extraKeys.push(key);
+            }
+          }
+        }
+        const pairs = [];
+        for (const key of shapeKeys) {
+          const keyValidator = shape[key];
+          const value = ctx.data[key];
+          pairs.push({
+            key: { status: "valid", value: key },
+            value: keyValidator._parse(new ParseInputLazyPath(ctx, value, ctx.path, key)),
+            alwaysSet: key in ctx.data
+          });
+        }
+        if (this._def.catchall instanceof ZodNever) {
+          const unknownKeys = this._def.unknownKeys;
+          if (unknownKeys === "passthrough") {
+            for (const key of extraKeys) {
+              pairs.push({
+                key: { status: "valid", value: key },
+                value: { status: "valid", value: ctx.data[key] }
+              });
+            }
+          } else if (unknownKeys === "strict") {
+            if (extraKeys.length > 0) {
+              addIssueToContext(ctx, {
+                code: ZodIssueCode.unrecognized_keys,
+                keys: extraKeys
+              });
+              status.dirty();
+            }
+          } else if (unknownKeys === "strip") {
+          } else {
+            throw new Error(`Internal ZodObject error: invalid unknownKeys value.`);
+          }
+        } else {
+          const catchall = this._def.catchall;
+          for (const key of extraKeys) {
+            const value = ctx.data[key];
+            pairs.push({
+              key: { status: "valid", value: key },
+              value: catchall._parse(
+                new ParseInputLazyPath(ctx, value, ctx.path, key)
+                //, ctx.child(key), value, getParsedType(value)
+              ),
+              alwaysSet: key in ctx.data
+            });
+          }
+        }
+        if (ctx.common.async) {
+          return Promise.resolve().then(async () => {
+            const syncPairs = [];
+            for (const pair of pairs) {
+              const key = await pair.key;
+              const value = await pair.value;
+              syncPairs.push({
+                key,
+                value,
+                alwaysSet: pair.alwaysSet
+              });
+            }
+            return syncPairs;
+          }).then((syncPairs) => {
+            return ParseStatus.mergeObjectSync(status, syncPairs);
+          });
+        } else {
+          return ParseStatus.mergeObjectSync(status, pairs);
+        }
+      }
+      get shape() {
+        return this._def.shape();
+      }
+      strict(message) {
+        errorUtil.errToObj;
+        return new _ZodObject({
+          ...this._def,
+          unknownKeys: "strict",
+          ...message !== void 0 ? {
+            errorMap: (issue2, ctx) => {
+              const defaultError = this._def.errorMap?.(issue2, ctx).message ?? ctx.defaultError;
+              if (issue2.code === "unrecognized_keys")
+                return {
+                  message: errorUtil.errToObj(message).message ?? defaultError
+                };
+              return {
+                message: defaultError
+              };
+            }
+          } : {}
+        });
+      }
+      strip() {
+        return new _ZodObject({
+          ...this._def,
+          unknownKeys: "strip"
+        });
+      }
+      passthrough() {
+        return new _ZodObject({
+          ...this._def,
+          unknownKeys: "passthrough"
+        });
+      }
+      // const AugmentFactory =
+      //   <Def extends ZodObjectDef>(def: Def) =>
+      //   <Augmentation extends ZodRawShape>(
+      //     augmentation: Augmentation
+      //   ): ZodObject<
+      //     extendShape<ReturnType<Def["shape"]>, Augmentation>,
+      //     Def["unknownKeys"],
+      //     Def["catchall"]
+      //   > => {
+      //     return new ZodObject({
+      //       ...def,
+      //       shape: () => ({
+      //         ...def.shape(),
+      //         ...augmentation,
+      //       }),
+      //     }) as any;
+      //   };
+      extend(augmentation) {
+        return new _ZodObject({
+          ...this._def,
+          shape: () => ({
+            ...this._def.shape(),
+            ...augmentation
+          })
+        });
+      }
+      /**
+       * Prior to zod@1.0.12 there was a bug in the
+       * inferred type of merged objects. Please
+       * upgrade if you are experiencing issues.
+       */
+      merge(merging) {
+        const merged = new _ZodObject({
+          unknownKeys: merging._def.unknownKeys,
+          catchall: merging._def.catchall,
+          shape: () => ({
+            ...this._def.shape(),
+            ...merging._def.shape()
+          }),
+          typeName: ZodFirstPartyTypeKind.ZodObject
+        });
+        return merged;
+      }
+      // merge<
+      //   Incoming extends AnyZodObject,
+      //   Augmentation extends Incoming["shape"],
+      //   NewOutput extends {
+      //     [k in keyof Augmentation | keyof Output]: k extends keyof Augmentation
+      //       ? Augmentation[k]["_output"]
+      //       : k extends keyof Output
+      //       ? Output[k]
+      //       : never;
+      //   },
+      //   NewInput extends {
+      //     [k in keyof Augmentation | keyof Input]: k extends keyof Augmentation
+      //       ? Augmentation[k]["_input"]
+      //       : k extends keyof Input
+      //       ? Input[k]
+      //       : never;
+      //   }
+      // >(
+      //   merging: Incoming
+      // ): ZodObject<
+      //   extendShape<T, ReturnType<Incoming["_def"]["shape"]>>,
+      //   Incoming["_def"]["unknownKeys"],
+      //   Incoming["_def"]["catchall"],
+      //   NewOutput,
+      //   NewInput
+      // > {
+      //   const merged: any = new ZodObject({
+      //     unknownKeys: merging._def.unknownKeys,
+      //     catchall: merging._def.catchall,
+      //     shape: () =>
+      //       objectUtil.mergeShapes(this._def.shape(), merging._def.shape()),
+      //     typeName: ZodFirstPartyTypeKind.ZodObject,
+      //   }) as any;
+      //   return merged;
+      // }
+      setKey(key, schema) {
+        return this.augment({ [key]: schema });
+      }
+      // merge<Incoming extends AnyZodObject>(
+      //   merging: Incoming
+      // ): //ZodObject<T & Incoming["_shape"], UnknownKeys, Catchall> = (merging) => {
+      // ZodObject<
+      //   extendShape<T, ReturnType<Incoming["_def"]["shape"]>>,
+      //   Incoming["_def"]["unknownKeys"],
+      //   Incoming["_def"]["catchall"]
+      // > {
+      //   // const mergedShape = objectUtil.mergeShapes(
+      //   //   this._def.shape(),
+      //   //   merging._def.shape()
+      //   // );
+      //   const merged: any = new ZodObject({
+      //     unknownKeys: merging._def.unknownKeys,
+      //     catchall: merging._def.catchall,
+      //     shape: () =>
+      //       objectUtil.mergeShapes(this._def.shape(), merging._def.shape()),
+      //     typeName: ZodFirstPartyTypeKind.ZodObject,
+      //   }) as any;
+      //   return merged;
+      // }
+      catchall(index) {
+        return new _ZodObject({
+          ...this._def,
+          catchall: index
+        });
+      }
+      pick(mask) {
+        const shape = {};
+        for (const key of util.objectKeys(mask)) {
+          if (mask[key] && this.shape[key]) {
+            shape[key] = this.shape[key];
+          }
+        }
+        return new _ZodObject({
+          ...this._def,
+          shape: () => shape
+        });
+      }
+      omit(mask) {
+        const shape = {};
+        for (const key of util.objectKeys(this.shape)) {
+          if (!mask[key]) {
+            shape[key] = this.shape[key];
+          }
+        }
+        return new _ZodObject({
+          ...this._def,
+          shape: () => shape
+        });
+      }
+      /**
+       * @deprecated
+       */
+      deepPartial() {
+        return deepPartialify(this);
+      }
+      partial(mask) {
+        const newShape = {};
+        for (const key of util.objectKeys(this.shape)) {
+          const fieldSchema = this.shape[key];
+          if (mask && !mask[key]) {
+            newShape[key] = fieldSchema;
+          } else {
+            newShape[key] = fieldSchema.optional();
+          }
+        }
+        return new _ZodObject({
+          ...this._def,
+          shape: () => newShape
+        });
+      }
+      required(mask) {
+        const newShape = {};
+        for (const key of util.objectKeys(this.shape)) {
+          if (mask && !mask[key]) {
+            newShape[key] = this.shape[key];
+          } else {
+            const fieldSchema = this.shape[key];
+            let newField = fieldSchema;
+            while (newField instanceof ZodOptional) {
+              newField = newField._def.innerType;
+            }
+            newShape[key] = newField;
+          }
+        }
+        return new _ZodObject({
+          ...this._def,
+          shape: () => newShape
+        });
+      }
+      keyof() {
+        return createZodEnum(util.objectKeys(this.shape));
+      }
+    };
+    ZodObject.create = (shape, params) => {
+      return new ZodObject({
+        shape: () => shape,
+        unknownKeys: "strip",
+        catchall: ZodNever.create(),
+        typeName: ZodFirstPartyTypeKind.ZodObject,
+        ...processCreateParams(params)
+      });
+    };
+    ZodObject.strictCreate = (shape, params) => {
+      return new ZodObject({
+        shape: () => shape,
+        unknownKeys: "strict",
+        catchall: ZodNever.create(),
+        typeName: ZodFirstPartyTypeKind.ZodObject,
+        ...processCreateParams(params)
+      });
+    };
+    ZodObject.lazycreate = (shape, params) => {
+      return new ZodObject({
+        shape,
+        unknownKeys: "strip",
+        catchall: ZodNever.create(),
+        typeName: ZodFirstPartyTypeKind.ZodObject,
+        ...processCreateParams(params)
+      });
+    };
+    ZodUnion = class extends ZodType {
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        const options = this._def.options;
+        function handleResults(results) {
+          for (const result of results) {
+            if (result.result.status === "valid") {
+              return result.result;
+            }
+          }
+          for (const result of results) {
+            if (result.result.status === "dirty") {
+              ctx.common.issues.push(...result.ctx.common.issues);
+              return result.result;
+            }
+          }
+          const unionErrors = results.map((result) => new ZodError(result.ctx.common.issues));
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_union,
+            unionErrors
+          });
+          return INVALID;
+        }
+        if (ctx.common.async) {
+          return Promise.all(options.map(async (option) => {
+            const childCtx = {
+              ...ctx,
+              common: {
+                ...ctx.common,
+                issues: []
+              },
+              parent: null
+            };
+            return {
+              result: await option._parseAsync({
+                data: ctx.data,
+                path: ctx.path,
+                parent: childCtx
+              }),
+              ctx: childCtx
+            };
+          })).then(handleResults);
+        } else {
+          let dirty = void 0;
+          const issues = [];
+          for (const option of options) {
+            const childCtx = {
+              ...ctx,
+              common: {
+                ...ctx.common,
+                issues: []
+              },
+              parent: null
+            };
+            const result = option._parseSync({
+              data: ctx.data,
+              path: ctx.path,
+              parent: childCtx
+            });
+            if (result.status === "valid") {
+              return result;
+            } else if (result.status === "dirty" && !dirty) {
+              dirty = { result, ctx: childCtx };
+            }
+            if (childCtx.common.issues.length) {
+              issues.push(childCtx.common.issues);
+            }
+          }
+          if (dirty) {
+            ctx.common.issues.push(...dirty.ctx.common.issues);
+            return dirty.result;
+          }
+          const unionErrors = issues.map((issues2) => new ZodError(issues2));
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_union,
+            unionErrors
+          });
+          return INVALID;
+        }
+      }
+      get options() {
+        return this._def.options;
+      }
+    };
+    ZodUnion.create = (types, params) => {
+      return new ZodUnion({
+        options: types,
+        typeName: ZodFirstPartyTypeKind.ZodUnion,
+        ...processCreateParams(params)
+      });
+    };
+    getDiscriminator = (type) => {
+      if (type instanceof ZodLazy) {
+        return getDiscriminator(type.schema);
+      } else if (type instanceof ZodEffects) {
+        return getDiscriminator(type.innerType());
+      } else if (type instanceof ZodLiteral) {
+        return [type.value];
+      } else if (type instanceof ZodEnum) {
+        return type.options;
+      } else if (type instanceof ZodNativeEnum) {
+        return util.objectValues(type.enum);
+      } else if (type instanceof ZodDefault) {
+        return getDiscriminator(type._def.innerType);
+      } else if (type instanceof ZodUndefined) {
+        return [void 0];
+      } else if (type instanceof ZodNull) {
+        return [null];
+      } else if (type instanceof ZodOptional) {
+        return [void 0, ...getDiscriminator(type.unwrap())];
+      } else if (type instanceof ZodNullable) {
+        return [null, ...getDiscriminator(type.unwrap())];
+      } else if (type instanceof ZodBranded) {
+        return getDiscriminator(type.unwrap());
+      } else if (type instanceof ZodReadonly) {
+        return getDiscriminator(type.unwrap());
+      } else if (type instanceof ZodCatch) {
+        return getDiscriminator(type._def.innerType);
+      } else {
+        return [];
+      }
+    };
+    ZodDiscriminatedUnion = class _ZodDiscriminatedUnion extends ZodType {
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        if (ctx.parsedType !== ZodParsedType.object) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.object,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        const discriminator = this.discriminator;
+        const discriminatorValue = ctx.data[discriminator];
+        const option = this.optionsMap.get(discriminatorValue);
+        if (!option) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_union_discriminator,
+            options: Array.from(this.optionsMap.keys()),
+            path: [discriminator]
+          });
+          return INVALID;
+        }
+        if (ctx.common.async) {
+          return option._parseAsync({
+            data: ctx.data,
+            path: ctx.path,
+            parent: ctx
+          });
+        } else {
+          return option._parseSync({
+            data: ctx.data,
+            path: ctx.path,
+            parent: ctx
+          });
+        }
+      }
+      get discriminator() {
+        return this._def.discriminator;
+      }
+      get options() {
+        return this._def.options;
+      }
+      get optionsMap() {
+        return this._def.optionsMap;
+      }
+      /**
+       * The constructor of the discriminated union schema. Its behaviour is very similar to that of the normal z.union() constructor.
+       * However, it only allows a union of objects, all of which need to share a discriminator property. This property must
+       * have a different value for each object in the union.
+       * @param discriminator the name of the discriminator property
+       * @param types an array of object schemas
+       * @param params
+       */
+      static create(discriminator, options, params) {
+        const optionsMap = /* @__PURE__ */ new Map();
+        for (const type of options) {
+          const discriminatorValues = getDiscriminator(type.shape[discriminator]);
+          if (!discriminatorValues.length) {
+            throw new Error(`A discriminator value for key \`${discriminator}\` could not be extracted from all schema options`);
+          }
+          for (const value of discriminatorValues) {
+            if (optionsMap.has(value)) {
+              throw new Error(`Discriminator property ${String(discriminator)} has duplicate value ${String(value)}`);
+            }
+            optionsMap.set(value, type);
+          }
+        }
+        return new _ZodDiscriminatedUnion({
+          typeName: ZodFirstPartyTypeKind.ZodDiscriminatedUnion,
+          discriminator,
+          options,
+          optionsMap,
+          ...processCreateParams(params)
+        });
+      }
+    };
+    ZodIntersection = class extends ZodType {
+      _parse(input) {
+        const { status, ctx } = this._processInputParams(input);
+        const handleParsed = (parsedLeft, parsedRight) => {
+          if (isAborted(parsedLeft) || isAborted(parsedRight)) {
+            return INVALID;
+          }
+          const merged = mergeValues(parsedLeft.value, parsedRight.value);
+          if (!merged.valid) {
+            addIssueToContext(ctx, {
+              code: ZodIssueCode.invalid_intersection_types
+            });
+            return INVALID;
+          }
+          if (isDirty(parsedLeft) || isDirty(parsedRight)) {
+            status.dirty();
+          }
+          return { status: status.value, value: merged.data };
+        };
+        if (ctx.common.async) {
+          return Promise.all([
+            this._def.left._parseAsync({
+              data: ctx.data,
+              path: ctx.path,
+              parent: ctx
+            }),
+            this._def.right._parseAsync({
+              data: ctx.data,
+              path: ctx.path,
+              parent: ctx
+            })
+          ]).then(([left, right]) => handleParsed(left, right));
+        } else {
+          return handleParsed(this._def.left._parseSync({
+            data: ctx.data,
+            path: ctx.path,
+            parent: ctx
+          }), this._def.right._parseSync({
+            data: ctx.data,
+            path: ctx.path,
+            parent: ctx
+          }));
+        }
+      }
+    };
+    ZodIntersection.create = (left, right, params) => {
+      return new ZodIntersection({
+        left,
+        right,
+        typeName: ZodFirstPartyTypeKind.ZodIntersection,
+        ...processCreateParams(params)
+      });
+    };
+    ZodTuple = class _ZodTuple extends ZodType {
+      _parse(input) {
+        const { status, ctx } = this._processInputParams(input);
+        if (ctx.parsedType !== ZodParsedType.array) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.array,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        if (ctx.data.length < this._def.items.length) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.too_small,
+            minimum: this._def.items.length,
+            inclusive: true,
+            exact: false,
+            type: "array"
+          });
+          return INVALID;
+        }
+        const rest = this._def.rest;
+        if (!rest && ctx.data.length > this._def.items.length) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.too_big,
+            maximum: this._def.items.length,
+            inclusive: true,
+            exact: false,
+            type: "array"
+          });
+          status.dirty();
+        }
+        const items = [...ctx.data].map((item, itemIndex) => {
+          const schema = this._def.items[itemIndex] || this._def.rest;
+          if (!schema)
+            return null;
+          return schema._parse(new ParseInputLazyPath(ctx, item, ctx.path, itemIndex));
+        }).filter((x) => !!x);
+        if (ctx.common.async) {
+          return Promise.all(items).then((results) => {
+            return ParseStatus.mergeArray(status, results);
+          });
+        } else {
+          return ParseStatus.mergeArray(status, items);
+        }
+      }
+      get items() {
+        return this._def.items;
+      }
+      rest(rest) {
+        return new _ZodTuple({
+          ...this._def,
+          rest
+        });
+      }
+    };
+    ZodTuple.create = (schemas, params) => {
+      if (!Array.isArray(schemas)) {
+        throw new Error("You must pass an array of schemas to z.tuple([ ... ])");
+      }
+      return new ZodTuple({
+        items: schemas,
+        typeName: ZodFirstPartyTypeKind.ZodTuple,
+        rest: null,
+        ...processCreateParams(params)
+      });
+    };
+    ZodRecord = class _ZodRecord extends ZodType {
+      get keySchema() {
+        return this._def.keyType;
+      }
+      get valueSchema() {
+        return this._def.valueType;
+      }
+      _parse(input) {
+        const { status, ctx } = this._processInputParams(input);
+        if (ctx.parsedType !== ZodParsedType.object) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.object,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        const pairs = [];
+        const keyType = this._def.keyType;
+        const valueType = this._def.valueType;
+        for (const key in ctx.data) {
+          pairs.push({
+            key: keyType._parse(new ParseInputLazyPath(ctx, key, ctx.path, key)),
+            value: valueType._parse(new ParseInputLazyPath(ctx, ctx.data[key], ctx.path, key)),
+            alwaysSet: key in ctx.data
+          });
+        }
+        if (ctx.common.async) {
+          return ParseStatus.mergeObjectAsync(status, pairs);
+        } else {
+          return ParseStatus.mergeObjectSync(status, pairs);
+        }
+      }
+      get element() {
+        return this._def.valueType;
+      }
+      static create(first, second, third) {
+        if (second instanceof ZodType) {
+          return new _ZodRecord({
+            keyType: first,
+            valueType: second,
+            typeName: ZodFirstPartyTypeKind.ZodRecord,
+            ...processCreateParams(third)
+          });
+        }
+        return new _ZodRecord({
+          keyType: ZodString.create(),
+          valueType: first,
+          typeName: ZodFirstPartyTypeKind.ZodRecord,
+          ...processCreateParams(second)
+        });
+      }
+    };
+    ZodMap = class extends ZodType {
+      get keySchema() {
+        return this._def.keyType;
+      }
+      get valueSchema() {
+        return this._def.valueType;
+      }
+      _parse(input) {
+        const { status, ctx } = this._processInputParams(input);
+        if (ctx.parsedType !== ZodParsedType.map) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.map,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        const keyType = this._def.keyType;
+        const valueType = this._def.valueType;
+        const pairs = [...ctx.data.entries()].map(([key, value], index) => {
+          return {
+            key: keyType._parse(new ParseInputLazyPath(ctx, key, ctx.path, [index, "key"])),
+            value: valueType._parse(new ParseInputLazyPath(ctx, value, ctx.path, [index, "value"]))
+          };
+        });
+        if (ctx.common.async) {
+          const finalMap = /* @__PURE__ */ new Map();
+          return Promise.resolve().then(async () => {
+            for (const pair of pairs) {
+              const key = await pair.key;
+              const value = await pair.value;
+              if (key.status === "aborted" || value.status === "aborted") {
+                return INVALID;
+              }
+              if (key.status === "dirty" || value.status === "dirty") {
+                status.dirty();
+              }
+              finalMap.set(key.value, value.value);
+            }
+            return { status: status.value, value: finalMap };
+          });
+        } else {
+          const finalMap = /* @__PURE__ */ new Map();
+          for (const pair of pairs) {
+            const key = pair.key;
+            const value = pair.value;
+            if (key.status === "aborted" || value.status === "aborted") {
+              return INVALID;
+            }
+            if (key.status === "dirty" || value.status === "dirty") {
+              status.dirty();
+            }
+            finalMap.set(key.value, value.value);
+          }
+          return { status: status.value, value: finalMap };
+        }
+      }
+    };
+    ZodMap.create = (keyType, valueType, params) => {
+      return new ZodMap({
+        valueType,
+        keyType,
+        typeName: ZodFirstPartyTypeKind.ZodMap,
+        ...processCreateParams(params)
+      });
+    };
+    ZodSet = class _ZodSet extends ZodType {
+      _parse(input) {
+        const { status, ctx } = this._processInputParams(input);
+        if (ctx.parsedType !== ZodParsedType.set) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.set,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        const def = this._def;
+        if (def.minSize !== null) {
+          if (ctx.data.size < def.minSize.value) {
+            addIssueToContext(ctx, {
+              code: ZodIssueCode.too_small,
+              minimum: def.minSize.value,
+              type: "set",
+              inclusive: true,
+              exact: false,
+              message: def.minSize.message
+            });
+            status.dirty();
+          }
+        }
+        if (def.maxSize !== null) {
+          if (ctx.data.size > def.maxSize.value) {
+            addIssueToContext(ctx, {
+              code: ZodIssueCode.too_big,
+              maximum: def.maxSize.value,
+              type: "set",
+              inclusive: true,
+              exact: false,
+              message: def.maxSize.message
+            });
+            status.dirty();
+          }
+        }
+        const valueType = this._def.valueType;
+        function finalizeSet(elements2) {
+          const parsedSet = /* @__PURE__ */ new Set();
+          for (const element of elements2) {
+            if (element.status === "aborted")
+              return INVALID;
+            if (element.status === "dirty")
+              status.dirty();
+            parsedSet.add(element.value);
+          }
+          return { status: status.value, value: parsedSet };
+        }
+        const elements = [...ctx.data.values()].map((item, i) => valueType._parse(new ParseInputLazyPath(ctx, item, ctx.path, i)));
+        if (ctx.common.async) {
+          return Promise.all(elements).then((elements2) => finalizeSet(elements2));
+        } else {
+          return finalizeSet(elements);
+        }
+      }
+      min(minSize, message) {
+        return new _ZodSet({
+          ...this._def,
+          minSize: { value: minSize, message: errorUtil.toString(message) }
+        });
+      }
+      max(maxSize, message) {
+        return new _ZodSet({
+          ...this._def,
+          maxSize: { value: maxSize, message: errorUtil.toString(message) }
+        });
+      }
+      size(size, message) {
+        return this.min(size, message).max(size, message);
+      }
+      nonempty(message) {
+        return this.min(1, message);
+      }
+    };
+    ZodSet.create = (valueType, params) => {
+      return new ZodSet({
+        valueType,
+        minSize: null,
+        maxSize: null,
+        typeName: ZodFirstPartyTypeKind.ZodSet,
+        ...processCreateParams(params)
+      });
+    };
+    ZodFunction = class _ZodFunction extends ZodType {
+      constructor() {
+        super(...arguments);
+        this.validate = this.implement;
+      }
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        if (ctx.parsedType !== ZodParsedType.function) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.function,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        function makeArgsIssue(args, error) {
+          return makeIssue({
+            data: args,
+            path: ctx.path,
+            errorMaps: [ctx.common.contextualErrorMap, ctx.schemaErrorMap, getErrorMap(), en_default].filter((x) => !!x),
+            issueData: {
+              code: ZodIssueCode.invalid_arguments,
+              argumentsError: error
+            }
+          });
+        }
+        function makeReturnsIssue(returns, error) {
+          return makeIssue({
+            data: returns,
+            path: ctx.path,
+            errorMaps: [ctx.common.contextualErrorMap, ctx.schemaErrorMap, getErrorMap(), en_default].filter((x) => !!x),
+            issueData: {
+              code: ZodIssueCode.invalid_return_type,
+              returnTypeError: error
+            }
+          });
+        }
+        const params = { errorMap: ctx.common.contextualErrorMap };
+        const fn = ctx.data;
+        if (this._def.returns instanceof ZodPromise) {
+          const me = this;
+          return OK(async function(...args) {
+            const error = new ZodError([]);
+            const parsedArgs = await me._def.args.parseAsync(args, params).catch((e) => {
+              error.addIssue(makeArgsIssue(args, e));
+              throw error;
+            });
+            const result = await Reflect.apply(fn, this, parsedArgs);
+            const parsedReturns = await me._def.returns._def.type.parseAsync(result, params).catch((e) => {
+              error.addIssue(makeReturnsIssue(result, e));
+              throw error;
+            });
+            return parsedReturns;
+          });
+        } else {
+          const me = this;
+          return OK(function(...args) {
+            const parsedArgs = me._def.args.safeParse(args, params);
+            if (!parsedArgs.success) {
+              throw new ZodError([makeArgsIssue(args, parsedArgs.error)]);
+            }
+            const result = Reflect.apply(fn, this, parsedArgs.data);
+            const parsedReturns = me._def.returns.safeParse(result, params);
+            if (!parsedReturns.success) {
+              throw new ZodError([makeReturnsIssue(result, parsedReturns.error)]);
+            }
+            return parsedReturns.data;
+          });
+        }
+      }
+      parameters() {
+        return this._def.args;
+      }
+      returnType() {
+        return this._def.returns;
+      }
+      args(...items) {
+        return new _ZodFunction({
+          ...this._def,
+          args: ZodTuple.create(items).rest(ZodUnknown.create())
+        });
+      }
+      returns(returnType) {
+        return new _ZodFunction({
+          ...this._def,
+          returns: returnType
+        });
+      }
+      implement(func) {
+        const validatedFunc = this.parse(func);
+        return validatedFunc;
+      }
+      strictImplement(func) {
+        const validatedFunc = this.parse(func);
+        return validatedFunc;
+      }
+      static create(args, returns, params) {
+        return new _ZodFunction({
+          args: args ? args : ZodTuple.create([]).rest(ZodUnknown.create()),
+          returns: returns || ZodUnknown.create(),
+          typeName: ZodFirstPartyTypeKind.ZodFunction,
+          ...processCreateParams(params)
+        });
+      }
+    };
+    ZodLazy = class extends ZodType {
+      get schema() {
+        return this._def.getter();
+      }
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        const lazySchema = this._def.getter();
+        return lazySchema._parse({ data: ctx.data, path: ctx.path, parent: ctx });
+      }
+    };
+    ZodLazy.create = (getter, params) => {
+      return new ZodLazy({
+        getter,
+        typeName: ZodFirstPartyTypeKind.ZodLazy,
+        ...processCreateParams(params)
+      });
+    };
+    ZodLiteral = class extends ZodType {
+      _parse(input) {
+        if (input.data !== this._def.value) {
+          const ctx = this._getOrReturnCtx(input);
+          addIssueToContext(ctx, {
+            received: ctx.data,
+            code: ZodIssueCode.invalid_literal,
+            expected: this._def.value
+          });
+          return INVALID;
+        }
+        return { status: "valid", value: input.data };
+      }
+      get value() {
+        return this._def.value;
+      }
+    };
+    ZodLiteral.create = (value, params) => {
+      return new ZodLiteral({
+        value,
+        typeName: ZodFirstPartyTypeKind.ZodLiteral,
+        ...processCreateParams(params)
+      });
+    };
+    ZodEnum = class _ZodEnum extends ZodType {
+      _parse(input) {
+        if (typeof input.data !== "string") {
+          const ctx = this._getOrReturnCtx(input);
+          const expectedValues = this._def.values;
+          addIssueToContext(ctx, {
+            expected: util.joinValues(expectedValues),
+            received: ctx.parsedType,
+            code: ZodIssueCode.invalid_type
+          });
+          return INVALID;
+        }
+        if (!this._cache) {
+          this._cache = new Set(this._def.values);
+        }
+        if (!this._cache.has(input.data)) {
+          const ctx = this._getOrReturnCtx(input);
+          const expectedValues = this._def.values;
+          addIssueToContext(ctx, {
+            received: ctx.data,
+            code: ZodIssueCode.invalid_enum_value,
+            options: expectedValues
+          });
+          return INVALID;
+        }
+        return OK(input.data);
+      }
+      get options() {
+        return this._def.values;
+      }
+      get enum() {
+        const enumValues = {};
+        for (const val of this._def.values) {
+          enumValues[val] = val;
+        }
+        return enumValues;
+      }
+      get Values() {
+        const enumValues = {};
+        for (const val of this._def.values) {
+          enumValues[val] = val;
+        }
+        return enumValues;
+      }
+      get Enum() {
+        const enumValues = {};
+        for (const val of this._def.values) {
+          enumValues[val] = val;
+        }
+        return enumValues;
+      }
+      extract(values, newDef = this._def) {
+        return _ZodEnum.create(values, {
+          ...this._def,
+          ...newDef
+        });
+      }
+      exclude(values, newDef = this._def) {
+        return _ZodEnum.create(this.options.filter((opt) => !values.includes(opt)), {
+          ...this._def,
+          ...newDef
+        });
+      }
+    };
+    ZodEnum.create = createZodEnum;
+    ZodNativeEnum = class extends ZodType {
+      _parse(input) {
+        const nativeEnumValues = util.getValidEnumValues(this._def.values);
+        const ctx = this._getOrReturnCtx(input);
+        if (ctx.parsedType !== ZodParsedType.string && ctx.parsedType !== ZodParsedType.number) {
+          const expectedValues = util.objectValues(nativeEnumValues);
+          addIssueToContext(ctx, {
+            expected: util.joinValues(expectedValues),
+            received: ctx.parsedType,
+            code: ZodIssueCode.invalid_type
+          });
+          return INVALID;
+        }
+        if (!this._cache) {
+          this._cache = new Set(util.getValidEnumValues(this._def.values));
+        }
+        if (!this._cache.has(input.data)) {
+          const expectedValues = util.objectValues(nativeEnumValues);
+          addIssueToContext(ctx, {
+            received: ctx.data,
+            code: ZodIssueCode.invalid_enum_value,
+            options: expectedValues
+          });
+          return INVALID;
+        }
+        return OK(input.data);
+      }
+      get enum() {
+        return this._def.values;
+      }
+    };
+    ZodNativeEnum.create = (values, params) => {
+      return new ZodNativeEnum({
+        values,
+        typeName: ZodFirstPartyTypeKind.ZodNativeEnum,
+        ...processCreateParams(params)
+      });
+    };
+    ZodPromise = class extends ZodType {
+      unwrap() {
+        return this._def.type;
+      }
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        if (ctx.parsedType !== ZodParsedType.promise && ctx.common.async === false) {
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.promise,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        const promisified = ctx.parsedType === ZodParsedType.promise ? ctx.data : Promise.resolve(ctx.data);
+        return OK(promisified.then((data) => {
+          return this._def.type.parseAsync(data, {
+            path: ctx.path,
+            errorMap: ctx.common.contextualErrorMap
+          });
+        }));
+      }
+    };
+    ZodPromise.create = (schema, params) => {
+      return new ZodPromise({
+        type: schema,
+        typeName: ZodFirstPartyTypeKind.ZodPromise,
+        ...processCreateParams(params)
+      });
+    };
+    ZodEffects = class extends ZodType {
+      innerType() {
+        return this._def.schema;
+      }
+      sourceType() {
+        return this._def.schema._def.typeName === ZodFirstPartyTypeKind.ZodEffects ? this._def.schema.sourceType() : this._def.schema;
+      }
+      _parse(input) {
+        const { status, ctx } = this._processInputParams(input);
+        const effect = this._def.effect || null;
+        const checkCtx = {
+          addIssue: (arg) => {
+            addIssueToContext(ctx, arg);
+            if (arg.fatal) {
+              status.abort();
+            } else {
+              status.dirty();
+            }
+          },
+          get path() {
+            return ctx.path;
+          }
+        };
+        checkCtx.addIssue = checkCtx.addIssue.bind(checkCtx);
+        if (effect.type === "preprocess") {
+          const processed = effect.transform(ctx.data, checkCtx);
+          if (ctx.common.async) {
+            return Promise.resolve(processed).then(async (processed2) => {
+              if (status.value === "aborted")
+                return INVALID;
+              const result = await this._def.schema._parseAsync({
+                data: processed2,
+                path: ctx.path,
+                parent: ctx
+              });
+              if (result.status === "aborted")
+                return INVALID;
+              if (result.status === "dirty")
+                return DIRTY(result.value);
+              if (status.value === "dirty")
+                return DIRTY(result.value);
+              return result;
+            });
+          } else {
+            if (status.value === "aborted")
+              return INVALID;
+            const result = this._def.schema._parseSync({
+              data: processed,
+              path: ctx.path,
+              parent: ctx
+            });
+            if (result.status === "aborted")
+              return INVALID;
+            if (result.status === "dirty")
+              return DIRTY(result.value);
+            if (status.value === "dirty")
+              return DIRTY(result.value);
+            return result;
+          }
+        }
+        if (effect.type === "refinement") {
+          const executeRefinement = (acc) => {
+            const result = effect.refinement(acc, checkCtx);
+            if (ctx.common.async) {
+              return Promise.resolve(result);
+            }
+            if (result instanceof Promise) {
+              throw new Error("Async refinement encountered during synchronous parse operation. Use .parseAsync instead.");
+            }
+            return acc;
+          };
+          if (ctx.common.async === false) {
+            const inner = this._def.schema._parseSync({
+              data: ctx.data,
+              path: ctx.path,
+              parent: ctx
+            });
+            if (inner.status === "aborted")
+              return INVALID;
+            if (inner.status === "dirty")
+              status.dirty();
+            executeRefinement(inner.value);
+            return { status: status.value, value: inner.value };
+          } else {
+            return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((inner) => {
+              if (inner.status === "aborted")
+                return INVALID;
+              if (inner.status === "dirty")
+                status.dirty();
+              return executeRefinement(inner.value).then(() => {
+                return { status: status.value, value: inner.value };
+              });
+            });
+          }
+        }
+        if (effect.type === "transform") {
+          if (ctx.common.async === false) {
+            const base = this._def.schema._parseSync({
+              data: ctx.data,
+              path: ctx.path,
+              parent: ctx
+            });
+            if (!isValid(base))
+              return INVALID;
+            const result = effect.transform(base.value, checkCtx);
+            if (result instanceof Promise) {
+              throw new Error(`Asynchronous transform encountered during synchronous parse operation. Use .parseAsync instead.`);
+            }
+            return { status: status.value, value: result };
+          } else {
+            return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((base) => {
+              if (!isValid(base))
+                return INVALID;
+              return Promise.resolve(effect.transform(base.value, checkCtx)).then((result) => ({
+                status: status.value,
+                value: result
+              }));
+            });
+          }
+        }
+        util.assertNever(effect);
+      }
+    };
+    ZodEffects.create = (schema, effect, params) => {
+      return new ZodEffects({
+        schema,
+        typeName: ZodFirstPartyTypeKind.ZodEffects,
+        effect,
+        ...processCreateParams(params)
+      });
+    };
+    ZodEffects.createWithPreprocess = (preprocess2, schema, params) => {
+      return new ZodEffects({
+        schema,
+        effect: { type: "preprocess", transform: preprocess2 },
+        typeName: ZodFirstPartyTypeKind.ZodEffects,
+        ...processCreateParams(params)
+      });
+    };
+    ZodOptional = class extends ZodType {
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType === ZodParsedType.undefined) {
+          return OK(void 0);
+        }
+        return this._def.innerType._parse(input);
+      }
+      unwrap() {
+        return this._def.innerType;
+      }
+    };
+    ZodOptional.create = (type, params) => {
+      return new ZodOptional({
+        innerType: type,
+        typeName: ZodFirstPartyTypeKind.ZodOptional,
+        ...processCreateParams(params)
+      });
+    };
+    ZodNullable = class extends ZodType {
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType === ZodParsedType.null) {
+          return OK(null);
+        }
+        return this._def.innerType._parse(input);
+      }
+      unwrap() {
+        return this._def.innerType;
+      }
+    };
+    ZodNullable.create = (type, params) => {
+      return new ZodNullable({
+        innerType: type,
+        typeName: ZodFirstPartyTypeKind.ZodNullable,
+        ...processCreateParams(params)
+      });
+    };
+    ZodDefault = class extends ZodType {
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        let data = ctx.data;
+        if (ctx.parsedType === ZodParsedType.undefined) {
+          data = this._def.defaultValue();
+        }
+        return this._def.innerType._parse({
+          data,
+          path: ctx.path,
+          parent: ctx
+        });
+      }
+      removeDefault() {
+        return this._def.innerType;
+      }
+    };
+    ZodDefault.create = (type, params) => {
+      return new ZodDefault({
+        innerType: type,
+        typeName: ZodFirstPartyTypeKind.ZodDefault,
+        defaultValue: typeof params.default === "function" ? params.default : () => params.default,
+        ...processCreateParams(params)
+      });
+    };
+    ZodCatch = class extends ZodType {
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        const newCtx = {
+          ...ctx,
+          common: {
+            ...ctx.common,
+            issues: []
+          }
+        };
+        const result = this._def.innerType._parse({
+          data: newCtx.data,
+          path: newCtx.path,
+          parent: {
+            ...newCtx
+          }
+        });
+        if (isAsync(result)) {
+          return result.then((result2) => {
+            return {
+              status: "valid",
+              value: result2.status === "valid" ? result2.value : this._def.catchValue({
+                get error() {
+                  return new ZodError(newCtx.common.issues);
+                },
+                input: newCtx.data
+              })
+            };
+          });
+        } else {
+          return {
+            status: "valid",
+            value: result.status === "valid" ? result.value : this._def.catchValue({
+              get error() {
+                return new ZodError(newCtx.common.issues);
+              },
+              input: newCtx.data
+            })
+          };
+        }
+      }
+      removeCatch() {
+        return this._def.innerType;
+      }
+    };
+    ZodCatch.create = (type, params) => {
+      return new ZodCatch({
+        innerType: type,
+        typeName: ZodFirstPartyTypeKind.ZodCatch,
+        catchValue: typeof params.catch === "function" ? params.catch : () => params.catch,
+        ...processCreateParams(params)
+      });
+    };
+    ZodNaN = class extends ZodType {
+      _parse(input) {
+        const parsedType = this._getType(input);
+        if (parsedType !== ZodParsedType.nan) {
+          const ctx = this._getOrReturnCtx(input);
+          addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.nan,
+            received: ctx.parsedType
+          });
+          return INVALID;
+        }
+        return { status: "valid", value: input.data };
+      }
+    };
+    ZodNaN.create = (params) => {
+      return new ZodNaN({
+        typeName: ZodFirstPartyTypeKind.ZodNaN,
+        ...processCreateParams(params)
+      });
+    };
+    BRAND = Symbol("zod_brand");
+    ZodBranded = class extends ZodType {
+      _parse(input) {
+        const { ctx } = this._processInputParams(input);
+        const data = ctx.data;
+        return this._def.type._parse({
+          data,
+          path: ctx.path,
+          parent: ctx
+        });
+      }
+      unwrap() {
+        return this._def.type;
+      }
+    };
+    ZodPipeline = class _ZodPipeline extends ZodType {
+      _parse(input) {
+        const { status, ctx } = this._processInputParams(input);
+        if (ctx.common.async) {
+          const handleAsync = async () => {
+            const inResult = await this._def.in._parseAsync({
+              data: ctx.data,
+              path: ctx.path,
+              parent: ctx
+            });
+            if (inResult.status === "aborted")
+              return INVALID;
+            if (inResult.status === "dirty") {
+              status.dirty();
+              return DIRTY(inResult.value);
+            } else {
+              return this._def.out._parseAsync({
+                data: inResult.value,
+                path: ctx.path,
+                parent: ctx
+              });
+            }
+          };
+          return handleAsync();
+        } else {
+          const inResult = this._def.in._parseSync({
+            data: ctx.data,
+            path: ctx.path,
+            parent: ctx
+          });
+          if (inResult.status === "aborted")
+            return INVALID;
+          if (inResult.status === "dirty") {
+            status.dirty();
+            return {
+              status: "dirty",
+              value: inResult.value
+            };
+          } else {
+            return this._def.out._parseSync({
+              data: inResult.value,
+              path: ctx.path,
+              parent: ctx
+            });
+          }
+        }
+      }
+      static create(a, b) {
+        return new _ZodPipeline({
+          in: a,
+          out: b,
+          typeName: ZodFirstPartyTypeKind.ZodPipeline
+        });
+      }
+    };
+    ZodReadonly = class extends ZodType {
+      _parse(input) {
+        const result = this._def.innerType._parse(input);
+        const freeze = (data) => {
+          if (isValid(data)) {
+            data.value = Object.freeze(data.value);
+          }
+          return data;
+        };
+        return isAsync(result) ? result.then((data) => freeze(data)) : freeze(result);
+      }
+      unwrap() {
+        return this._def.innerType;
+      }
+    };
+    ZodReadonly.create = (type, params) => {
+      return new ZodReadonly({
+        innerType: type,
+        typeName: ZodFirstPartyTypeKind.ZodReadonly,
+        ...processCreateParams(params)
+      });
+    };
+    late = {
+      object: ZodObject.lazycreate
+    };
+    (function(ZodFirstPartyTypeKind2) {
+      ZodFirstPartyTypeKind2["ZodString"] = "ZodString";
+      ZodFirstPartyTypeKind2["ZodNumber"] = "ZodNumber";
+      ZodFirstPartyTypeKind2["ZodNaN"] = "ZodNaN";
+      ZodFirstPartyTypeKind2["ZodBigInt"] = "ZodBigInt";
+      ZodFirstPartyTypeKind2["ZodBoolean"] = "ZodBoolean";
+      ZodFirstPartyTypeKind2["ZodDate"] = "ZodDate";
+      ZodFirstPartyTypeKind2["ZodSymbol"] = "ZodSymbol";
+      ZodFirstPartyTypeKind2["ZodUndefined"] = "ZodUndefined";
+      ZodFirstPartyTypeKind2["ZodNull"] = "ZodNull";
+      ZodFirstPartyTypeKind2["ZodAny"] = "ZodAny";
+      ZodFirstPartyTypeKind2["ZodUnknown"] = "ZodUnknown";
+      ZodFirstPartyTypeKind2["ZodNever"] = "ZodNever";
+      ZodFirstPartyTypeKind2["ZodVoid"] = "ZodVoid";
+      ZodFirstPartyTypeKind2["ZodArray"] = "ZodArray";
+      ZodFirstPartyTypeKind2["ZodObject"] = "ZodObject";
+      ZodFirstPartyTypeKind2["ZodUnion"] = "ZodUnion";
+      ZodFirstPartyTypeKind2["ZodDiscriminatedUnion"] = "ZodDiscriminatedUnion";
+      ZodFirstPartyTypeKind2["ZodIntersection"] = "ZodIntersection";
+      ZodFirstPartyTypeKind2["ZodTuple"] = "ZodTuple";
+      ZodFirstPartyTypeKind2["ZodRecord"] = "ZodRecord";
+      ZodFirstPartyTypeKind2["ZodMap"] = "ZodMap";
+      ZodFirstPartyTypeKind2["ZodSet"] = "ZodSet";
+      ZodFirstPartyTypeKind2["ZodFunction"] = "ZodFunction";
+      ZodFirstPartyTypeKind2["ZodLazy"] = "ZodLazy";
+      ZodFirstPartyTypeKind2["ZodLiteral"] = "ZodLiteral";
+      ZodFirstPartyTypeKind2["ZodEnum"] = "ZodEnum";
+      ZodFirstPartyTypeKind2["ZodEffects"] = "ZodEffects";
+      ZodFirstPartyTypeKind2["ZodNativeEnum"] = "ZodNativeEnum";
+      ZodFirstPartyTypeKind2["ZodOptional"] = "ZodOptional";
+      ZodFirstPartyTypeKind2["ZodNullable"] = "ZodNullable";
+      ZodFirstPartyTypeKind2["ZodDefault"] = "ZodDefault";
+      ZodFirstPartyTypeKind2["ZodCatch"] = "ZodCatch";
+      ZodFirstPartyTypeKind2["ZodPromise"] = "ZodPromise";
+      ZodFirstPartyTypeKind2["ZodBranded"] = "ZodBranded";
+      ZodFirstPartyTypeKind2["ZodPipeline"] = "ZodPipeline";
+      ZodFirstPartyTypeKind2["ZodReadonly"] = "ZodReadonly";
+    })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
+    instanceOfType = (cls, params = {
+      message: `Input not instance of ${cls.name}`
+    }) => custom((data) => data instanceof cls, params);
+    stringType = ZodString.create;
+    numberType = ZodNumber.create;
+    nanType = ZodNaN.create;
+    bigIntType = ZodBigInt.create;
+    booleanType = ZodBoolean.create;
+    dateType = ZodDate.create;
+    symbolType = ZodSymbol.create;
+    undefinedType = ZodUndefined.create;
+    nullType = ZodNull.create;
+    anyType = ZodAny.create;
+    unknownType = ZodUnknown.create;
+    neverType = ZodNever.create;
+    voidType = ZodVoid.create;
+    arrayType = ZodArray.create;
+    objectType = ZodObject.create;
+    strictObjectType = ZodObject.strictCreate;
+    unionType = ZodUnion.create;
+    discriminatedUnionType = ZodDiscriminatedUnion.create;
+    intersectionType = ZodIntersection.create;
+    tupleType = ZodTuple.create;
+    recordType = ZodRecord.create;
+    mapType = ZodMap.create;
+    setType = ZodSet.create;
+    functionType = ZodFunction.create;
+    lazyType = ZodLazy.create;
+    literalType = ZodLiteral.create;
+    enumType = ZodEnum.create;
+    nativeEnumType = ZodNativeEnum.create;
+    promiseType = ZodPromise.create;
+    effectsType = ZodEffects.create;
+    optionalType = ZodOptional.create;
+    nullableType = ZodNullable.create;
+    preprocessType = ZodEffects.createWithPreprocess;
+    pipelineType = ZodPipeline.create;
+    ostring = () => stringType().optional();
+    onumber = () => numberType().optional();
+    oboolean = () => booleanType().optional();
+    coerce = {
+      string: ((arg) => ZodString.create({ ...arg, coerce: true })),
+      number: ((arg) => ZodNumber.create({ ...arg, coerce: true })),
+      boolean: ((arg) => ZodBoolean.create({
+        ...arg,
+        coerce: true
+      })),
+      bigint: ((arg) => ZodBigInt.create({ ...arg, coerce: true })),
+      date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
+    };
+    NEVER = INVALID;
+  }
+});
+
+// node_modules/zod/v3/external.js
+var external_exports = {};
+__export(external_exports, {
+  BRAND: () => BRAND,
+  DIRTY: () => DIRTY,
+  EMPTY_PATH: () => EMPTY_PATH,
+  INVALID: () => INVALID,
+  NEVER: () => NEVER,
+  OK: () => OK,
+  ParseStatus: () => ParseStatus,
+  Schema: () => ZodType,
+  ZodAny: () => ZodAny,
+  ZodArray: () => ZodArray,
+  ZodBigInt: () => ZodBigInt,
+  ZodBoolean: () => ZodBoolean,
+  ZodBranded: () => ZodBranded,
+  ZodCatch: () => ZodCatch,
+  ZodDate: () => ZodDate,
+  ZodDefault: () => ZodDefault,
+  ZodDiscriminatedUnion: () => ZodDiscriminatedUnion,
+  ZodEffects: () => ZodEffects,
+  ZodEnum: () => ZodEnum,
+  ZodError: () => ZodError,
+  ZodFirstPartyTypeKind: () => ZodFirstPartyTypeKind,
+  ZodFunction: () => ZodFunction,
+  ZodIntersection: () => ZodIntersection,
+  ZodIssueCode: () => ZodIssueCode,
+  ZodLazy: () => ZodLazy,
+  ZodLiteral: () => ZodLiteral,
+  ZodMap: () => ZodMap,
+  ZodNaN: () => ZodNaN,
+  ZodNativeEnum: () => ZodNativeEnum,
+  ZodNever: () => ZodNever,
+  ZodNull: () => ZodNull,
+  ZodNullable: () => ZodNullable,
+  ZodNumber: () => ZodNumber,
+  ZodObject: () => ZodObject,
+  ZodOptional: () => ZodOptional,
+  ZodParsedType: () => ZodParsedType,
+  ZodPipeline: () => ZodPipeline,
+  ZodPromise: () => ZodPromise,
+  ZodReadonly: () => ZodReadonly,
+  ZodRecord: () => ZodRecord,
+  ZodSchema: () => ZodType,
+  ZodSet: () => ZodSet,
+  ZodString: () => ZodString,
+  ZodSymbol: () => ZodSymbol,
+  ZodTransformer: () => ZodEffects,
+  ZodTuple: () => ZodTuple,
+  ZodType: () => ZodType,
+  ZodUndefined: () => ZodUndefined,
+  ZodUnion: () => ZodUnion,
+  ZodUnknown: () => ZodUnknown,
+  ZodVoid: () => ZodVoid,
+  addIssueToContext: () => addIssueToContext,
+  any: () => anyType,
+  array: () => arrayType,
+  bigint: () => bigIntType,
+  boolean: () => booleanType,
+  coerce: () => coerce,
+  custom: () => custom,
+  date: () => dateType,
+  datetimeRegex: () => datetimeRegex,
+  defaultErrorMap: () => en_default,
+  discriminatedUnion: () => discriminatedUnionType,
+  effect: () => effectsType,
+  enum: () => enumType,
+  function: () => functionType,
+  getErrorMap: () => getErrorMap,
+  getParsedType: () => getParsedType,
+  instanceof: () => instanceOfType,
+  intersection: () => intersectionType,
+  isAborted: () => isAborted,
+  isAsync: () => isAsync,
+  isDirty: () => isDirty,
+  isValid: () => isValid,
+  late: () => late,
+  lazy: () => lazyType,
+  literal: () => literalType,
+  makeIssue: () => makeIssue,
+  map: () => mapType,
+  nan: () => nanType,
+  nativeEnum: () => nativeEnumType,
+  never: () => neverType,
+  null: () => nullType,
+  nullable: () => nullableType,
+  number: () => numberType,
+  object: () => objectType,
+  objectUtil: () => objectUtil,
+  oboolean: () => oboolean,
+  onumber: () => onumber,
+  optional: () => optionalType,
+  ostring: () => ostring,
+  pipeline: () => pipelineType,
+  preprocess: () => preprocessType,
+  promise: () => promiseType,
+  quotelessJson: () => quotelessJson,
+  record: () => recordType,
+  set: () => setType,
+  setErrorMap: () => setErrorMap,
+  strictObject: () => strictObjectType,
+  string: () => stringType,
+  symbol: () => symbolType,
+  transformer: () => effectsType,
+  tuple: () => tupleType,
+  undefined: () => undefinedType,
+  union: () => unionType,
+  unknown: () => unknownType,
+  util: () => util,
+  void: () => voidType
+});
+var init_external = __esm({
+  "node_modules/zod/v3/external.js"() {
+    init_errors();
+    init_parseUtil();
+    init_typeAliases();
+    init_util();
+    init_types();
+    init_ZodError();
+  }
+});
+
 // node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
   "node_modules/ajv/dist/compile/codegen/code.js"(exports2) {
@@ -3976,19 +8074,19 @@ var require_core = __commonJS({
         this.addKeyword("$async");
       }
       _addDefaultMetaSchema() {
-        const { $data, meta, schemaId } = this.opts;
+        const { $data, meta: meta2, schemaId } = this.opts;
         let _dataRefSchema = $dataRefSchema;
         if (schemaId === "id") {
           _dataRefSchema = { ...$dataRefSchema };
           _dataRefSchema.id = _dataRefSchema.$id;
           delete _dataRefSchema.$id;
         }
-        if (meta && $data)
+        if (meta2 && $data)
           this.addMetaSchema(_dataRefSchema, _dataRefSchema[schemaId], false);
       }
       defaultMeta() {
-        const { meta, schemaId } = this.opts;
-        return this.opts.defaultMeta = typeof meta == "object" ? meta[schemaId] || meta : void 0;
+        const { meta: meta2, schemaId } = this.opts;
+        return this.opts.defaultMeta = typeof meta2 == "object" ? meta2[schemaId] || meta2 : void 0;
       }
       validate(schemaKeyRef, data) {
         let v;
@@ -4008,12 +8106,12 @@ var require_core = __commonJS({
         const sch = this._addSchema(schema, _meta);
         return sch.validate || this._compileSchemaEnv(sch);
       }
-      compileAsync(schema, meta) {
+      compileAsync(schema, meta2) {
         if (typeof this.opts.loadSchema != "function") {
           throw new Error("options.loadSchema should be a function");
         }
         const { loadSchema } = this.opts;
-        return runCompileAsync.call(this, schema, meta);
+        return runCompileAsync.call(this, schema, meta2);
         async function runCompileAsync(_schema, _meta) {
           await loadMetaSchema.call(this, _schema.$schema);
           const sch = this._addSchema(_schema, _meta);
@@ -4045,7 +8143,7 @@ var require_core = __commonJS({
           if (!this.refs[ref])
             await loadMetaSchema.call(this, _schema.$schema);
           if (!this.refs[ref])
-            this.addSchema(_schema, ref, meta);
+            this.addSchema(_schema, ref, meta2);
         }
         async function _loadSchema(ref) {
           const p = this._loading[ref];
@@ -4262,7 +8360,7 @@ var require_core = __commonJS({
           }
         }
       }
-      _addSchema(schema, meta, baseId, validateSchema = this.opts.validateSchema, addSchema = this.opts.addUsedSchema) {
+      _addSchema(schema, meta2, baseId, validateSchema = this.opts.validateSchema, addSchema = this.opts.addUsedSchema) {
         let id;
         const { schemaId } = this.opts;
         if (typeof schema == "object") {
@@ -4278,7 +8376,7 @@ var require_core = __commonJS({
           return sch;
         baseId = (0, resolve_1.normalizeId)(id || baseId);
         const localRefs = resolve_1.getSchemaRefs.call(this, schema, baseId);
-        sch = new compile_1.SchemaEnv({ schema, schemaId, meta, baseId, localRefs });
+        sch = new compile_1.SchemaEnv({ schema, schemaId, meta: meta2, baseId, localRefs });
         this._cache.set(sch.schema, sch);
         if (addSchema && !baseId.startsWith("#")) {
           if (baseId)
@@ -6792,6 +10890,14 @@ var require_dist = __commonJS({
   }
 });
 
+// node_modules/zod/index.js
+var init_zod = __esm({
+  "node_modules/zod/index.js"() {
+    init_external();
+    init_external();
+  }
+});
+
 // node_modules/seedrandom/lib/alea.js
 var require_alea = __commonJS({
   "node_modules/seedrandom/lib/alea.js"(exports2, module2) {
@@ -7320,7 +11426,7 @@ var require_seedrandom = __commonJS({
   "node_modules/seedrandom/seedrandom.js"(exports2, module2) {
     (function(global, pool, math) {
       var width = 256, chunks = 6, digits = 52, rngname = "random", startdenom = math.pow(width, chunks), significance = math.pow(2, digits), overflow = significance * 2, mask = width - 1, nodecrypto;
-      function seedrandom9(seed, options, callback) {
+      function seedrandom10(seed, options, callback) {
         var key = [];
         options = options == true ? { entropy: true } : options || {};
         var shortseed = mixkey(flatten(
@@ -7439,17 +11545,17 @@ var require_seedrandom = __commonJS({
       }
       mixkey(math.random(), pool);
       if (typeof module2 == "object" && module2.exports) {
-        module2.exports = seedrandom9;
+        module2.exports = seedrandom10;
         try {
           nodecrypto = require("crypto");
         } catch (ex) {
         }
       } else if (typeof define == "function" && define.amd) {
         define(function() {
-          return seedrandom9;
+          return seedrandom10;
         });
       } else {
-        math["seed" + rngname] = seedrandom9;
+        math["seed" + rngname] = seedrandom10;
       }
     })(
       // global: `self` in browsers (including strict mode and web workers),
@@ -7704,10 +11810,617 @@ var require_better_sqlite3 = __commonJS({
   }
 });
 
+// dist/schema/party.js
+var PartyStatusSchema, MemberRoleSchema, CharacterTypeSchema, PartySchema, PartyMemberSchema, PartyMemberWithCharacterSchema, PartyWithMembersSchema, PartyContextSchema;
+var init_party = __esm({
+  "dist/schema/party.js"() {
+    "use strict";
+    init_zod();
+    PartyStatusSchema = external_exports.enum(["active", "dormant", "archived"]);
+    MemberRoleSchema = external_exports.enum(["leader", "member", "companion", "hireling", "prisoner", "mount"]);
+    CharacterTypeSchema = external_exports.enum(["pc", "npc", "enemy", "neutral"]);
+    PartySchema = external_exports.object({
+      id: external_exports.string(),
+      name: external_exports.string().min(1),
+      description: external_exports.string().optional(),
+      worldId: external_exports.string().optional(),
+      status: PartyStatusSchema.default("active"),
+      currentLocation: external_exports.string().optional(),
+      currentQuestId: external_exports.string().optional(),
+      formation: external_exports.string().default("standard"),
+      // NEW: Position fields for world map location tracking
+      positionX: external_exports.number().int().nonnegative().optional(),
+      positionY: external_exports.number().int().nonnegative().optional(),
+      currentPOI: external_exports.string().optional(),
+      // Structure ID if at a POI
+      createdAt: external_exports.string().datetime(),
+      updatedAt: external_exports.string().datetime(),
+      lastPlayedAt: external_exports.string().datetime().optional()
+    });
+    PartyMemberSchema = external_exports.object({
+      id: external_exports.string(),
+      partyId: external_exports.string(),
+      characterId: external_exports.string(),
+      role: MemberRoleSchema.default("member"),
+      isActive: external_exports.boolean().default(false),
+      position: external_exports.number().int().optional(),
+      sharePercentage: external_exports.number().int().min(0).max(100).default(100),
+      joinedAt: external_exports.string().datetime(),
+      notes: external_exports.string().optional()
+    });
+    PartyMemberWithCharacterSchema = PartyMemberSchema.extend({
+      character: external_exports.object({
+        id: external_exports.string(),
+        name: external_exports.string(),
+        hp: external_exports.number(),
+        maxHp: external_exports.number(),
+        ac: external_exports.number(),
+        level: external_exports.number(),
+        stats: external_exports.object({
+          str: external_exports.number(),
+          dex: external_exports.number(),
+          con: external_exports.number(),
+          int: external_exports.number(),
+          wis: external_exports.number(),
+          cha: external_exports.number()
+        }),
+        behavior: external_exports.string().optional(),
+        characterType: CharacterTypeSchema.optional()
+      })
+    });
+    PartyWithMembersSchema = PartySchema.extend({
+      members: external_exports.array(PartyMemberWithCharacterSchema),
+      leader: PartyMemberWithCharacterSchema.optional(),
+      activeCharacter: PartyMemberWithCharacterSchema.optional(),
+      memberCount: external_exports.number().int()
+    });
+    PartyContextSchema = external_exports.object({
+      party: external_exports.object({
+        id: external_exports.string(),
+        name: external_exports.string(),
+        status: PartyStatusSchema,
+        location: external_exports.string().optional(),
+        formation: external_exports.string()
+      }),
+      leader: external_exports.object({
+        id: external_exports.string(),
+        name: external_exports.string(),
+        hp: external_exports.number(),
+        maxHp: external_exports.number(),
+        level: external_exports.number()
+      }).optional(),
+      activeCharacter: external_exports.object({
+        id: external_exports.string(),
+        name: external_exports.string(),
+        hp: external_exports.number(),
+        maxHp: external_exports.number(),
+        level: external_exports.number(),
+        conditions: external_exports.array(external_exports.string()).optional()
+      }).optional(),
+      members: external_exports.array(external_exports.object({
+        name: external_exports.string(),
+        role: MemberRoleSchema,
+        hp: external_exports.string(),
+        // "85/85" format for compactness
+        status: external_exports.string().optional()
+      })),
+      activeQuest: external_exports.object({
+        name: external_exports.string(),
+        currentObjective: external_exports.string().optional(),
+        progress: external_exports.string().optional()
+      }).optional(),
+      recentEvents: external_exports.array(external_exports.string()).optional()
+    });
+  }
+});
+
+// dist/schema/spell.js
+var SpellSchoolSchema, CastingTimeSchema, SpellRangeSchema, DamageTypeSchema, SaveTypeSchema, SpellComponentsSchema, SpellTargetTypeSchema, AreaShapeSchema, SpellEffectSchema, SpellcastingClassSchema, SpellSchema, SpellSlotSchema, SpellSlotsSchema, PactMagicSlotsSchema, SpellcastingAbilitySchema, CharacterClassSchema, SubclassSchema, CastSpellRequestSchema, SpellCastResultSchema;
+var init_spell = __esm({
+  "dist/schema/spell.js"() {
+    "use strict";
+    init_zod();
+    SpellSchoolSchema = external_exports.enum([
+      "abjuration",
+      "conjuration",
+      "divination",
+      "enchantment",
+      "evocation",
+      "illusion",
+      "necromancy",
+      "transmutation"
+    ]);
+    CastingTimeSchema = external_exports.enum([
+      "action",
+      "bonus_action",
+      "reaction",
+      "minute",
+      "10_minutes",
+      "hour",
+      "8_hours",
+      "12_hours",
+      "24_hours"
+    ]);
+    SpellRangeSchema = external_exports.union([
+      external_exports.literal("self"),
+      external_exports.literal("touch"),
+      external_exports.number().int().min(0)
+      // Distance in feet
+    ]);
+    DamageTypeSchema = external_exports.enum([
+      "acid",
+      "bludgeoning",
+      "cold",
+      "fire",
+      "force",
+      "lightning",
+      "necrotic",
+      "piercing",
+      "poison",
+      "psychic",
+      "radiant",
+      "slashing",
+      "thunder"
+    ]);
+    SaveTypeSchema = external_exports.enum([
+      "strength",
+      "dexterity",
+      "constitution",
+      "intelligence",
+      "wisdom",
+      "charisma",
+      "none"
+    ]);
+    SpellComponentsSchema = external_exports.object({
+      verbal: external_exports.boolean(),
+      somatic: external_exports.boolean(),
+      material: external_exports.boolean(),
+      materialDescription: external_exports.string().optional()
+    });
+    SpellTargetTypeSchema = external_exports.enum([
+      "self",
+      "creature",
+      "creatures",
+      "point",
+      "area",
+      "object"
+    ]);
+    AreaShapeSchema = external_exports.enum([
+      "cone",
+      "cube",
+      "cylinder",
+      "line",
+      "sphere"
+    ]);
+    SpellEffectSchema = external_exports.object({
+      type: external_exports.enum(["damage", "healing", "buff", "debuff", "utility", "summon"]),
+      dice: external_exports.string().optional(),
+      // e.g., "8d6", "1d8+4"
+      damageType: DamageTypeSchema.optional(),
+      saveType: SaveTypeSchema.optional(),
+      saveEffect: external_exports.enum(["half", "none", "special"]).optional(),
+      // What happens on successful save
+      upcastBonus: external_exports.object({
+        dice: external_exports.string(),
+        // Additional dice per level, e.g., "1d6"
+        perLevel: external_exports.number().int().default(1)
+        // How many levels for the bonus
+      }).optional(),
+      conditions: external_exports.array(external_exports.string()).optional()
+      // Conditions applied
+    });
+    SpellcastingClassSchema = external_exports.enum([
+      "bard",
+      "cleric",
+      "druid",
+      "paladin",
+      "ranger",
+      "sorcerer",
+      "warlock",
+      "wizard",
+      "artificer"
+    ]);
+    SpellSchema = external_exports.object({
+      id: external_exports.string(),
+      name: external_exports.string(),
+      level: external_exports.number().int().min(0).max(9),
+      // 0 = cantrip
+      school: SpellSchoolSchema,
+      castingTime: CastingTimeSchema,
+      range: SpellRangeSchema,
+      components: SpellComponentsSchema,
+      duration: external_exports.string(),
+      // e.g., "Instantaneous", "1 minute", "Concentration, up to 1 hour"
+      concentration: external_exports.boolean(),
+      ritual: external_exports.boolean().optional().default(false),
+      description: external_exports.string(),
+      higherLevels: external_exports.string().optional(),
+      // Description for upcasting
+      classes: external_exports.array(SpellcastingClassSchema),
+      targetType: SpellTargetTypeSchema,
+      areaOfEffect: external_exports.object({
+        shape: AreaShapeSchema,
+        size: external_exports.number().int()
+        // Size in feet
+      }).optional(),
+      effects: external_exports.array(SpellEffectSchema),
+      autoHit: external_exports.boolean().default(false)
+      // e.g., Magic Missile
+    });
+    SpellSlotSchema = external_exports.object({
+      current: external_exports.number().int().min(0),
+      max: external_exports.number().int().min(0)
+    });
+    SpellSlotsSchema = external_exports.object({
+      level1: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level2: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level3: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level4: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level5: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level6: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level7: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level8: SpellSlotSchema.default({ current: 0, max: 0 }),
+      level9: SpellSlotSchema.default({ current: 0, max: 0 })
+    });
+    PactMagicSlotsSchema = external_exports.object({
+      current: external_exports.number().int().min(0),
+      max: external_exports.number().int().min(0),
+      slotLevel: external_exports.number().int().min(1).max(5)
+      // Warlock slots max at 5th level
+    });
+    SpellcastingAbilitySchema = external_exports.enum([
+      "intelligence",
+      "wisdom",
+      "charisma"
+    ]);
+    CharacterClassSchema = external_exports.enum([
+      "barbarian",
+      "bard",
+      "cleric",
+      "druid",
+      "fighter",
+      "monk",
+      "paladin",
+      "ranger",
+      "rogue",
+      "sorcerer",
+      "warlock",
+      "wizard",
+      "artificer"
+    ]);
+    SubclassSchema = external_exports.enum([
+      "eldritch_knight",
+      // Fighter
+      "arcane_trickster",
+      // Rogue
+      "champion",
+      // Fighter (non-caster)
+      "assassin",
+      // Rogue (non-caster)
+      "none"
+    ]).default("none");
+    CastSpellRequestSchema = external_exports.object({
+      characterId: external_exports.string(),
+      spellName: external_exports.string().min(1, "Spell name is required"),
+      slotLevel: external_exports.number().int().min(1).max(9).optional(),
+      targetId: external_exports.string().optional(),
+      targetPoint: external_exports.object({
+        x: external_exports.number(),
+        y: external_exports.number()
+      }).optional(),
+      asReaction: external_exports.boolean().optional(),
+      metamagic: external_exports.array(external_exports.string()).optional()
+    });
+    SpellCastResultSchema = external_exports.object({
+      success: external_exports.boolean(),
+      spellName: external_exports.string(),
+      slotUsed: external_exports.number().int().optional(),
+      // undefined for cantrips
+      damage: external_exports.number().int().optional(),
+      damageType: DamageTypeSchema.optional(),
+      healing: external_exports.number().int().optional(),
+      diceRolled: external_exports.string().optional(),
+      saveResult: external_exports.enum(["passed", "failed", "none"]).optional(),
+      damageRolled: external_exports.number().int().optional(),
+      damageApplied: external_exports.number().int().optional(),
+      autoHit: external_exports.boolean().optional(),
+      attackRoll: external_exports.number().int().optional(),
+      acBonus: external_exports.number().int().optional(),
+      // For Shield
+      dartCount: external_exports.number().int().optional(),
+      // For Magic Missile
+      concentration: external_exports.boolean().optional(),
+      error: external_exports.string().optional()
+    });
+  }
+});
+
+// dist/schema/character.js
+var CharacterSchema, NPCSchema;
+var init_character = __esm({
+  "dist/schema/character.js"() {
+    "use strict";
+    init_zod();
+    init_party();
+    init_spell();
+    CharacterSchema = external_exports.object({
+      id: external_exports.string(),
+      name: external_exports.string().min(1, "Character name cannot be empty").max(100, "Character name cannot exceed 100 characters"),
+      stats: external_exports.object({
+        str: external_exports.number().int().min(0),
+        dex: external_exports.number().int().min(0),
+        con: external_exports.number().int().min(0),
+        int: external_exports.number().int().min(0),
+        wis: external_exports.number().int().min(0),
+        cha: external_exports.number().int().min(0)
+      }),
+      hp: external_exports.number().int().min(0),
+      maxHp: external_exports.number().int().min(0),
+      ac: external_exports.number().int().min(0),
+      level: external_exports.number().int().min(1),
+      characterType: CharacterTypeSchema.optional().default("pc"),
+      // PHASE-2: Social Hearing Mechanics - skill bonuses for opposed rolls
+      perceptionBonus: external_exports.number().int().optional().default(0).describe("Proficiency bonus for Perception checks (WIS-based)"),
+      stealthBonus: external_exports.number().int().optional().default(0).describe("Proficiency bonus for Stealth checks (DEX-based)"),
+      // Spellcasting fields (CRIT-002/006)
+      // Flexible character class - allows any string (standard D&D classes or custom like "Chronomancer")
+      characterClass: external_exports.string().optional().default("fighter"),
+      subclass: SubclassSchema.optional(),
+      spellSlots: SpellSlotsSchema.optional(),
+      pactMagicSlots: PactMagicSlotsSchema.optional(),
+      // Warlock only
+      knownSpells: external_exports.array(external_exports.string()).optional().default([]),
+      preparedSpells: external_exports.array(external_exports.string()).optional().default([]),
+      cantripsKnown: external_exports.array(external_exports.string()).optional().default([]),
+      maxSpellLevel: external_exports.number().int().min(0).max(9).optional().default(0),
+      spellcastingAbility: SpellcastingAbilitySchema.optional(),
+      spellSaveDC: external_exports.number().int().optional(),
+      spellAttackBonus: external_exports.number().int().optional(),
+      concentratingOn: external_exports.string().nullable().optional().default(null),
+      activeSpells: external_exports.array(external_exports.string()).optional().default([]),
+      conditions: external_exports.array(external_exports.string()).optional().default([]),
+      position: external_exports.object({
+        x: external_exports.number(),
+        y: external_exports.number()
+      }).optional(),
+      // PHASE-1: Spatial Graph System - current room for spatial awareness
+      currentRoomId: external_exports.string().uuid().optional().describe("ID of the room the character is currently in"),
+      // HIGH-007: Legendary creature fields
+      legendaryActions: external_exports.number().int().min(0).optional().describe("Total legendary actions per round (usually 3)"),
+      legendaryActionsRemaining: external_exports.number().int().min(0).optional().describe("Remaining legendary actions this round"),
+      legendaryResistances: external_exports.number().int().min(0).optional().describe("Total legendary resistances per day (usually 3)"),
+      legendaryResistancesRemaining: external_exports.number().int().min(0).optional().describe("Remaining legendary resistances"),
+      hasLairActions: external_exports.boolean().optional().default(false).describe("Whether this creature can use lair actions on initiative 20"),
+      // HIGH-002: Damage modifiers
+      resistances: external_exports.array(external_exports.string()).optional().default([]).describe('Damage types that deal half damage (e.g., ["fire", "cold"])'),
+      vulnerabilities: external_exports.array(external_exports.string()).optional().default([]).describe("Damage types that deal double damage"),
+      immunities: external_exports.array(external_exports.string()).optional().default([]).describe("Damage types that deal no damage"),
+      createdAt: external_exports.string().datetime(),
+      updatedAt: external_exports.string().datetime()
+    });
+    NPCSchema = CharacterSchema.extend({
+      factionId: external_exports.string().optional(),
+      behavior: external_exports.string().optional()
+    });
+  }
+});
+
+// dist/storage/repos/character.repo.js
+var character_repo_exports = {};
+__export(character_repo_exports, {
+  CharacterRepository: () => CharacterRepository
+});
+var CharacterRepository;
+var init_character_repo = __esm({
+  "dist/storage/repos/character.repo.js"() {
+    "use strict";
+    init_character();
+    CharacterRepository = class {
+      db;
+      constructor(db) {
+        this.db = db;
+      }
+      create(character) {
+        const isNPC = "factionId" in character || "behavior" in character;
+        const validChar = isNPC ? NPCSchema.parse(character) : CharacterSchema.parse(character);
+        const stmt = this.db.prepare(`
+      INSERT INTO characters (id, name, stats, hp, max_hp, ac, level, faction_id, behavior, character_type,
+                              character_class, spell_slots, pact_magic_slots, known_spells, prepared_spells,
+                              cantrips_known, max_spell_level, concentrating_on, conditions,
+                              legendary_actions, legendary_actions_remaining, legendary_resistances,
+                              legendary_resistances_remaining, has_lair_actions, resistances, vulnerabilities, immunities,
+                              current_room_id, perception_bonus, stealth_bonus, created_at, updated_at)
+      VALUES (@id, @name, @stats, @hp, @maxHp, @ac, @level, @factionId, @behavior, @characterType,
+              @characterClass, @spellSlots, @pactMagicSlots, @knownSpells, @preparedSpells,
+              @cantripsKnown, @maxSpellLevel, @concentratingOn, @conditions,
+              @legendaryActions, @legendaryActionsRemaining, @legendaryResistances,
+              @legendaryResistancesRemaining, @hasLairActions, @resistances, @vulnerabilities, @immunities,
+              @currentRoomId, @perceptionBonus, @stealthBonus, @createdAt, @updatedAt)
+    `);
+        stmt.run({
+          id: validChar.id,
+          name: validChar.name,
+          stats: JSON.stringify(validChar.stats),
+          hp: validChar.hp,
+          maxHp: validChar.maxHp,
+          ac: validChar.ac,
+          level: validChar.level,
+          factionId: validChar.factionId || null,
+          behavior: validChar.behavior || null,
+          characterType: validChar.characterType || "pc",
+          // CRIT-002/006: Spellcasting fields
+          characterClass: validChar.characterClass || "fighter",
+          spellSlots: validChar.spellSlots ? JSON.stringify(validChar.spellSlots) : null,
+          pactMagicSlots: validChar.pactMagicSlots ? JSON.stringify(validChar.pactMagicSlots) : null,
+          knownSpells: JSON.stringify(validChar.knownSpells || []),
+          preparedSpells: JSON.stringify(validChar.preparedSpells || []),
+          cantripsKnown: JSON.stringify(validChar.cantripsKnown || []),
+          maxSpellLevel: validChar.maxSpellLevel || 0,
+          concentratingOn: validChar.concentratingOn || null,
+          conditions: JSON.stringify(validChar.conditions || []),
+          // HIGH-007: Legendary creature fields
+          legendaryActions: validChar.legendaryActions ?? null,
+          legendaryActionsRemaining: validChar.legendaryActionsRemaining ?? null,
+          legendaryResistances: validChar.legendaryResistances ?? null,
+          legendaryResistancesRemaining: validChar.legendaryResistancesRemaining ?? null,
+          hasLairActions: validChar.hasLairActions ? 1 : 0,
+          resistances: JSON.stringify(validChar.resistances || []),
+          vulnerabilities: JSON.stringify(validChar.vulnerabilities || []),
+          immunities: JSON.stringify(validChar.immunities || []),
+          // PHASE-1: Spatial awareness
+          currentRoomId: validChar.currentRoomId || null,
+          // PHASE-2: Social hearing mechanics skill bonuses
+          perceptionBonus: validChar.perceptionBonus || 0,
+          stealthBonus: validChar.stealthBonus || 0,
+          createdAt: validChar.createdAt,
+          updatedAt: validChar.updatedAt
+        });
+      }
+      findById(id) {
+        const stmt = this.db.prepare("SELECT * FROM characters WHERE id = ?");
+        const row = stmt.get(id);
+        if (!row)
+          return null;
+        return this.rowToCharacter(row);
+      }
+      findAll(filters) {
+        let query = "SELECT * FROM characters";
+        const params = [];
+        if (filters?.characterType) {
+          query += " WHERE character_type = ?";
+          params.push(filters.characterType);
+        }
+        const stmt = this.db.prepare(query);
+        const rows = stmt.all(...params);
+        return rows.map((row) => this.rowToCharacter(row));
+      }
+      findByType(characterType) {
+        const stmt = this.db.prepare("SELECT * FROM characters WHERE character_type = ?");
+        const rows = stmt.all(characterType);
+        return rows.map((row) => this.rowToCharacter(row));
+      }
+      update(id, updates) {
+        const existing = this.findById(id);
+        if (!existing)
+          return null;
+        const updated = {
+          ...existing,
+          ...updates,
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        const isNPC = "factionId" in updated || "behavior" in updated;
+        const validChar = isNPC ? NPCSchema.parse(updated) : CharacterSchema.parse(updated);
+        const stmt = this.db.prepare(`
+            UPDATE characters
+            SET name = ?, stats = ?, hp = ?, max_hp = ?, ac = ?, level = ?,
+                faction_id = ?, behavior = ?, character_type = ?,
+                character_class = ?, spell_slots = ?, pact_magic_slots = ?,
+                known_spells = ?, prepared_spells = ?, cantrips_known = ?,
+                max_spell_level = ?, concentrating_on = ?, conditions = ?,
+                legendary_actions = ?, legendary_actions_remaining = ?,
+                legendary_resistances = ?, legendary_resistances_remaining = ?,
+                has_lair_actions = ?, resistances = ?, vulnerabilities = ?, immunities = ?,
+                current_room_id = ?, perception_bonus = ?, stealth_bonus = ?, updated_at = ?
+            WHERE id = ?
+        `);
+        stmt.run(
+          validChar.name,
+          JSON.stringify(validChar.stats),
+          validChar.hp,
+          validChar.maxHp,
+          validChar.ac,
+          validChar.level,
+          validChar.factionId || null,
+          validChar.behavior || null,
+          validChar.characterType || "pc",
+          // CRIT-002/006: Spellcasting fields
+          validChar.characterClass || "fighter",
+          validChar.spellSlots ? JSON.stringify(validChar.spellSlots) : null,
+          validChar.pactMagicSlots ? JSON.stringify(validChar.pactMagicSlots) : null,
+          JSON.stringify(validChar.knownSpells || []),
+          JSON.stringify(validChar.preparedSpells || []),
+          JSON.stringify(validChar.cantripsKnown || []),
+          validChar.maxSpellLevel || 0,
+          validChar.concentratingOn || null,
+          JSON.stringify(validChar.conditions || []),
+          // HIGH-007: Legendary creature fields
+          validChar.legendaryActions ?? null,
+          validChar.legendaryActionsRemaining ?? null,
+          validChar.legendaryResistances ?? null,
+          validChar.legendaryResistancesRemaining ?? null,
+          validChar.hasLairActions ? 1 : 0,
+          JSON.stringify(validChar.resistances || []),
+          JSON.stringify(validChar.vulnerabilities || []),
+          JSON.stringify(validChar.immunities || []),
+          // PHASE-1: Spatial awareness
+          validChar.currentRoomId || null,
+          // PHASE-2: Social hearing mechanics skill bonuses
+          validChar.perceptionBonus || 0,
+          validChar.stealthBonus || 0,
+          validChar.updatedAt,
+          id
+        );
+        return validChar;
+      }
+      delete(id) {
+        const stmt = this.db.prepare("DELETE FROM characters WHERE id = ?");
+        const result = stmt.run(id);
+        return result.changes > 0;
+      }
+      rowToCharacter(row) {
+        const base = {
+          id: row.id,
+          name: row.name,
+          stats: JSON.parse(row.stats),
+          hp: row.hp,
+          maxHp: row.max_hp,
+          ac: row.ac,
+          level: row.level,
+          characterType: row.character_type || "pc",
+          // CRIT-002/006: Spellcasting fields
+          characterClass: row.character_class || "fighter",
+          spellSlots: row.spell_slots ? JSON.parse(row.spell_slots) : void 0,
+          pactMagicSlots: row.pact_magic_slots ? JSON.parse(row.pact_magic_slots) : void 0,
+          knownSpells: row.known_spells ? JSON.parse(row.known_spells) : [],
+          preparedSpells: row.prepared_spells ? JSON.parse(row.prepared_spells) : [],
+          cantripsKnown: row.cantrips_known ? JSON.parse(row.cantrips_known) : [],
+          maxSpellLevel: row.max_spell_level || 0,
+          concentratingOn: row.concentrating_on || null,
+          conditions: row.conditions ? JSON.parse(row.conditions) : [],
+          // HIGH-007: Legendary creature fields
+          legendaryActions: row.legendary_actions ?? void 0,
+          legendaryActionsRemaining: row.legendary_actions_remaining ?? void 0,
+          legendaryResistances: row.legendary_resistances ?? void 0,
+          legendaryResistancesRemaining: row.legendary_resistances_remaining ?? void 0,
+          hasLairActions: row.has_lair_actions === 1,
+          resistances: row.resistances ? JSON.parse(row.resistances) : [],
+          vulnerabilities: row.vulnerabilities ? JSON.parse(row.vulnerabilities) : [],
+          immunities: row.immunities ? JSON.parse(row.immunities) : [],
+          // PHASE-1: Spatial awareness
+          currentRoomId: row.current_room_id || void 0,
+          // PHASE-2: Social hearing mechanics skill bonuses
+          perceptionBonus: row.perception_bonus ?? 0,
+          stealthBonus: row.stealth_bonus ?? 0,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        };
+        if (row.faction_id || row.behavior) {
+          return NPCSchema.parse({
+            ...base,
+            factionId: row.faction_id || void 0,
+            behavior: row.behavior || void 0
+          });
+        }
+        return CharacterSchema.parse(base);
+      }
+    };
+  }
+});
+
 // node_modules/nerdamer/nerdamer.core.js
 var require_nerdamer_core = __commonJS({
   "node_modules/nerdamer/nerdamer.core.js"(exports2, module2) {
-    var nerdamer3 = function(imports) {
+    var nerdamer3 = (function(imports) {
       "use strict";
       var version2 = "1.1.13";
       var _ = new Parser();
@@ -12578,13 +17291,13 @@ var require_nerdamer_core = __commonJS({
           }
           return retval;
         };
-        this.operator_filter_regex = function() {
+        this.operator_filter_regex = (function() {
           var ostr = "^\\" + Object.keys(operators).filter(function(x) {
             if (x.length === 1)
               return x;
           }).join("\\");
           return new RegExp("([" + ostr + "])\\s+([" + ostr + "])");
-        }();
+        })();
         this.setOperator = function(operator, action, shift) {
           var name = operator.operator;
           operators[name] = operator;
@@ -15278,7 +19991,7 @@ var require_nerdamer_core = __commonJS({
         }
       };
       var LaTeX = {
-        parser: function() {
+        parser: (function() {
           var keep = ["classes", "setOperator", "getOperators", "getBrackets", "tokenize", "toRPN", "tree", "units"];
           var parser = new Parser();
           for (var x in parser) {
@@ -15310,7 +20023,7 @@ var require_nerdamer_core = __commonJS({
           var brackets = parser.getBrackets();
           brackets["{"].maps_to = void 0;
           return parser;
-        }(),
+        })(),
         space: "~",
         dot: " \\cdot ",
         // grab a list of supported functions but remove the excluded ones found in exclFN
@@ -17089,10 +21802,10 @@ var require_nerdamer_core = __commonJS({
       };
       libExports.updateAPI();
       return libExports;
-    }({
+    })({
       //https://github.com/peterolson/BigInteger.js
-      bigInt: function() {
-        var bigInt = function(undefined2) {
+      bigInt: (function() {
+        var bigInt = (function(undefined2) {
           "use strict";
           var BASE = 1e7, LOG_BASE = 7, MAX_INT = 9007199254740992, MAX_INT_ARR = smallToArray(MAX_INT), LOG_MAX_INT = Math.log(MAX_INT);
           function Integer(v, radix) {
@@ -18193,7 +22906,7 @@ var require_nerdamer_core = __commonJS({
             return parseBaseFromArray(digits.map(parseValue), parseValue(base || 10), isNegative);
           };
           return Integer;
-        }();
+        })();
         if (typeof module2 !== "undefined" && module2.hasOwnProperty("exports")) {
           module2.exports = bigInt;
         }
@@ -18203,7 +22916,7 @@ var require_nerdamer_core = __commonJS({
           });
         }
         return bigInt;
-      }(),
+      })(),
       /*
        *  decimal.js v10.2.1
        *  An arbitrary-precision Decimal type for JavaScript.
@@ -18211,7 +22924,7 @@ var require_nerdamer_core = __commonJS({
        *  Copyright (c) 2020 Michael Mclaughlin <M8ch88l@gmail.com>
        *  MIT Licence
        */
-      bigDec: function(n2) {
+      bigDec: (function(n2) {
         "use strict";
         var e, i, t, r, s = 9e15, o = 1e9, u = "0123456789abcdef", c = "2.3025850929940456840179914546843642076011014886287729760333279009675726096773524802359972050895982983419677840422862486334095254650828067566662873690987816894829072083255546808437998948262331985283935053089653777326288461633662222876982198867465436674744042432743651550489343149393914796194044002221051017141748003688084012647080685567743216228355220114804663715659121373450747856947683463616792101806445070648000277502684916746550586856935673420670581136429224554405758925724208241314695689016758940256776311356919292033376587141660230105703089634572075440370847469940168269282808481184289314848524948644871927809676271275775397027668605952496716674183485704422507197965004714951050492214776567636938662976979522110718264549734772662425709429322582798502585509785265383207606726317164309505995087807523710333101197857547331541421808427543863591778117054309827482385045648019095610299291824318237525357709750539565187697510374970888692180205189339507238539205144634197265287286965110862571492198849978748873771345686209167058", f = "3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491298336733624406566430860213949463952247371907021798609437027705392171762931767523846748184676694051320005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235420199561121290219608640344181598136297747713099605187072113499999983729780499510597317328160963185950244594553469083026425223082533446850352619311881710100031378387528865875332083814206171776691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989380952572010654858632789", a = { precision: 20, rounding: 4, modulo: 1, toExpNeg: -7, toExpPos: 21, minE: -s, maxE: s, crypto: false }, h = true, d = "[DecimalError] ", l = d + "Invalid argument: ", p = d + "Precision limit exceeded", g = d + "crypto unavailable", m = Math.floor, w = Math.pow, v = /^0b([01]+(\.[01]*)?|\.[01]+)(p[+-]?\d+)?$/i, N = /^0x([0-9a-f]+(\.[0-9a-f]*)?|\.[0-9a-f]+)(p[+-]?\d+)?$/i, b = /^0o([0-7]+(\.[0-7]*)?|\.[0-7]+)(p[+-]?\d+)?$/i, E = /^(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i, x = 1e7, y = 7, M = c.length - 1, q = f.length - 1, O = { name: "[object Decimal]" };
         function D(n3) {
@@ -18253,7 +22966,7 @@ var require_nerdamer_core = __commonJS({
           return t2 === r2 ? 0 : t2 > r2 ^ c2 < 0 ? 1 : -1;
         }, O.cosine = O.cos = function() {
           var n3, e2, i2 = this, t2 = i2.constructor;
-          return i2.d ? i2.d[0] ? (n3 = t2.precision, e2 = t2.rounding, t2.precision = n3 + Math.max(i2.e, i2.sd()) + y, t2.rounding = 1, i2 = function(n4, e3) {
+          return i2.d ? i2.d[0] ? (n3 = t2.precision, e2 = t2.rounding, t2.precision = n3 + Math.max(i2.e, i2.sd()) + y, t2.rounding = 1, i2 = (function(n4, e3) {
             var i3, t3, r2 = e3.d.length;
             r2 < 32 ? (i3 = Math.ceil(r2 / 3), t3 = (1 / z(4, i3)).toString()) : (i3 = 16, t3 = "2.3283064365386962890625e-10");
             n4.precision += i3, e3 = J(n4, 1, e3.times(t3), new n4(1));
@@ -18262,7 +22975,7 @@ var require_nerdamer_core = __commonJS({
               e3 = o2.times(o2).minus(o2).times(8).plus(1);
             }
             return n4.precision -= i3, e3;
-          }(t2, G(t2, i2)), t2.precision = n3, t2.rounding = e2, P(2 == r || 3 == r ? i2.neg() : i2, n3, e2, true)) : new t2(1) : new t2(NaN);
+          })(t2, G(t2, i2)), t2.precision = n3, t2.rounding = e2, P(2 == r || 3 == r ? i2.neg() : i2, n3, e2, true)) : new t2(1) : new t2(NaN);
         }, O.cubeRoot = O.cbrt = function() {
           var n3, e2, i2, t2, r2, s2, o2, u2, c2, f2, a2 = this, d2 = a2.constructor;
           if (!a2.isFinite() || a2.isZero()) return new d2(a2);
@@ -18445,13 +23158,13 @@ var require_nerdamer_core = __commonJS({
           return P(new e2(n3), n3.e + 1, e2.rounding);
         }, O.sine = O.sin = function() {
           var n3, e2, i2 = this, t2 = i2.constructor;
-          return i2.isFinite() ? i2.isZero() ? new t2(i2) : (n3 = t2.precision, e2 = t2.rounding, t2.precision = n3 + Math.max(i2.e, i2.sd()) + y, t2.rounding = 1, i2 = function(n4, e3) {
+          return i2.isFinite() ? i2.isZero() ? new t2(i2) : (n3 = t2.precision, e2 = t2.rounding, t2.precision = n3 + Math.max(i2.e, i2.sd()) + y, t2.rounding = 1, i2 = (function(n4, e3) {
             var i3, t3 = e3.d.length;
             if (t3 < 3) return J(n4, 2, e3, e3);
             i3 = (i3 = 1.4 * Math.sqrt(t3)) > 16 ? 16 : 0 | i3, e3 = e3.times(1 / z(5, i3)), e3 = J(n4, 2, e3, e3);
             for (var r2, s2 = new n4(5), o2 = new n4(16), u2 = new n4(20); i3--; ) r2 = e3.times(e3), e3 = e3.times(s2.plus(r2.times(o2.times(r2).minus(u2))));
             return e3;
-          }(t2, G(t2, i2)), t2.precision = n3, t2.rounding = e2, P(r > 2 ? i2.neg() : i2, n3, e2, true)) : new t2(NaN);
+          })(t2, G(t2, i2)), t2.precision = n3, t2.rounding = e2, P(r > 2 ? i2.neg() : i2, n3, e2, true)) : new t2(NaN);
         }, O.squareRoot = O.sqrt = function() {
           var n3, e2, i2, t2, r2, s2, o2 = this, u2 = o2.d, c2 = o2.e, f2 = o2.s, a2 = o2.constructor;
           if (1 !== f2 || !u2 || !u2[0]) return new a2(!f2 || f2 < 0 && (!u2 || u2[0]) ? NaN : u2 ? o2 : 1 / 0);
@@ -18543,7 +23256,7 @@ var require_nerdamer_core = __commonJS({
           var n3 = this, e2 = n3.constructor, i2 = R(n3, n3.e <= e2.toExpNeg || n3.e >= e2.toExpPos);
           return n3.isNeg() ? "-" + i2 : i2;
         };
-        var Z = /* @__PURE__ */ function() {
+        var Z = /* @__PURE__ */ (function() {
           function n3(n4, e3, i2) {
             var t3, r2 = 0, s2 = n4.length;
             for (n4 = n4.slice(); s2--; ) t3 = n4[s2] * e3 + r2, n4[s2] = t3 % i2 | 0, r2 = t3 / i2 | 0;
@@ -18588,7 +23301,7 @@ var require_nerdamer_core = __commonJS({
             }
             return N2;
           };
-        }();
+        })();
         function P(n3, e2, i2, t2) {
           var r2, s2, o2, u2, c2, f2, a2, d2, l2, p2 = n3.constructor;
           n: if (null != e2) {
@@ -18932,7 +23645,7 @@ var require_nerdamer_core = __commonJS({
         function Un(n3) {
           return P(n3 = new this(n3), n3.e + 1, 1);
         }
-        return (e = function n3(e2) {
+        return (e = (function n3(e2) {
           var i2, t2, r2;
           function s2(n4) {
             var e3, i3, t3, r3 = this;
@@ -18951,12 +23664,12 @@ var require_nerdamer_core = __commonJS({
           }
           if (s2.prototype = O, s2.ROUND_UP = 0, s2.ROUND_DOWN = 1, s2.ROUND_CEIL = 2, s2.ROUND_FLOOR = 3, s2.ROUND_HALF_UP = 4, s2.ROUND_HALF_DOWN = 5, s2.ROUND_HALF_EVEN = 6, s2.ROUND_HALF_CEIL = 7, s2.ROUND_HALF_FLOOR = 8, s2.EUCLID = 9, s2.config = s2.set = an, s2.clone = n3, s2.isDecimal = wn, s2.abs = X, s2.acos = Y, s2.acosh = nn, s2.add = en, s2.asin = tn, s2.asinh = rn, s2.atan = sn, s2.atanh = on, s2.atan2 = un, s2.cbrt = cn, s2.ceil = fn, s2.cos = hn, s2.cosh = dn, s2.div = ln, s2.exp = pn, s2.floor = gn, s2.hypot = mn, s2.ln = vn, s2.log = Nn, s2.log10 = En, s2.log2 = bn, s2.max = xn, s2.min = yn, s2.mod = Mn, s2.mul = qn, s2.pow = On, s2.random = Dn, s2.round = Fn, s2.sign = An, s2.sin = Sn, s2.sinh = Zn, s2.sqrt = Pn, s2.sub = Rn, s2.tan = Ln, s2.tanh = Tn, s2.trunc = Un, void 0 === e2 && (e2 = {}), e2 && true !== e2.defaults) for (r2 = ["precision", "rounding", "toExpNeg", "toExpPos", "maxE", "minE", "modulo", "crypto"], i2 = 0; i2 < r2.length; ) e2.hasOwnProperty(t2 = r2[i2++]) || (e2[t2] = this[t2]);
           return s2.config(e2), s2;
-        }(a)).default = e.Decimal = e, c = new e(c), f = new e(f), "function" == typeof define && define.amd ? define(function() {
+        })(a)).default = e.Decimal = e, c = new e(c), f = new e(f), "function" == typeof define && define.amd ? define(function() {
           return e;
         }) : "undefined" != typeof module2 && module2.exports ? ("function" == typeof Symbol && "symbol" == typeof Symbol.iterator && (O[Symbol.for("nodejs.util.inspect.custom")] = O.toString, O[Symbol.toStringTag] = "Decimal"), module2.exports = e) : (n2 || (n2 = "undefined" != typeof self && self && self.self == self ? self : window), t = n2.Decimal, e.noConflict = function() {
           return n2.Decimal = t, e;
         }, n2.Decimal = e), e;
-      }(exports2)
+      })(exports2)
       //    bigDec: require('decimal.js')
     });
     if (typeof module2 !== "undefined") {
@@ -21390,7 +26103,7 @@ var require_Algebra = __commonJS({
             //take all complementary terms, e.g.
             //[a,b,c] => [a*b, b*c, a*c]
             //[a,b,c,d] => [a*b*c, a*b*d, a*c*d, b*c*d]
-            function(input, size) {
+            (function(input, size) {
               size = Number(size);
               var results = [], result, mask, i, total = Math.pow(2, input.length);
               for (mask = size; mask < total; mask++) {
@@ -21406,7 +26119,7 @@ var require_Algebra = __commonJS({
                 }
               }
               return results;
-            }(arguments, arguments.length - 1).map(function(x) {
+            })(arguments, arguments.length - 1).map(function(x) {
               return x.reduce(function(prev, curr) {
                 return _.multiply(prev, curr.clone());
               }, new Symbol2(1));
@@ -23326,6 +28039,7 @@ var require_Calculus = __commonJS({
                         case ACOT:
                           retval = __.integration.by_parts(symbol, dx, depth, opt);
                           break;
+                        //inverse htrig
                         case ASECH:
                           retval = __.integration.by_parts(symbol, dx, depth, opt);
                           break;
@@ -23335,6 +28049,8 @@ var require_Calculus = __commonJS({
                         case ACOTH:
                           retval = __.integration.by_parts(symbol, dx, depth, opt);
                           break;
+                        //end inverse htrig
+                        //htrigh
                         case SECH:
                           retval = _.parse(format("atan(sinh({0}))", arg));
                           break;
@@ -23344,6 +28060,7 @@ var require_Calculus = __commonJS({
                         case COTH:
                           retval = _.parse(format(Settings.LOG + "(sinh({0}))", arg));
                           break;
+                        //end htrig
                         case EXP:
                           retval = __.integrate(_.parse(format("e^({0})", arg)), dx, depth);
                           break;
@@ -24039,6 +28756,7 @@ var require_Calculus = __commonJS({
                         if (__.Limit.isConvergent(arg)) {
                           if (symbol.fname === LOG) {
                             switch (arg.toString()) {
+                              //lim -> 0
                               case "0":
                                 retval = Symbol2.infinity().negate();
                                 break;
@@ -25478,6 +30196,223 @@ var require_Solve = __commonJS({
   }
 });
 
+// dist/engine/magic/aura.js
+var aura_exports = {};
+__export(aura_exports, {
+  applyAuraEffect: () => applyAuraEffect,
+  calculateDistance: () => calculateDistance,
+  checkAuraDuration: () => checkAuraDuration,
+  checkAuraEffectsForTarget: () => checkAuraEffectsForTarget,
+  createAura: () => createAura,
+  endAura: () => endAura,
+  endAurasByOwner: () => endAurasByOwner,
+  expireOldAuras: () => expireOldAuras,
+  getActiveAuras: () => getActiveAuras,
+  getAurasAtPosition: () => getAurasAtPosition,
+  isInAuraRange: () => isInAuraRange,
+  rollDice: () => rollDice2,
+  rollSave: () => rollSave,
+  shouldAffectTarget: () => shouldAffectTarget
+});
+function calculateDistance(pos1, pos2) {
+  const dx = pos1.x - pos2.x;
+  const dy = pos1.y - pos2.y;
+  const squares = Math.sqrt(dx * dx + dy * dy);
+  return Math.round(squares * 5);
+}
+function isInAuraRange(auraCenter, targetPosition, radius) {
+  const distance = calculateDistance(auraCenter, targetPosition);
+  return distance <= radius;
+}
+function createAura(request, auraRepo) {
+  const aura = {
+    id: (0, import_crypto9.randomUUID)(),
+    ownerId: request.ownerId,
+    spellName: request.spellName,
+    spellLevel: request.spellLevel,
+    radius: request.radius,
+    affectsAllies: request.affectsAllies,
+    affectsEnemies: request.affectsEnemies,
+    affectsSelf: request.affectsSelf,
+    effects: request.effects,
+    startedAt: request.currentRound,
+    maxDuration: request.maxDuration,
+    requiresConcentration: request.requiresConcentration
+  };
+  auraRepo.create(aura);
+  return aura;
+}
+function endAura(auraId, auraRepo) {
+  return auraRepo.delete(auraId);
+}
+function endAurasByOwner(ownerId, auraRepo) {
+  return auraRepo.deleteByOwnerId(ownerId);
+}
+function getActiveAuras(auraRepo) {
+  return auraRepo.findAll();
+}
+function getAurasAtPosition(tokens, targetPosition, auraRepo) {
+  const allAuras = auraRepo.findAll();
+  const aurasAtPosition = [];
+  for (const aura of allAuras) {
+    const owner = tokens.find((t) => t.id === aura.ownerId);
+    if (!owner || !owner.position) {
+      continue;
+    }
+    if (isInAuraRange(owner.position, targetPosition, aura.radius)) {
+      aurasAtPosition.push(aura);
+    }
+  }
+  return aurasAtPosition;
+}
+function shouldAffectTarget(aura, target, ownerIsAlly) {
+  if (target.id === aura.ownerId) {
+    return aura.affectsSelf;
+  }
+  if (ownerIsAlly && !aura.affectsAllies) {
+    return false;
+  }
+  if (!ownerIsAlly && !aura.affectsEnemies) {
+    return false;
+  }
+  return true;
+}
+function rollSave(abilityModifier) {
+  const roll = Math.floor(Math.random() * 20) + 1;
+  const total = roll + abilityModifier;
+  return { roll, total };
+}
+function rollDice2(dice) {
+  const match = dice.match(/^(\d+)d(\d+)(?:\+(\d+))?$/);
+  if (!match) {
+    throw new Error(`Invalid dice notation: ${dice}`);
+  }
+  const [, numDiceStr, diceSizeStr, bonusStr] = match;
+  const numDice = parseInt(numDiceStr, 10);
+  const diceSize = parseInt(diceSizeStr, 10);
+  const bonus = bonusStr ? parseInt(bonusStr, 10) : 0;
+  let total = bonus;
+  for (let i = 0; i < numDice; i++) {
+    total += Math.floor(Math.random() * diceSize) + 1;
+  }
+  return total;
+}
+function applyAuraEffect(aura, effect, target, trigger) {
+  const result = {
+    auraId: aura.id,
+    auraName: aura.spellName,
+    targetId: target.id,
+    trigger,
+    effectType: effect.type,
+    succeeded: false
+  };
+  if (effect.saveType && effect.saveDC) {
+    const abilityModifier = getAbilityModifier3(target, effect.saveType);
+    const saveResult = rollSave(abilityModifier);
+    result.saveRoll = saveResult.roll;
+    result.saveDC = effect.saveDC;
+    result.saveTotal = saveResult.total;
+    result.succeeded = saveResult.total >= effect.saveDC;
+    if (result.succeeded && (effect.type === "damage" || effect.type === "condition")) {
+      return result;
+    }
+  } else {
+    result.succeeded = true;
+  }
+  switch (effect.type) {
+    case "damage":
+      if (effect.dice) {
+        result.damageDealt = rollDice2(effect.dice);
+        result.damageType = effect.damageType;
+      }
+      break;
+    case "healing":
+      if (effect.dice) {
+        result.healingDone = rollDice2(effect.dice);
+      }
+      break;
+    case "condition":
+      if (effect.conditions) {
+        result.conditionsApplied = effect.conditions;
+      }
+      break;
+    case "buff":
+    case "debuff":
+    case "custom":
+      result.description = effect.description;
+      break;
+  }
+  return result;
+}
+function getAbilityModifier3(token, ability) {
+  if (!token.abilityScores) {
+    return 0;
+  }
+  const abilityMap = {
+    strength: "strength",
+    dexterity: "dexterity",
+    constitution: "constitution",
+    intelligence: "intelligence",
+    wisdom: "wisdom",
+    charisma: "charisma"
+  };
+  const abilityKey = abilityMap[ability.toLowerCase()];
+  if (!abilityKey) {
+    return 0;
+  }
+  const score = token.abilityScores[abilityKey];
+  return Math.floor((score - 10) / 2);
+}
+function checkAuraEffectsForTarget(tokens, targetId, trigger, auraRepo) {
+  const target = tokens.find((t) => t.id === targetId);
+  if (!target || !target.position) {
+    return [];
+  }
+  const aurasAtPosition = getAurasAtPosition(tokens, target.position, auraRepo);
+  const results = [];
+  for (const aura of aurasAtPosition) {
+    const owner = tokens.find((t) => t.id === aura.ownerId);
+    if (!owner)
+      continue;
+    const ownerIsAlly = target.isEnemy === owner.isEnemy;
+    if (!shouldAffectTarget(aura, target, ownerIsAlly)) {
+      continue;
+    }
+    for (const effect of aura.effects) {
+      if (effect.trigger === trigger) {
+        const result = applyAuraEffect(aura, effect, target, trigger);
+        results.push(result);
+      }
+    }
+  }
+  return results;
+}
+function checkAuraDuration(aura, currentRound) {
+  if (!aura.maxDuration) {
+    return false;
+  }
+  const roundsElapsed = currentRound - aura.startedAt;
+  return roundsElapsed >= aura.maxDuration;
+}
+function expireOldAuras(currentRound, auraRepo) {
+  const allAuras = auraRepo.findAll();
+  const expiredIds = [];
+  for (const aura of allAuras) {
+    if (checkAuraDuration(aura, currentRound)) {
+      auraRepo.delete(aura.id);
+      expiredIds.push(aura.id);
+    }
+  }
+  return expiredIds;
+}
+var import_crypto9;
+var init_aura = __esm({
+  "dist/engine/magic/aura.js"() {
+    "use strict";
+    import_crypto9 = require("crypto");
+  }
+});
+
 // dist/server/transport/tcp.js
 var tcp_exports = {};
 __export(tcp_exports, {
@@ -25569,12 +30504,12 @@ var unix_exports = {};
 __export(unix_exports, {
   UnixServerTransport: () => UnixServerTransport
 });
-var import_net2, import_fs, UnixServerTransport;
+var import_net2, import_fs2, UnixServerTransport;
 var init_unix = __esm({
   "dist/server/transport/unix.js"() {
     "use strict";
     import_net2 = require("net");
-    import_fs = __toESM(require("fs"), 1);
+    import_fs2 = __toESM(require("fs"), 1);
     UnixServerTransport = class {
       path;
       server;
@@ -25615,8 +30550,8 @@ var init_unix = __esm({
         });
       }
       async start() {
-        if (process.platform !== "win32" && import_fs.default.existsSync(this.path)) {
-          import_fs.default.unlinkSync(this.path);
+        if (process.platform !== "win32" && import_fs2.default.existsSync(this.path)) {
+          import_fs2.default.unlinkSync(this.path);
         }
         return new Promise((resolve) => {
           this.server.listen(this.path, () => {
@@ -29365,4047 +34300,6 @@ var init_websocket = __esm({
   }
 });
 
-// node_modules/zod/v3/external.js
-var external_exports = {};
-__export(external_exports, {
-  BRAND: () => BRAND,
-  DIRTY: () => DIRTY,
-  EMPTY_PATH: () => EMPTY_PATH,
-  INVALID: () => INVALID,
-  NEVER: () => NEVER,
-  OK: () => OK,
-  ParseStatus: () => ParseStatus,
-  Schema: () => ZodType,
-  ZodAny: () => ZodAny,
-  ZodArray: () => ZodArray,
-  ZodBigInt: () => ZodBigInt,
-  ZodBoolean: () => ZodBoolean,
-  ZodBranded: () => ZodBranded,
-  ZodCatch: () => ZodCatch,
-  ZodDate: () => ZodDate,
-  ZodDefault: () => ZodDefault,
-  ZodDiscriminatedUnion: () => ZodDiscriminatedUnion,
-  ZodEffects: () => ZodEffects,
-  ZodEnum: () => ZodEnum,
-  ZodError: () => ZodError,
-  ZodFirstPartyTypeKind: () => ZodFirstPartyTypeKind,
-  ZodFunction: () => ZodFunction,
-  ZodIntersection: () => ZodIntersection,
-  ZodIssueCode: () => ZodIssueCode,
-  ZodLazy: () => ZodLazy,
-  ZodLiteral: () => ZodLiteral,
-  ZodMap: () => ZodMap,
-  ZodNaN: () => ZodNaN,
-  ZodNativeEnum: () => ZodNativeEnum,
-  ZodNever: () => ZodNever,
-  ZodNull: () => ZodNull,
-  ZodNullable: () => ZodNullable,
-  ZodNumber: () => ZodNumber,
-  ZodObject: () => ZodObject,
-  ZodOptional: () => ZodOptional,
-  ZodParsedType: () => ZodParsedType,
-  ZodPipeline: () => ZodPipeline,
-  ZodPromise: () => ZodPromise,
-  ZodReadonly: () => ZodReadonly,
-  ZodRecord: () => ZodRecord,
-  ZodSchema: () => ZodType,
-  ZodSet: () => ZodSet,
-  ZodString: () => ZodString,
-  ZodSymbol: () => ZodSymbol,
-  ZodTransformer: () => ZodEffects,
-  ZodTuple: () => ZodTuple,
-  ZodType: () => ZodType,
-  ZodUndefined: () => ZodUndefined,
-  ZodUnion: () => ZodUnion,
-  ZodUnknown: () => ZodUnknown,
-  ZodVoid: () => ZodVoid,
-  addIssueToContext: () => addIssueToContext,
-  any: () => anyType,
-  array: () => arrayType,
-  bigint: () => bigIntType,
-  boolean: () => booleanType,
-  coerce: () => coerce,
-  custom: () => custom,
-  date: () => dateType,
-  datetimeRegex: () => datetimeRegex,
-  defaultErrorMap: () => en_default,
-  discriminatedUnion: () => discriminatedUnionType,
-  effect: () => effectsType,
-  enum: () => enumType,
-  function: () => functionType,
-  getErrorMap: () => getErrorMap,
-  getParsedType: () => getParsedType,
-  instanceof: () => instanceOfType,
-  intersection: () => intersectionType,
-  isAborted: () => isAborted,
-  isAsync: () => isAsync,
-  isDirty: () => isDirty,
-  isValid: () => isValid,
-  late: () => late,
-  lazy: () => lazyType,
-  literal: () => literalType,
-  makeIssue: () => makeIssue,
-  map: () => mapType,
-  nan: () => nanType,
-  nativeEnum: () => nativeEnumType,
-  never: () => neverType,
-  null: () => nullType,
-  nullable: () => nullableType,
-  number: () => numberType,
-  object: () => objectType,
-  objectUtil: () => objectUtil,
-  oboolean: () => oboolean,
-  onumber: () => onumber,
-  optional: () => optionalType,
-  ostring: () => ostring,
-  pipeline: () => pipelineType,
-  preprocess: () => preprocessType,
-  promise: () => promiseType,
-  quotelessJson: () => quotelessJson,
-  record: () => recordType,
-  set: () => setType,
-  setErrorMap: () => setErrorMap,
-  strictObject: () => strictObjectType,
-  string: () => stringType,
-  symbol: () => symbolType,
-  transformer: () => effectsType,
-  tuple: () => tupleType,
-  undefined: () => undefinedType,
-  union: () => unionType,
-  unknown: () => unknownType,
-  util: () => util,
-  void: () => voidType
-});
-
-// node_modules/zod/v3/helpers/util.js
-var util;
-(function(util2) {
-  util2.assertEqual = (_) => {
-  };
-  function assertIs2(_arg) {
-  }
-  util2.assertIs = assertIs2;
-  function assertNever2(_x) {
-    throw new Error();
-  }
-  util2.assertNever = assertNever2;
-  util2.arrayToEnum = (items) => {
-    const obj = {};
-    for (const item of items) {
-      obj[item] = item;
-    }
-    return obj;
-  };
-  util2.getValidEnumValues = (obj) => {
-    const validKeys = util2.objectKeys(obj).filter((k) => typeof obj[obj[k]] !== "number");
-    const filtered = {};
-    for (const k of validKeys) {
-      filtered[k] = obj[k];
-    }
-    return util2.objectValues(filtered);
-  };
-  util2.objectValues = (obj) => {
-    return util2.objectKeys(obj).map(function(e) {
-      return obj[e];
-    });
-  };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
-    const keys = [];
-    for (const key in object3) {
-      if (Object.prototype.hasOwnProperty.call(object3, key)) {
-        keys.push(key);
-      }
-    }
-    return keys;
-  };
-  util2.find = (arr, checker) => {
-    for (const item of arr) {
-      if (checker(item))
-        return item;
-    }
-    return void 0;
-  };
-  util2.isInteger = typeof Number.isInteger === "function" ? (val) => Number.isInteger(val) : (val) => typeof val === "number" && Number.isFinite(val) && Math.floor(val) === val;
-  function joinValues2(array2, separator = " | ") {
-    return array2.map((val) => typeof val === "string" ? `'${val}'` : val).join(separator);
-  }
-  util2.joinValues = joinValues2;
-  util2.jsonStringifyReplacer = (_, value) => {
-    if (typeof value === "bigint") {
-      return value.toString();
-    }
-    return value;
-  };
-})(util || (util = {}));
-var objectUtil;
-(function(objectUtil2) {
-  objectUtil2.mergeShapes = (first, second) => {
-    return {
-      ...first,
-      ...second
-      // second overwrites first
-    };
-  };
-})(objectUtil || (objectUtil = {}));
-var ZodParsedType = util.arrayToEnum([
-  "string",
-  "nan",
-  "number",
-  "integer",
-  "float",
-  "boolean",
-  "date",
-  "bigint",
-  "symbol",
-  "function",
-  "undefined",
-  "null",
-  "array",
-  "object",
-  "unknown",
-  "promise",
-  "void",
-  "never",
-  "map",
-  "set"
-]);
-var getParsedType = (data) => {
-  const t = typeof data;
-  switch (t) {
-    case "undefined":
-      return ZodParsedType.undefined;
-    case "string":
-      return ZodParsedType.string;
-    case "number":
-      return Number.isNaN(data) ? ZodParsedType.nan : ZodParsedType.number;
-    case "boolean":
-      return ZodParsedType.boolean;
-    case "function":
-      return ZodParsedType.function;
-    case "bigint":
-      return ZodParsedType.bigint;
-    case "symbol":
-      return ZodParsedType.symbol;
-    case "object":
-      if (Array.isArray(data)) {
-        return ZodParsedType.array;
-      }
-      if (data === null) {
-        return ZodParsedType.null;
-      }
-      if (data.then && typeof data.then === "function" && data.catch && typeof data.catch === "function") {
-        return ZodParsedType.promise;
-      }
-      if (typeof Map !== "undefined" && data instanceof Map) {
-        return ZodParsedType.map;
-      }
-      if (typeof Set !== "undefined" && data instanceof Set) {
-        return ZodParsedType.set;
-      }
-      if (typeof Date !== "undefined" && data instanceof Date) {
-        return ZodParsedType.date;
-      }
-      return ZodParsedType.object;
-    default:
-      return ZodParsedType.unknown;
-  }
-};
-
-// node_modules/zod/v3/ZodError.js
-var ZodIssueCode = util.arrayToEnum([
-  "invalid_type",
-  "invalid_literal",
-  "custom",
-  "invalid_union",
-  "invalid_union_discriminator",
-  "invalid_enum_value",
-  "unrecognized_keys",
-  "invalid_arguments",
-  "invalid_return_type",
-  "invalid_date",
-  "invalid_string",
-  "too_small",
-  "too_big",
-  "invalid_intersection_types",
-  "not_multiple_of",
-  "not_finite"
-]);
-var quotelessJson = (obj) => {
-  const json = JSON.stringify(obj, null, 2);
-  return json.replace(/"([^"]+)":/g, "$1:");
-};
-var ZodError = class _ZodError extends Error {
-  get errors() {
-    return this.issues;
-  }
-  constructor(issues) {
-    super();
-    this.issues = [];
-    this.addIssue = (sub) => {
-      this.issues = [...this.issues, sub];
-    };
-    this.addIssues = (subs = []) => {
-      this.issues = [...this.issues, ...subs];
-    };
-    const actualProto = new.target.prototype;
-    if (Object.setPrototypeOf) {
-      Object.setPrototypeOf(this, actualProto);
-    } else {
-      this.__proto__ = actualProto;
-    }
-    this.name = "ZodError";
-    this.issues = issues;
-  }
-  format(_mapper) {
-    const mapper = _mapper || function(issue2) {
-      return issue2.message;
-    };
-    const fieldErrors = { _errors: [] };
-    const processError = (error) => {
-      for (const issue2 of error.issues) {
-        if (issue2.code === "invalid_union") {
-          issue2.unionErrors.map(processError);
-        } else if (issue2.code === "invalid_return_type") {
-          processError(issue2.returnTypeError);
-        } else if (issue2.code === "invalid_arguments") {
-          processError(issue2.argumentsError);
-        } else if (issue2.path.length === 0) {
-          fieldErrors._errors.push(mapper(issue2));
-        } else {
-          let curr = fieldErrors;
-          let i = 0;
-          while (i < issue2.path.length) {
-            const el = issue2.path[i];
-            const terminal = i === issue2.path.length - 1;
-            if (!terminal) {
-              curr[el] = curr[el] || { _errors: [] };
-            } else {
-              curr[el] = curr[el] || { _errors: [] };
-              curr[el]._errors.push(mapper(issue2));
-            }
-            curr = curr[el];
-            i++;
-          }
-        }
-      }
-    };
-    processError(this);
-    return fieldErrors;
-  }
-  static assert(value) {
-    if (!(value instanceof _ZodError)) {
-      throw new Error(`Not a ZodError: ${value}`);
-    }
-  }
-  toString() {
-    return this.message;
-  }
-  get message() {
-    return JSON.stringify(this.issues, util.jsonStringifyReplacer, 2);
-  }
-  get isEmpty() {
-    return this.issues.length === 0;
-  }
-  flatten(mapper = (issue2) => issue2.message) {
-    const fieldErrors = {};
-    const formErrors = [];
-    for (const sub of this.issues) {
-      if (sub.path.length > 0) {
-        const firstEl = sub.path[0];
-        fieldErrors[firstEl] = fieldErrors[firstEl] || [];
-        fieldErrors[firstEl].push(mapper(sub));
-      } else {
-        formErrors.push(mapper(sub));
-      }
-    }
-    return { formErrors, fieldErrors };
-  }
-  get formErrors() {
-    return this.flatten();
-  }
-};
-ZodError.create = (issues) => {
-  const error = new ZodError(issues);
-  return error;
-};
-
-// node_modules/zod/v3/locales/en.js
-var errorMap = (issue2, _ctx) => {
-  let message;
-  switch (issue2.code) {
-    case ZodIssueCode.invalid_type:
-      if (issue2.received === ZodParsedType.undefined) {
-        message = "Required";
-      } else {
-        message = `Expected ${issue2.expected}, received ${issue2.received}`;
-      }
-      break;
-    case ZodIssueCode.invalid_literal:
-      message = `Invalid literal value, expected ${JSON.stringify(issue2.expected, util.jsonStringifyReplacer)}`;
-      break;
-    case ZodIssueCode.unrecognized_keys:
-      message = `Unrecognized key(s) in object: ${util.joinValues(issue2.keys, ", ")}`;
-      break;
-    case ZodIssueCode.invalid_union:
-      message = `Invalid input`;
-      break;
-    case ZodIssueCode.invalid_union_discriminator:
-      message = `Invalid discriminator value. Expected ${util.joinValues(issue2.options)}`;
-      break;
-    case ZodIssueCode.invalid_enum_value:
-      message = `Invalid enum value. Expected ${util.joinValues(issue2.options)}, received '${issue2.received}'`;
-      break;
-    case ZodIssueCode.invalid_arguments:
-      message = `Invalid function arguments`;
-      break;
-    case ZodIssueCode.invalid_return_type:
-      message = `Invalid function return type`;
-      break;
-    case ZodIssueCode.invalid_date:
-      message = `Invalid date`;
-      break;
-    case ZodIssueCode.invalid_string:
-      if (typeof issue2.validation === "object") {
-        if ("includes" in issue2.validation) {
-          message = `Invalid input: must include "${issue2.validation.includes}"`;
-          if (typeof issue2.validation.position === "number") {
-            message = `${message} at one or more positions greater than or equal to ${issue2.validation.position}`;
-          }
-        } else if ("startsWith" in issue2.validation) {
-          message = `Invalid input: must start with "${issue2.validation.startsWith}"`;
-        } else if ("endsWith" in issue2.validation) {
-          message = `Invalid input: must end with "${issue2.validation.endsWith}"`;
-        } else {
-          util.assertNever(issue2.validation);
-        }
-      } else if (issue2.validation !== "regex") {
-        message = `Invalid ${issue2.validation}`;
-      } else {
-        message = "Invalid";
-      }
-      break;
-    case ZodIssueCode.too_small:
-      if (issue2.type === "array")
-        message = `Array must contain ${issue2.exact ? "exactly" : issue2.inclusive ? `at least` : `more than`} ${issue2.minimum} element(s)`;
-      else if (issue2.type === "string")
-        message = `String must contain ${issue2.exact ? "exactly" : issue2.inclusive ? `at least` : `over`} ${issue2.minimum} character(s)`;
-      else if (issue2.type === "number")
-        message = `Number must be ${issue2.exact ? `exactly equal to ` : issue2.inclusive ? `greater than or equal to ` : `greater than `}${issue2.minimum}`;
-      else if (issue2.type === "bigint")
-        message = `Number must be ${issue2.exact ? `exactly equal to ` : issue2.inclusive ? `greater than or equal to ` : `greater than `}${issue2.minimum}`;
-      else if (issue2.type === "date")
-        message = `Date must be ${issue2.exact ? `exactly equal to ` : issue2.inclusive ? `greater than or equal to ` : `greater than `}${new Date(Number(issue2.minimum))}`;
-      else
-        message = "Invalid input";
-      break;
-    case ZodIssueCode.too_big:
-      if (issue2.type === "array")
-        message = `Array must contain ${issue2.exact ? `exactly` : issue2.inclusive ? `at most` : `less than`} ${issue2.maximum} element(s)`;
-      else if (issue2.type === "string")
-        message = `String must contain ${issue2.exact ? `exactly` : issue2.inclusive ? `at most` : `under`} ${issue2.maximum} character(s)`;
-      else if (issue2.type === "number")
-        message = `Number must be ${issue2.exact ? `exactly` : issue2.inclusive ? `less than or equal to` : `less than`} ${issue2.maximum}`;
-      else if (issue2.type === "bigint")
-        message = `BigInt must be ${issue2.exact ? `exactly` : issue2.inclusive ? `less than or equal to` : `less than`} ${issue2.maximum}`;
-      else if (issue2.type === "date")
-        message = `Date must be ${issue2.exact ? `exactly` : issue2.inclusive ? `smaller than or equal to` : `smaller than`} ${new Date(Number(issue2.maximum))}`;
-      else
-        message = "Invalid input";
-      break;
-    case ZodIssueCode.custom:
-      message = `Invalid input`;
-      break;
-    case ZodIssueCode.invalid_intersection_types:
-      message = `Intersection results could not be merged`;
-      break;
-    case ZodIssueCode.not_multiple_of:
-      message = `Number must be a multiple of ${issue2.multipleOf}`;
-      break;
-    case ZodIssueCode.not_finite:
-      message = "Number must be finite";
-      break;
-    default:
-      message = _ctx.defaultError;
-      util.assertNever(issue2);
-  }
-  return { message };
-};
-var en_default = errorMap;
-
-// node_modules/zod/v3/errors.js
-var overrideErrorMap = en_default;
-function setErrorMap(map) {
-  overrideErrorMap = map;
-}
-function getErrorMap() {
-  return overrideErrorMap;
-}
-
-// node_modules/zod/v3/helpers/parseUtil.js
-var makeIssue = (params) => {
-  const { data, path, errorMaps, issueData } = params;
-  const fullPath = [...path, ...issueData.path || []];
-  const fullIssue = {
-    ...issueData,
-    path: fullPath
-  };
-  if (issueData.message !== void 0) {
-    return {
-      ...issueData,
-      path: fullPath,
-      message: issueData.message
-    };
-  }
-  let errorMessage = "";
-  const maps = errorMaps.filter((m) => !!m).slice().reverse();
-  for (const map of maps) {
-    errorMessage = map(fullIssue, { data, defaultError: errorMessage }).message;
-  }
-  return {
-    ...issueData,
-    path: fullPath,
-    message: errorMessage
-  };
-};
-var EMPTY_PATH = [];
-function addIssueToContext(ctx, issueData) {
-  const overrideMap = getErrorMap();
-  const issue2 = makeIssue({
-    issueData,
-    data: ctx.data,
-    path: ctx.path,
-    errorMaps: [
-      ctx.common.contextualErrorMap,
-      // contextual error map is first priority
-      ctx.schemaErrorMap,
-      // then schema-bound map if available
-      overrideMap,
-      // then global override map
-      overrideMap === en_default ? void 0 : en_default
-      // then global default map
-    ].filter((x) => !!x)
-  });
-  ctx.common.issues.push(issue2);
-}
-var ParseStatus = class _ParseStatus {
-  constructor() {
-    this.value = "valid";
-  }
-  dirty() {
-    if (this.value === "valid")
-      this.value = "dirty";
-  }
-  abort() {
-    if (this.value !== "aborted")
-      this.value = "aborted";
-  }
-  static mergeArray(status, results) {
-    const arrayValue = [];
-    for (const s of results) {
-      if (s.status === "aborted")
-        return INVALID;
-      if (s.status === "dirty")
-        status.dirty();
-      arrayValue.push(s.value);
-    }
-    return { status: status.value, value: arrayValue };
-  }
-  static async mergeObjectAsync(status, pairs) {
-    const syncPairs = [];
-    for (const pair of pairs) {
-      const key = await pair.key;
-      const value = await pair.value;
-      syncPairs.push({
-        key,
-        value
-      });
-    }
-    return _ParseStatus.mergeObjectSync(status, syncPairs);
-  }
-  static mergeObjectSync(status, pairs) {
-    const finalObject = {};
-    for (const pair of pairs) {
-      const { key, value } = pair;
-      if (key.status === "aborted")
-        return INVALID;
-      if (value.status === "aborted")
-        return INVALID;
-      if (key.status === "dirty")
-        status.dirty();
-      if (value.status === "dirty")
-        status.dirty();
-      if (key.value !== "__proto__" && (typeof value.value !== "undefined" || pair.alwaysSet)) {
-        finalObject[key.value] = value.value;
-      }
-    }
-    return { status: status.value, value: finalObject };
-  }
-};
-var INVALID = Object.freeze({
-  status: "aborted"
-});
-var DIRTY = (value) => ({ status: "dirty", value });
-var OK = (value) => ({ status: "valid", value });
-var isAborted = (x) => x.status === "aborted";
-var isDirty = (x) => x.status === "dirty";
-var isValid = (x) => x.status === "valid";
-var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
-
-// node_modules/zod/v3/helpers/errorUtil.js
-var errorUtil;
-(function(errorUtil2) {
-  errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
-  errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
-})(errorUtil || (errorUtil = {}));
-
-// node_modules/zod/v3/types.js
-var ParseInputLazyPath = class {
-  constructor(parent, value, path, key) {
-    this._cachedPath = [];
-    this.parent = parent;
-    this.data = value;
-    this._path = path;
-    this._key = key;
-  }
-  get path() {
-    if (!this._cachedPath.length) {
-      if (Array.isArray(this._key)) {
-        this._cachedPath.push(...this._path, ...this._key);
-      } else {
-        this._cachedPath.push(...this._path, this._key);
-      }
-    }
-    return this._cachedPath;
-  }
-};
-var handleResult = (ctx, result) => {
-  if (isValid(result)) {
-    return { success: true, data: result.value };
-  } else {
-    if (!ctx.common.issues.length) {
-      throw new Error("Validation failed but no issues detected.");
-    }
-    return {
-      success: false,
-      get error() {
-        if (this._error)
-          return this._error;
-        const error = new ZodError(ctx.common.issues);
-        this._error = error;
-        return this._error;
-      }
-    };
-  }
-};
-function processCreateParams(params) {
-  if (!params)
-    return {};
-  const { errorMap: errorMap2, invalid_type_error, required_error, description } = params;
-  if (errorMap2 && (invalid_type_error || required_error)) {
-    throw new Error(`Can't use "invalid_type_error" or "required_error" in conjunction with custom error map.`);
-  }
-  if (errorMap2)
-    return { errorMap: errorMap2, description };
-  const customMap = (iss, ctx) => {
-    const { message } = params;
-    if (iss.code === "invalid_enum_value") {
-      return { message: message ?? ctx.defaultError };
-    }
-    if (typeof ctx.data === "undefined") {
-      return { message: message ?? required_error ?? ctx.defaultError };
-    }
-    if (iss.code !== "invalid_type")
-      return { message: ctx.defaultError };
-    return { message: message ?? invalid_type_error ?? ctx.defaultError };
-  };
-  return { errorMap: customMap, description };
-}
-var ZodType = class {
-  get description() {
-    return this._def.description;
-  }
-  _getType(input) {
-    return getParsedType(input.data);
-  }
-  _getOrReturnCtx(input, ctx) {
-    return ctx || {
-      common: input.parent.common,
-      data: input.data,
-      parsedType: getParsedType(input.data),
-      schemaErrorMap: this._def.errorMap,
-      path: input.path,
-      parent: input.parent
-    };
-  }
-  _processInputParams(input) {
-    return {
-      status: new ParseStatus(),
-      ctx: {
-        common: input.parent.common,
-        data: input.data,
-        parsedType: getParsedType(input.data),
-        schemaErrorMap: this._def.errorMap,
-        path: input.path,
-        parent: input.parent
-      }
-    };
-  }
-  _parseSync(input) {
-    const result = this._parse(input);
-    if (isAsync(result)) {
-      throw new Error("Synchronous parse encountered promise.");
-    }
-    return result;
-  }
-  _parseAsync(input) {
-    const result = this._parse(input);
-    return Promise.resolve(result);
-  }
-  parse(data, params) {
-    const result = this.safeParse(data, params);
-    if (result.success)
-      return result.data;
-    throw result.error;
-  }
-  safeParse(data, params) {
-    const ctx = {
-      common: {
-        issues: [],
-        async: params?.async ?? false,
-        contextualErrorMap: params?.errorMap
-      },
-      path: params?.path || [],
-      schemaErrorMap: this._def.errorMap,
-      parent: null,
-      data,
-      parsedType: getParsedType(data)
-    };
-    const result = this._parseSync({ data, path: ctx.path, parent: ctx });
-    return handleResult(ctx, result);
-  }
-  "~validate"(data) {
-    const ctx = {
-      common: {
-        issues: [],
-        async: !!this["~standard"].async
-      },
-      path: [],
-      schemaErrorMap: this._def.errorMap,
-      parent: null,
-      data,
-      parsedType: getParsedType(data)
-    };
-    if (!this["~standard"].async) {
-      try {
-        const result = this._parseSync({ data, path: [], parent: ctx });
-        return isValid(result) ? {
-          value: result.value
-        } : {
-          issues: ctx.common.issues
-        };
-      } catch (err) {
-        if (err?.message?.toLowerCase()?.includes("encountered")) {
-          this["~standard"].async = true;
-        }
-        ctx.common = {
-          issues: [],
-          async: true
-        };
-      }
-    }
-    return this._parseAsync({ data, path: [], parent: ctx }).then((result) => isValid(result) ? {
-      value: result.value
-    } : {
-      issues: ctx.common.issues
-    });
-  }
-  async parseAsync(data, params) {
-    const result = await this.safeParseAsync(data, params);
-    if (result.success)
-      return result.data;
-    throw result.error;
-  }
-  async safeParseAsync(data, params) {
-    const ctx = {
-      common: {
-        issues: [],
-        contextualErrorMap: params?.errorMap,
-        async: true
-      },
-      path: params?.path || [],
-      schemaErrorMap: this._def.errorMap,
-      parent: null,
-      data,
-      parsedType: getParsedType(data)
-    };
-    const maybeAsyncResult = this._parse({ data, path: ctx.path, parent: ctx });
-    const result = await (isAsync(maybeAsyncResult) ? maybeAsyncResult : Promise.resolve(maybeAsyncResult));
-    return handleResult(ctx, result);
-  }
-  refine(check2, message) {
-    const getIssueProperties = (val) => {
-      if (typeof message === "string" || typeof message === "undefined") {
-        return { message };
-      } else if (typeof message === "function") {
-        return message(val);
-      } else {
-        return message;
-      }
-    };
-    return this._refinement((val, ctx) => {
-      const result = check2(val);
-      const setError = () => ctx.addIssue({
-        code: ZodIssueCode.custom,
-        ...getIssueProperties(val)
-      });
-      if (typeof Promise !== "undefined" && result instanceof Promise) {
-        return result.then((data) => {
-          if (!data) {
-            setError();
-            return false;
-          } else {
-            return true;
-          }
-        });
-      }
-      if (!result) {
-        setError();
-        return false;
-      } else {
-        return true;
-      }
-    });
-  }
-  refinement(check2, refinementData) {
-    return this._refinement((val, ctx) => {
-      if (!check2(val)) {
-        ctx.addIssue(typeof refinementData === "function" ? refinementData(val, ctx) : refinementData);
-        return false;
-      } else {
-        return true;
-      }
-    });
-  }
-  _refinement(refinement) {
-    return new ZodEffects({
-      schema: this,
-      typeName: ZodFirstPartyTypeKind.ZodEffects,
-      effect: { type: "refinement", refinement }
-    });
-  }
-  superRefine(refinement) {
-    return this._refinement(refinement);
-  }
-  constructor(def) {
-    this.spa = this.safeParseAsync;
-    this._def = def;
-    this.parse = this.parse.bind(this);
-    this.safeParse = this.safeParse.bind(this);
-    this.parseAsync = this.parseAsync.bind(this);
-    this.safeParseAsync = this.safeParseAsync.bind(this);
-    this.spa = this.spa.bind(this);
-    this.refine = this.refine.bind(this);
-    this.refinement = this.refinement.bind(this);
-    this.superRefine = this.superRefine.bind(this);
-    this.optional = this.optional.bind(this);
-    this.nullable = this.nullable.bind(this);
-    this.nullish = this.nullish.bind(this);
-    this.array = this.array.bind(this);
-    this.promise = this.promise.bind(this);
-    this.or = this.or.bind(this);
-    this.and = this.and.bind(this);
-    this.transform = this.transform.bind(this);
-    this.brand = this.brand.bind(this);
-    this.default = this.default.bind(this);
-    this.catch = this.catch.bind(this);
-    this.describe = this.describe.bind(this);
-    this.pipe = this.pipe.bind(this);
-    this.readonly = this.readonly.bind(this);
-    this.isNullable = this.isNullable.bind(this);
-    this.isOptional = this.isOptional.bind(this);
-    this["~standard"] = {
-      version: 1,
-      vendor: "zod",
-      validate: (data) => this["~validate"](data)
-    };
-  }
-  optional() {
-    return ZodOptional.create(this, this._def);
-  }
-  nullable() {
-    return ZodNullable.create(this, this._def);
-  }
-  nullish() {
-    return this.nullable().optional();
-  }
-  array() {
-    return ZodArray.create(this);
-  }
-  promise() {
-    return ZodPromise.create(this, this._def);
-  }
-  or(option) {
-    return ZodUnion.create([this, option], this._def);
-  }
-  and(incoming) {
-    return ZodIntersection.create(this, incoming, this._def);
-  }
-  transform(transform2) {
-    return new ZodEffects({
-      ...processCreateParams(this._def),
-      schema: this,
-      typeName: ZodFirstPartyTypeKind.ZodEffects,
-      effect: { type: "transform", transform: transform2 }
-    });
-  }
-  default(def) {
-    const defaultValueFunc = typeof def === "function" ? def : () => def;
-    return new ZodDefault({
-      ...processCreateParams(this._def),
-      innerType: this,
-      defaultValue: defaultValueFunc,
-      typeName: ZodFirstPartyTypeKind.ZodDefault
-    });
-  }
-  brand() {
-    return new ZodBranded({
-      typeName: ZodFirstPartyTypeKind.ZodBranded,
-      type: this,
-      ...processCreateParams(this._def)
-    });
-  }
-  catch(def) {
-    const catchValueFunc = typeof def === "function" ? def : () => def;
-    return new ZodCatch({
-      ...processCreateParams(this._def),
-      innerType: this,
-      catchValue: catchValueFunc,
-      typeName: ZodFirstPartyTypeKind.ZodCatch
-    });
-  }
-  describe(description) {
-    const This = this.constructor;
-    return new This({
-      ...this._def,
-      description
-    });
-  }
-  pipe(target) {
-    return ZodPipeline.create(this, target);
-  }
-  readonly() {
-    return ZodReadonly.create(this);
-  }
-  isOptional() {
-    return this.safeParse(void 0).success;
-  }
-  isNullable() {
-    return this.safeParse(null).success;
-  }
-};
-var cuidRegex = /^c[^\s-]{8,}$/i;
-var cuid2Regex = /^[0-9a-z]+$/;
-var ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
-var uuidRegex = /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/i;
-var nanoidRegex = /^[a-z0-9_-]{21}$/i;
-var jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/;
-var durationRegex = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
-var emailRegex = /^(?!\.)(?!.*\.\.)([A-Z0-9_'+\-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i;
-var _emojiRegex = `^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$`;
-var emojiRegex;
-var ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
-var ipv4CidrRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/(3[0-2]|[12]?[0-9])$/;
-var ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
-var ipv6CidrRegex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/;
-var base64Regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-var base64urlRegex = /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/;
-var dateRegexSource = `((\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-((0[13578]|1[02])-(0[1-9]|[12]\\d|3[01])|(0[469]|11)-(0[1-9]|[12]\\d|30)|(02)-(0[1-9]|1\\d|2[0-8])))`;
-var dateRegex = new RegExp(`^${dateRegexSource}$`);
-function timeRegexSource(args) {
-  let secondsRegexSource = `[0-5]\\d`;
-  if (args.precision) {
-    secondsRegexSource = `${secondsRegexSource}\\.\\d{${args.precision}}`;
-  } else if (args.precision == null) {
-    secondsRegexSource = `${secondsRegexSource}(\\.\\d+)?`;
-  }
-  const secondsQuantifier = args.precision ? "+" : "?";
-  return `([01]\\d|2[0-3]):[0-5]\\d(:${secondsRegexSource})${secondsQuantifier}`;
-}
-function timeRegex(args) {
-  return new RegExp(`^${timeRegexSource(args)}$`);
-}
-function datetimeRegex(args) {
-  let regex = `${dateRegexSource}T${timeRegexSource(args)}`;
-  const opts = [];
-  opts.push(args.local ? `Z?` : `Z`);
-  if (args.offset)
-    opts.push(`([+-]\\d{2}:?\\d{2})`);
-  regex = `${regex}(${opts.join("|")})`;
-  return new RegExp(`^${regex}$`);
-}
-function isValidIP(ip, version2) {
-  if ((version2 === "v4" || !version2) && ipv4Regex.test(ip)) {
-    return true;
-  }
-  if ((version2 === "v6" || !version2) && ipv6Regex.test(ip)) {
-    return true;
-  }
-  return false;
-}
-function isValidJWT(jwt, alg) {
-  if (!jwtRegex.test(jwt))
-    return false;
-  try {
-    const [header] = jwt.split(".");
-    if (!header)
-      return false;
-    const base642 = header.replace(/-/g, "+").replace(/_/g, "/").padEnd(header.length + (4 - header.length % 4) % 4, "=");
-    const decoded = JSON.parse(atob(base642));
-    if (typeof decoded !== "object" || decoded === null)
-      return false;
-    if ("typ" in decoded && decoded?.typ !== "JWT")
-      return false;
-    if (!decoded.alg)
-      return false;
-    if (alg && decoded.alg !== alg)
-      return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-function isValidCidr(ip, version2) {
-  if ((version2 === "v4" || !version2) && ipv4CidrRegex.test(ip)) {
-    return true;
-  }
-  if ((version2 === "v6" || !version2) && ipv6CidrRegex.test(ip)) {
-    return true;
-  }
-  return false;
-}
-var ZodString = class _ZodString2 extends ZodType {
-  _parse(input) {
-    if (this._def.coerce) {
-      input.data = String(input.data);
-    }
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.string) {
-      const ctx2 = this._getOrReturnCtx(input);
-      addIssueToContext(ctx2, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.string,
-        received: ctx2.parsedType
-      });
-      return INVALID;
-    }
-    const status = new ParseStatus();
-    let ctx = void 0;
-    for (const check2 of this._def.checks) {
-      if (check2.kind === "min") {
-        if (input.data.length < check2.value) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_small,
-            minimum: check2.value,
-            type: "string",
-            inclusive: true,
-            exact: false,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "max") {
-        if (input.data.length > check2.value) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_big,
-            maximum: check2.value,
-            type: "string",
-            inclusive: true,
-            exact: false,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "length") {
-        const tooBig = input.data.length > check2.value;
-        const tooSmall = input.data.length < check2.value;
-        if (tooBig || tooSmall) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          if (tooBig) {
-            addIssueToContext(ctx, {
-              code: ZodIssueCode.too_big,
-              maximum: check2.value,
-              type: "string",
-              inclusive: true,
-              exact: true,
-              message: check2.message
-            });
-          } else if (tooSmall) {
-            addIssueToContext(ctx, {
-              code: ZodIssueCode.too_small,
-              minimum: check2.value,
-              type: "string",
-              inclusive: true,
-              exact: true,
-              message: check2.message
-            });
-          }
-          status.dirty();
-        }
-      } else if (check2.kind === "email") {
-        if (!emailRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "email",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "emoji") {
-        if (!emojiRegex) {
-          emojiRegex = new RegExp(_emojiRegex, "u");
-        }
-        if (!emojiRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "emoji",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "uuid") {
-        if (!uuidRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "uuid",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "nanoid") {
-        if (!nanoidRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "nanoid",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "cuid") {
-        if (!cuidRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "cuid",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "cuid2") {
-        if (!cuid2Regex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "cuid2",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "ulid") {
-        if (!ulidRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "ulid",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "url") {
-        try {
-          new URL(input.data);
-        } catch {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "url",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "regex") {
-        check2.regex.lastIndex = 0;
-        const testResult = check2.regex.test(input.data);
-        if (!testResult) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "regex",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "trim") {
-        input.data = input.data.trim();
-      } else if (check2.kind === "includes") {
-        if (!input.data.includes(check2.value, check2.position)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.invalid_string,
-            validation: { includes: check2.value, position: check2.position },
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "toLowerCase") {
-        input.data = input.data.toLowerCase();
-      } else if (check2.kind === "toUpperCase") {
-        input.data = input.data.toUpperCase();
-      } else if (check2.kind === "startsWith") {
-        if (!input.data.startsWith(check2.value)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.invalid_string,
-            validation: { startsWith: check2.value },
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "endsWith") {
-        if (!input.data.endsWith(check2.value)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.invalid_string,
-            validation: { endsWith: check2.value },
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "datetime") {
-        const regex = datetimeRegex(check2);
-        if (!regex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.invalid_string,
-            validation: "datetime",
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "date") {
-        const regex = dateRegex;
-        if (!regex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.invalid_string,
-            validation: "date",
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "time") {
-        const regex = timeRegex(check2);
-        if (!regex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.invalid_string,
-            validation: "time",
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "duration") {
-        if (!durationRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "duration",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "ip") {
-        if (!isValidIP(input.data, check2.version)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "ip",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "jwt") {
-        if (!isValidJWT(input.data, check2.alg)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "jwt",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "cidr") {
-        if (!isValidCidr(input.data, check2.version)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "cidr",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "base64") {
-        if (!base64Regex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "base64",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "base64url") {
-        if (!base64urlRegex.test(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            validation: "base64url",
-            code: ZodIssueCode.invalid_string,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else {
-        util.assertNever(check2);
-      }
-    }
-    return { status: status.value, value: input.data };
-  }
-  _regex(regex, validation, message) {
-    return this.refinement((data) => regex.test(data), {
-      validation,
-      code: ZodIssueCode.invalid_string,
-      ...errorUtil.errToObj(message)
-    });
-  }
-  _addCheck(check2) {
-    return new _ZodString2({
-      ...this._def,
-      checks: [...this._def.checks, check2]
-    });
-  }
-  email(message) {
-    return this._addCheck({ kind: "email", ...errorUtil.errToObj(message) });
-  }
-  url(message) {
-    return this._addCheck({ kind: "url", ...errorUtil.errToObj(message) });
-  }
-  emoji(message) {
-    return this._addCheck({ kind: "emoji", ...errorUtil.errToObj(message) });
-  }
-  uuid(message) {
-    return this._addCheck({ kind: "uuid", ...errorUtil.errToObj(message) });
-  }
-  nanoid(message) {
-    return this._addCheck({ kind: "nanoid", ...errorUtil.errToObj(message) });
-  }
-  cuid(message) {
-    return this._addCheck({ kind: "cuid", ...errorUtil.errToObj(message) });
-  }
-  cuid2(message) {
-    return this._addCheck({ kind: "cuid2", ...errorUtil.errToObj(message) });
-  }
-  ulid(message) {
-    return this._addCheck({ kind: "ulid", ...errorUtil.errToObj(message) });
-  }
-  base64(message) {
-    return this._addCheck({ kind: "base64", ...errorUtil.errToObj(message) });
-  }
-  base64url(message) {
-    return this._addCheck({
-      kind: "base64url",
-      ...errorUtil.errToObj(message)
-    });
-  }
-  jwt(options) {
-    return this._addCheck({ kind: "jwt", ...errorUtil.errToObj(options) });
-  }
-  ip(options) {
-    return this._addCheck({ kind: "ip", ...errorUtil.errToObj(options) });
-  }
-  cidr(options) {
-    return this._addCheck({ kind: "cidr", ...errorUtil.errToObj(options) });
-  }
-  datetime(options) {
-    if (typeof options === "string") {
-      return this._addCheck({
-        kind: "datetime",
-        precision: null,
-        offset: false,
-        local: false,
-        message: options
-      });
-    }
-    return this._addCheck({
-      kind: "datetime",
-      precision: typeof options?.precision === "undefined" ? null : options?.precision,
-      offset: options?.offset ?? false,
-      local: options?.local ?? false,
-      ...errorUtil.errToObj(options?.message)
-    });
-  }
-  date(message) {
-    return this._addCheck({ kind: "date", message });
-  }
-  time(options) {
-    if (typeof options === "string") {
-      return this._addCheck({
-        kind: "time",
-        precision: null,
-        message: options
-      });
-    }
-    return this._addCheck({
-      kind: "time",
-      precision: typeof options?.precision === "undefined" ? null : options?.precision,
-      ...errorUtil.errToObj(options?.message)
-    });
-  }
-  duration(message) {
-    return this._addCheck({ kind: "duration", ...errorUtil.errToObj(message) });
-  }
-  regex(regex, message) {
-    return this._addCheck({
-      kind: "regex",
-      regex,
-      ...errorUtil.errToObj(message)
-    });
-  }
-  includes(value, options) {
-    return this._addCheck({
-      kind: "includes",
-      value,
-      position: options?.position,
-      ...errorUtil.errToObj(options?.message)
-    });
-  }
-  startsWith(value, message) {
-    return this._addCheck({
-      kind: "startsWith",
-      value,
-      ...errorUtil.errToObj(message)
-    });
-  }
-  endsWith(value, message) {
-    return this._addCheck({
-      kind: "endsWith",
-      value,
-      ...errorUtil.errToObj(message)
-    });
-  }
-  min(minLength, message) {
-    return this._addCheck({
-      kind: "min",
-      value: minLength,
-      ...errorUtil.errToObj(message)
-    });
-  }
-  max(maxLength, message) {
-    return this._addCheck({
-      kind: "max",
-      value: maxLength,
-      ...errorUtil.errToObj(message)
-    });
-  }
-  length(len, message) {
-    return this._addCheck({
-      kind: "length",
-      value: len,
-      ...errorUtil.errToObj(message)
-    });
-  }
-  /**
-   * Equivalent to `.min(1)`
-   */
-  nonempty(message) {
-    return this.min(1, errorUtil.errToObj(message));
-  }
-  trim() {
-    return new _ZodString2({
-      ...this._def,
-      checks: [...this._def.checks, { kind: "trim" }]
-    });
-  }
-  toLowerCase() {
-    return new _ZodString2({
-      ...this._def,
-      checks: [...this._def.checks, { kind: "toLowerCase" }]
-    });
-  }
-  toUpperCase() {
-    return new _ZodString2({
-      ...this._def,
-      checks: [...this._def.checks, { kind: "toUpperCase" }]
-    });
-  }
-  get isDatetime() {
-    return !!this._def.checks.find((ch) => ch.kind === "datetime");
-  }
-  get isDate() {
-    return !!this._def.checks.find((ch) => ch.kind === "date");
-  }
-  get isTime() {
-    return !!this._def.checks.find((ch) => ch.kind === "time");
-  }
-  get isDuration() {
-    return !!this._def.checks.find((ch) => ch.kind === "duration");
-  }
-  get isEmail() {
-    return !!this._def.checks.find((ch) => ch.kind === "email");
-  }
-  get isURL() {
-    return !!this._def.checks.find((ch) => ch.kind === "url");
-  }
-  get isEmoji() {
-    return !!this._def.checks.find((ch) => ch.kind === "emoji");
-  }
-  get isUUID() {
-    return !!this._def.checks.find((ch) => ch.kind === "uuid");
-  }
-  get isNANOID() {
-    return !!this._def.checks.find((ch) => ch.kind === "nanoid");
-  }
-  get isCUID() {
-    return !!this._def.checks.find((ch) => ch.kind === "cuid");
-  }
-  get isCUID2() {
-    return !!this._def.checks.find((ch) => ch.kind === "cuid2");
-  }
-  get isULID() {
-    return !!this._def.checks.find((ch) => ch.kind === "ulid");
-  }
-  get isIP() {
-    return !!this._def.checks.find((ch) => ch.kind === "ip");
-  }
-  get isCIDR() {
-    return !!this._def.checks.find((ch) => ch.kind === "cidr");
-  }
-  get isBase64() {
-    return !!this._def.checks.find((ch) => ch.kind === "base64");
-  }
-  get isBase64url() {
-    return !!this._def.checks.find((ch) => ch.kind === "base64url");
-  }
-  get minLength() {
-    let min = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "min") {
-        if (min === null || ch.value > min)
-          min = ch.value;
-      }
-    }
-    return min;
-  }
-  get maxLength() {
-    let max = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
-      }
-    }
-    return max;
-  }
-};
-ZodString.create = (params) => {
-  return new ZodString({
-    checks: [],
-    typeName: ZodFirstPartyTypeKind.ZodString,
-    coerce: params?.coerce ?? false,
-    ...processCreateParams(params)
-  });
-};
-function floatSafeRemainder(val, step) {
-  const valDecCount = (val.toString().split(".")[1] || "").length;
-  const stepDecCount = (step.toString().split(".")[1] || "").length;
-  const decCount = valDecCount > stepDecCount ? valDecCount : stepDecCount;
-  const valInt = Number.parseInt(val.toFixed(decCount).replace(".", ""));
-  const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
-  return valInt % stepInt / 10 ** decCount;
-}
-var ZodNumber = class _ZodNumber extends ZodType {
-  constructor() {
-    super(...arguments);
-    this.min = this.gte;
-    this.max = this.lte;
-    this.step = this.multipleOf;
-  }
-  _parse(input) {
-    if (this._def.coerce) {
-      input.data = Number(input.data);
-    }
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.number) {
-      const ctx2 = this._getOrReturnCtx(input);
-      addIssueToContext(ctx2, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.number,
-        received: ctx2.parsedType
-      });
-      return INVALID;
-    }
-    let ctx = void 0;
-    const status = new ParseStatus();
-    for (const check2 of this._def.checks) {
-      if (check2.kind === "int") {
-        if (!util.isInteger(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.invalid_type,
-            expected: "integer",
-            received: "float",
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "min") {
-        const tooSmall = check2.inclusive ? input.data < check2.value : input.data <= check2.value;
-        if (tooSmall) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_small,
-            minimum: check2.value,
-            type: "number",
-            inclusive: check2.inclusive,
-            exact: false,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "max") {
-        const tooBig = check2.inclusive ? input.data > check2.value : input.data >= check2.value;
-        if (tooBig) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_big,
-            maximum: check2.value,
-            type: "number",
-            inclusive: check2.inclusive,
-            exact: false,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "multipleOf") {
-        if (floatSafeRemainder(input.data, check2.value) !== 0) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.not_multiple_of,
-            multipleOf: check2.value,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "finite") {
-        if (!Number.isFinite(input.data)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.not_finite,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else {
-        util.assertNever(check2);
-      }
-    }
-    return { status: status.value, value: input.data };
-  }
-  gte(value, message) {
-    return this.setLimit("min", value, true, errorUtil.toString(message));
-  }
-  gt(value, message) {
-    return this.setLimit("min", value, false, errorUtil.toString(message));
-  }
-  lte(value, message) {
-    return this.setLimit("max", value, true, errorUtil.toString(message));
-  }
-  lt(value, message) {
-    return this.setLimit("max", value, false, errorUtil.toString(message));
-  }
-  setLimit(kind, value, inclusive, message) {
-    return new _ZodNumber({
-      ...this._def,
-      checks: [
-        ...this._def.checks,
-        {
-          kind,
-          value,
-          inclusive,
-          message: errorUtil.toString(message)
-        }
-      ]
-    });
-  }
-  _addCheck(check2) {
-    return new _ZodNumber({
-      ...this._def,
-      checks: [...this._def.checks, check2]
-    });
-  }
-  int(message) {
-    return this._addCheck({
-      kind: "int",
-      message: errorUtil.toString(message)
-    });
-  }
-  positive(message) {
-    return this._addCheck({
-      kind: "min",
-      value: 0,
-      inclusive: false,
-      message: errorUtil.toString(message)
-    });
-  }
-  negative(message) {
-    return this._addCheck({
-      kind: "max",
-      value: 0,
-      inclusive: false,
-      message: errorUtil.toString(message)
-    });
-  }
-  nonpositive(message) {
-    return this._addCheck({
-      kind: "max",
-      value: 0,
-      inclusive: true,
-      message: errorUtil.toString(message)
-    });
-  }
-  nonnegative(message) {
-    return this._addCheck({
-      kind: "min",
-      value: 0,
-      inclusive: true,
-      message: errorUtil.toString(message)
-    });
-  }
-  multipleOf(value, message) {
-    return this._addCheck({
-      kind: "multipleOf",
-      value,
-      message: errorUtil.toString(message)
-    });
-  }
-  finite(message) {
-    return this._addCheck({
-      kind: "finite",
-      message: errorUtil.toString(message)
-    });
-  }
-  safe(message) {
-    return this._addCheck({
-      kind: "min",
-      inclusive: true,
-      value: Number.MIN_SAFE_INTEGER,
-      message: errorUtil.toString(message)
-    })._addCheck({
-      kind: "max",
-      inclusive: true,
-      value: Number.MAX_SAFE_INTEGER,
-      message: errorUtil.toString(message)
-    });
-  }
-  get minValue() {
-    let min = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "min") {
-        if (min === null || ch.value > min)
-          min = ch.value;
-      }
-    }
-    return min;
-  }
-  get maxValue() {
-    let max = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
-      }
-    }
-    return max;
-  }
-  get isInt() {
-    return !!this._def.checks.find((ch) => ch.kind === "int" || ch.kind === "multipleOf" && util.isInteger(ch.value));
-  }
-  get isFinite() {
-    let max = null;
-    let min = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "finite" || ch.kind === "int" || ch.kind === "multipleOf") {
-        return true;
-      } else if (ch.kind === "min") {
-        if (min === null || ch.value > min)
-          min = ch.value;
-      } else if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
-      }
-    }
-    return Number.isFinite(min) && Number.isFinite(max);
-  }
-};
-ZodNumber.create = (params) => {
-  return new ZodNumber({
-    checks: [],
-    typeName: ZodFirstPartyTypeKind.ZodNumber,
-    coerce: params?.coerce || false,
-    ...processCreateParams(params)
-  });
-};
-var ZodBigInt = class _ZodBigInt extends ZodType {
-  constructor() {
-    super(...arguments);
-    this.min = this.gte;
-    this.max = this.lte;
-  }
-  _parse(input) {
-    if (this._def.coerce) {
-      try {
-        input.data = BigInt(input.data);
-      } catch {
-        return this._getInvalidInput(input);
-      }
-    }
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.bigint) {
-      return this._getInvalidInput(input);
-    }
-    let ctx = void 0;
-    const status = new ParseStatus();
-    for (const check2 of this._def.checks) {
-      if (check2.kind === "min") {
-        const tooSmall = check2.inclusive ? input.data < check2.value : input.data <= check2.value;
-        if (tooSmall) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_small,
-            type: "bigint",
-            minimum: check2.value,
-            inclusive: check2.inclusive,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "max") {
-        const tooBig = check2.inclusive ? input.data > check2.value : input.data >= check2.value;
-        if (tooBig) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_big,
-            type: "bigint",
-            maximum: check2.value,
-            inclusive: check2.inclusive,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "multipleOf") {
-        if (input.data % check2.value !== BigInt(0)) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.not_multiple_of,
-            multipleOf: check2.value,
-            message: check2.message
-          });
-          status.dirty();
-        }
-      } else {
-        util.assertNever(check2);
-      }
-    }
-    return { status: status.value, value: input.data };
-  }
-  _getInvalidInput(input) {
-    const ctx = this._getOrReturnCtx(input);
-    addIssueToContext(ctx, {
-      code: ZodIssueCode.invalid_type,
-      expected: ZodParsedType.bigint,
-      received: ctx.parsedType
-    });
-    return INVALID;
-  }
-  gte(value, message) {
-    return this.setLimit("min", value, true, errorUtil.toString(message));
-  }
-  gt(value, message) {
-    return this.setLimit("min", value, false, errorUtil.toString(message));
-  }
-  lte(value, message) {
-    return this.setLimit("max", value, true, errorUtil.toString(message));
-  }
-  lt(value, message) {
-    return this.setLimit("max", value, false, errorUtil.toString(message));
-  }
-  setLimit(kind, value, inclusive, message) {
-    return new _ZodBigInt({
-      ...this._def,
-      checks: [
-        ...this._def.checks,
-        {
-          kind,
-          value,
-          inclusive,
-          message: errorUtil.toString(message)
-        }
-      ]
-    });
-  }
-  _addCheck(check2) {
-    return new _ZodBigInt({
-      ...this._def,
-      checks: [...this._def.checks, check2]
-    });
-  }
-  positive(message) {
-    return this._addCheck({
-      kind: "min",
-      value: BigInt(0),
-      inclusive: false,
-      message: errorUtil.toString(message)
-    });
-  }
-  negative(message) {
-    return this._addCheck({
-      kind: "max",
-      value: BigInt(0),
-      inclusive: false,
-      message: errorUtil.toString(message)
-    });
-  }
-  nonpositive(message) {
-    return this._addCheck({
-      kind: "max",
-      value: BigInt(0),
-      inclusive: true,
-      message: errorUtil.toString(message)
-    });
-  }
-  nonnegative(message) {
-    return this._addCheck({
-      kind: "min",
-      value: BigInt(0),
-      inclusive: true,
-      message: errorUtil.toString(message)
-    });
-  }
-  multipleOf(value, message) {
-    return this._addCheck({
-      kind: "multipleOf",
-      value,
-      message: errorUtil.toString(message)
-    });
-  }
-  get minValue() {
-    let min = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "min") {
-        if (min === null || ch.value > min)
-          min = ch.value;
-      }
-    }
-    return min;
-  }
-  get maxValue() {
-    let max = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
-      }
-    }
-    return max;
-  }
-};
-ZodBigInt.create = (params) => {
-  return new ZodBigInt({
-    checks: [],
-    typeName: ZodFirstPartyTypeKind.ZodBigInt,
-    coerce: params?.coerce ?? false,
-    ...processCreateParams(params)
-  });
-};
-var ZodBoolean = class extends ZodType {
-  _parse(input) {
-    if (this._def.coerce) {
-      input.data = Boolean(input.data);
-    }
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.boolean) {
-      const ctx = this._getOrReturnCtx(input);
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.boolean,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    return OK(input.data);
-  }
-};
-ZodBoolean.create = (params) => {
-  return new ZodBoolean({
-    typeName: ZodFirstPartyTypeKind.ZodBoolean,
-    coerce: params?.coerce || false,
-    ...processCreateParams(params)
-  });
-};
-var ZodDate = class _ZodDate extends ZodType {
-  _parse(input) {
-    if (this._def.coerce) {
-      input.data = new Date(input.data);
-    }
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.date) {
-      const ctx2 = this._getOrReturnCtx(input);
-      addIssueToContext(ctx2, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.date,
-        received: ctx2.parsedType
-      });
-      return INVALID;
-    }
-    if (Number.isNaN(input.data.getTime())) {
-      const ctx2 = this._getOrReturnCtx(input);
-      addIssueToContext(ctx2, {
-        code: ZodIssueCode.invalid_date
-      });
-      return INVALID;
-    }
-    const status = new ParseStatus();
-    let ctx = void 0;
-    for (const check2 of this._def.checks) {
-      if (check2.kind === "min") {
-        if (input.data.getTime() < check2.value) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_small,
-            message: check2.message,
-            inclusive: true,
-            exact: false,
-            minimum: check2.value,
-            type: "date"
-          });
-          status.dirty();
-        }
-      } else if (check2.kind === "max") {
-        if (input.data.getTime() > check2.value) {
-          ctx = this._getOrReturnCtx(input, ctx);
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.too_big,
-            message: check2.message,
-            inclusive: true,
-            exact: false,
-            maximum: check2.value,
-            type: "date"
-          });
-          status.dirty();
-        }
-      } else {
-        util.assertNever(check2);
-      }
-    }
-    return {
-      status: status.value,
-      value: new Date(input.data.getTime())
-    };
-  }
-  _addCheck(check2) {
-    return new _ZodDate({
-      ...this._def,
-      checks: [...this._def.checks, check2]
-    });
-  }
-  min(minDate, message) {
-    return this._addCheck({
-      kind: "min",
-      value: minDate.getTime(),
-      message: errorUtil.toString(message)
-    });
-  }
-  max(maxDate, message) {
-    return this._addCheck({
-      kind: "max",
-      value: maxDate.getTime(),
-      message: errorUtil.toString(message)
-    });
-  }
-  get minDate() {
-    let min = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "min") {
-        if (min === null || ch.value > min)
-          min = ch.value;
-      }
-    }
-    return min != null ? new Date(min) : null;
-  }
-  get maxDate() {
-    let max = null;
-    for (const ch of this._def.checks) {
-      if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
-      }
-    }
-    return max != null ? new Date(max) : null;
-  }
-};
-ZodDate.create = (params) => {
-  return new ZodDate({
-    checks: [],
-    coerce: params?.coerce || false,
-    typeName: ZodFirstPartyTypeKind.ZodDate,
-    ...processCreateParams(params)
-  });
-};
-var ZodSymbol = class extends ZodType {
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.symbol) {
-      const ctx = this._getOrReturnCtx(input);
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.symbol,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    return OK(input.data);
-  }
-};
-ZodSymbol.create = (params) => {
-  return new ZodSymbol({
-    typeName: ZodFirstPartyTypeKind.ZodSymbol,
-    ...processCreateParams(params)
-  });
-};
-var ZodUndefined = class extends ZodType {
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.undefined) {
-      const ctx = this._getOrReturnCtx(input);
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.undefined,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    return OK(input.data);
-  }
-};
-ZodUndefined.create = (params) => {
-  return new ZodUndefined({
-    typeName: ZodFirstPartyTypeKind.ZodUndefined,
-    ...processCreateParams(params)
-  });
-};
-var ZodNull = class extends ZodType {
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.null) {
-      const ctx = this._getOrReturnCtx(input);
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.null,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    return OK(input.data);
-  }
-};
-ZodNull.create = (params) => {
-  return new ZodNull({
-    typeName: ZodFirstPartyTypeKind.ZodNull,
-    ...processCreateParams(params)
-  });
-};
-var ZodAny = class extends ZodType {
-  constructor() {
-    super(...arguments);
-    this._any = true;
-  }
-  _parse(input) {
-    return OK(input.data);
-  }
-};
-ZodAny.create = (params) => {
-  return new ZodAny({
-    typeName: ZodFirstPartyTypeKind.ZodAny,
-    ...processCreateParams(params)
-  });
-};
-var ZodUnknown = class extends ZodType {
-  constructor() {
-    super(...arguments);
-    this._unknown = true;
-  }
-  _parse(input) {
-    return OK(input.data);
-  }
-};
-ZodUnknown.create = (params) => {
-  return new ZodUnknown({
-    typeName: ZodFirstPartyTypeKind.ZodUnknown,
-    ...processCreateParams(params)
-  });
-};
-var ZodNever = class extends ZodType {
-  _parse(input) {
-    const ctx = this._getOrReturnCtx(input);
-    addIssueToContext(ctx, {
-      code: ZodIssueCode.invalid_type,
-      expected: ZodParsedType.never,
-      received: ctx.parsedType
-    });
-    return INVALID;
-  }
-};
-ZodNever.create = (params) => {
-  return new ZodNever({
-    typeName: ZodFirstPartyTypeKind.ZodNever,
-    ...processCreateParams(params)
-  });
-};
-var ZodVoid = class extends ZodType {
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.undefined) {
-      const ctx = this._getOrReturnCtx(input);
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.void,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    return OK(input.data);
-  }
-};
-ZodVoid.create = (params) => {
-  return new ZodVoid({
-    typeName: ZodFirstPartyTypeKind.ZodVoid,
-    ...processCreateParams(params)
-  });
-};
-var ZodArray = class _ZodArray extends ZodType {
-  _parse(input) {
-    const { ctx, status } = this._processInputParams(input);
-    const def = this._def;
-    if (ctx.parsedType !== ZodParsedType.array) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.array,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    if (def.exactLength !== null) {
-      const tooBig = ctx.data.length > def.exactLength.value;
-      const tooSmall = ctx.data.length < def.exactLength.value;
-      if (tooBig || tooSmall) {
-        addIssueToContext(ctx, {
-          code: tooBig ? ZodIssueCode.too_big : ZodIssueCode.too_small,
-          minimum: tooSmall ? def.exactLength.value : void 0,
-          maximum: tooBig ? def.exactLength.value : void 0,
-          type: "array",
-          inclusive: true,
-          exact: true,
-          message: def.exactLength.message
-        });
-        status.dirty();
-      }
-    }
-    if (def.minLength !== null) {
-      if (ctx.data.length < def.minLength.value) {
-        addIssueToContext(ctx, {
-          code: ZodIssueCode.too_small,
-          minimum: def.minLength.value,
-          type: "array",
-          inclusive: true,
-          exact: false,
-          message: def.minLength.message
-        });
-        status.dirty();
-      }
-    }
-    if (def.maxLength !== null) {
-      if (ctx.data.length > def.maxLength.value) {
-        addIssueToContext(ctx, {
-          code: ZodIssueCode.too_big,
-          maximum: def.maxLength.value,
-          type: "array",
-          inclusive: true,
-          exact: false,
-          message: def.maxLength.message
-        });
-        status.dirty();
-      }
-    }
-    if (ctx.common.async) {
-      return Promise.all([...ctx.data].map((item, i) => {
-        return def.type._parseAsync(new ParseInputLazyPath(ctx, item, ctx.path, i));
-      })).then((result2) => {
-        return ParseStatus.mergeArray(status, result2);
-      });
-    }
-    const result = [...ctx.data].map((item, i) => {
-      return def.type._parseSync(new ParseInputLazyPath(ctx, item, ctx.path, i));
-    });
-    return ParseStatus.mergeArray(status, result);
-  }
-  get element() {
-    return this._def.type;
-  }
-  min(minLength, message) {
-    return new _ZodArray({
-      ...this._def,
-      minLength: { value: minLength, message: errorUtil.toString(message) }
-    });
-  }
-  max(maxLength, message) {
-    return new _ZodArray({
-      ...this._def,
-      maxLength: { value: maxLength, message: errorUtil.toString(message) }
-    });
-  }
-  length(len, message) {
-    return new _ZodArray({
-      ...this._def,
-      exactLength: { value: len, message: errorUtil.toString(message) }
-    });
-  }
-  nonempty(message) {
-    return this.min(1, message);
-  }
-};
-ZodArray.create = (schema, params) => {
-  return new ZodArray({
-    type: schema,
-    minLength: null,
-    maxLength: null,
-    exactLength: null,
-    typeName: ZodFirstPartyTypeKind.ZodArray,
-    ...processCreateParams(params)
-  });
-};
-function deepPartialify(schema) {
-  if (schema instanceof ZodObject) {
-    const newShape = {};
-    for (const key in schema.shape) {
-      const fieldSchema = schema.shape[key];
-      newShape[key] = ZodOptional.create(deepPartialify(fieldSchema));
-    }
-    return new ZodObject({
-      ...schema._def,
-      shape: () => newShape
-    });
-  } else if (schema instanceof ZodArray) {
-    return new ZodArray({
-      ...schema._def,
-      type: deepPartialify(schema.element)
-    });
-  } else if (schema instanceof ZodOptional) {
-    return ZodOptional.create(deepPartialify(schema.unwrap()));
-  } else if (schema instanceof ZodNullable) {
-    return ZodNullable.create(deepPartialify(schema.unwrap()));
-  } else if (schema instanceof ZodTuple) {
-    return ZodTuple.create(schema.items.map((item) => deepPartialify(item)));
-  } else {
-    return schema;
-  }
-}
-var ZodObject = class _ZodObject extends ZodType {
-  constructor() {
-    super(...arguments);
-    this._cached = null;
-    this.nonstrict = this.passthrough;
-    this.augment = this.extend;
-  }
-  _getCached() {
-    if (this._cached !== null)
-      return this._cached;
-    const shape = this._def.shape();
-    const keys = util.objectKeys(shape);
-    this._cached = { shape, keys };
-    return this._cached;
-  }
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.object) {
-      const ctx2 = this._getOrReturnCtx(input);
-      addIssueToContext(ctx2, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.object,
-        received: ctx2.parsedType
-      });
-      return INVALID;
-    }
-    const { status, ctx } = this._processInputParams(input);
-    const { shape, keys: shapeKeys } = this._getCached();
-    const extraKeys = [];
-    if (!(this._def.catchall instanceof ZodNever && this._def.unknownKeys === "strip")) {
-      for (const key in ctx.data) {
-        if (!shapeKeys.includes(key)) {
-          extraKeys.push(key);
-        }
-      }
-    }
-    const pairs = [];
-    for (const key of shapeKeys) {
-      const keyValidator = shape[key];
-      const value = ctx.data[key];
-      pairs.push({
-        key: { status: "valid", value: key },
-        value: keyValidator._parse(new ParseInputLazyPath(ctx, value, ctx.path, key)),
-        alwaysSet: key in ctx.data
-      });
-    }
-    if (this._def.catchall instanceof ZodNever) {
-      const unknownKeys = this._def.unknownKeys;
-      if (unknownKeys === "passthrough") {
-        for (const key of extraKeys) {
-          pairs.push({
-            key: { status: "valid", value: key },
-            value: { status: "valid", value: ctx.data[key] }
-          });
-        }
-      } else if (unknownKeys === "strict") {
-        if (extraKeys.length > 0) {
-          addIssueToContext(ctx, {
-            code: ZodIssueCode.unrecognized_keys,
-            keys: extraKeys
-          });
-          status.dirty();
-        }
-      } else if (unknownKeys === "strip") {
-      } else {
-        throw new Error(`Internal ZodObject error: invalid unknownKeys value.`);
-      }
-    } else {
-      const catchall = this._def.catchall;
-      for (const key of extraKeys) {
-        const value = ctx.data[key];
-        pairs.push({
-          key: { status: "valid", value: key },
-          value: catchall._parse(
-            new ParseInputLazyPath(ctx, value, ctx.path, key)
-            //, ctx.child(key), value, getParsedType(value)
-          ),
-          alwaysSet: key in ctx.data
-        });
-      }
-    }
-    if (ctx.common.async) {
-      return Promise.resolve().then(async () => {
-        const syncPairs = [];
-        for (const pair of pairs) {
-          const key = await pair.key;
-          const value = await pair.value;
-          syncPairs.push({
-            key,
-            value,
-            alwaysSet: pair.alwaysSet
-          });
-        }
-        return syncPairs;
-      }).then((syncPairs) => {
-        return ParseStatus.mergeObjectSync(status, syncPairs);
-      });
-    } else {
-      return ParseStatus.mergeObjectSync(status, pairs);
-    }
-  }
-  get shape() {
-    return this._def.shape();
-  }
-  strict(message) {
-    errorUtil.errToObj;
-    return new _ZodObject({
-      ...this._def,
-      unknownKeys: "strict",
-      ...message !== void 0 ? {
-        errorMap: (issue2, ctx) => {
-          const defaultError = this._def.errorMap?.(issue2, ctx).message ?? ctx.defaultError;
-          if (issue2.code === "unrecognized_keys")
-            return {
-              message: errorUtil.errToObj(message).message ?? defaultError
-            };
-          return {
-            message: defaultError
-          };
-        }
-      } : {}
-    });
-  }
-  strip() {
-    return new _ZodObject({
-      ...this._def,
-      unknownKeys: "strip"
-    });
-  }
-  passthrough() {
-    return new _ZodObject({
-      ...this._def,
-      unknownKeys: "passthrough"
-    });
-  }
-  // const AugmentFactory =
-  //   <Def extends ZodObjectDef>(def: Def) =>
-  //   <Augmentation extends ZodRawShape>(
-  //     augmentation: Augmentation
-  //   ): ZodObject<
-  //     extendShape<ReturnType<Def["shape"]>, Augmentation>,
-  //     Def["unknownKeys"],
-  //     Def["catchall"]
-  //   > => {
-  //     return new ZodObject({
-  //       ...def,
-  //       shape: () => ({
-  //         ...def.shape(),
-  //         ...augmentation,
-  //       }),
-  //     }) as any;
-  //   };
-  extend(augmentation) {
-    return new _ZodObject({
-      ...this._def,
-      shape: () => ({
-        ...this._def.shape(),
-        ...augmentation
-      })
-    });
-  }
-  /**
-   * Prior to zod@1.0.12 there was a bug in the
-   * inferred type of merged objects. Please
-   * upgrade if you are experiencing issues.
-   */
-  merge(merging) {
-    const merged = new _ZodObject({
-      unknownKeys: merging._def.unknownKeys,
-      catchall: merging._def.catchall,
-      shape: () => ({
-        ...this._def.shape(),
-        ...merging._def.shape()
-      }),
-      typeName: ZodFirstPartyTypeKind.ZodObject
-    });
-    return merged;
-  }
-  // merge<
-  //   Incoming extends AnyZodObject,
-  //   Augmentation extends Incoming["shape"],
-  //   NewOutput extends {
-  //     [k in keyof Augmentation | keyof Output]: k extends keyof Augmentation
-  //       ? Augmentation[k]["_output"]
-  //       : k extends keyof Output
-  //       ? Output[k]
-  //       : never;
-  //   },
-  //   NewInput extends {
-  //     [k in keyof Augmentation | keyof Input]: k extends keyof Augmentation
-  //       ? Augmentation[k]["_input"]
-  //       : k extends keyof Input
-  //       ? Input[k]
-  //       : never;
-  //   }
-  // >(
-  //   merging: Incoming
-  // ): ZodObject<
-  //   extendShape<T, ReturnType<Incoming["_def"]["shape"]>>,
-  //   Incoming["_def"]["unknownKeys"],
-  //   Incoming["_def"]["catchall"],
-  //   NewOutput,
-  //   NewInput
-  // > {
-  //   const merged: any = new ZodObject({
-  //     unknownKeys: merging._def.unknownKeys,
-  //     catchall: merging._def.catchall,
-  //     shape: () =>
-  //       objectUtil.mergeShapes(this._def.shape(), merging._def.shape()),
-  //     typeName: ZodFirstPartyTypeKind.ZodObject,
-  //   }) as any;
-  //   return merged;
-  // }
-  setKey(key, schema) {
-    return this.augment({ [key]: schema });
-  }
-  // merge<Incoming extends AnyZodObject>(
-  //   merging: Incoming
-  // ): //ZodObject<T & Incoming["_shape"], UnknownKeys, Catchall> = (merging) => {
-  // ZodObject<
-  //   extendShape<T, ReturnType<Incoming["_def"]["shape"]>>,
-  //   Incoming["_def"]["unknownKeys"],
-  //   Incoming["_def"]["catchall"]
-  // > {
-  //   // const mergedShape = objectUtil.mergeShapes(
-  //   //   this._def.shape(),
-  //   //   merging._def.shape()
-  //   // );
-  //   const merged: any = new ZodObject({
-  //     unknownKeys: merging._def.unknownKeys,
-  //     catchall: merging._def.catchall,
-  //     shape: () =>
-  //       objectUtil.mergeShapes(this._def.shape(), merging._def.shape()),
-  //     typeName: ZodFirstPartyTypeKind.ZodObject,
-  //   }) as any;
-  //   return merged;
-  // }
-  catchall(index) {
-    return new _ZodObject({
-      ...this._def,
-      catchall: index
-    });
-  }
-  pick(mask) {
-    const shape = {};
-    for (const key of util.objectKeys(mask)) {
-      if (mask[key] && this.shape[key]) {
-        shape[key] = this.shape[key];
-      }
-    }
-    return new _ZodObject({
-      ...this._def,
-      shape: () => shape
-    });
-  }
-  omit(mask) {
-    const shape = {};
-    for (const key of util.objectKeys(this.shape)) {
-      if (!mask[key]) {
-        shape[key] = this.shape[key];
-      }
-    }
-    return new _ZodObject({
-      ...this._def,
-      shape: () => shape
-    });
-  }
-  /**
-   * @deprecated
-   */
-  deepPartial() {
-    return deepPartialify(this);
-  }
-  partial(mask) {
-    const newShape = {};
-    for (const key of util.objectKeys(this.shape)) {
-      const fieldSchema = this.shape[key];
-      if (mask && !mask[key]) {
-        newShape[key] = fieldSchema;
-      } else {
-        newShape[key] = fieldSchema.optional();
-      }
-    }
-    return new _ZodObject({
-      ...this._def,
-      shape: () => newShape
-    });
-  }
-  required(mask) {
-    const newShape = {};
-    for (const key of util.objectKeys(this.shape)) {
-      if (mask && !mask[key]) {
-        newShape[key] = this.shape[key];
-      } else {
-        const fieldSchema = this.shape[key];
-        let newField = fieldSchema;
-        while (newField instanceof ZodOptional) {
-          newField = newField._def.innerType;
-        }
-        newShape[key] = newField;
-      }
-    }
-    return new _ZodObject({
-      ...this._def,
-      shape: () => newShape
-    });
-  }
-  keyof() {
-    return createZodEnum(util.objectKeys(this.shape));
-  }
-};
-ZodObject.create = (shape, params) => {
-  return new ZodObject({
-    shape: () => shape,
-    unknownKeys: "strip",
-    catchall: ZodNever.create(),
-    typeName: ZodFirstPartyTypeKind.ZodObject,
-    ...processCreateParams(params)
-  });
-};
-ZodObject.strictCreate = (shape, params) => {
-  return new ZodObject({
-    shape: () => shape,
-    unknownKeys: "strict",
-    catchall: ZodNever.create(),
-    typeName: ZodFirstPartyTypeKind.ZodObject,
-    ...processCreateParams(params)
-  });
-};
-ZodObject.lazycreate = (shape, params) => {
-  return new ZodObject({
-    shape,
-    unknownKeys: "strip",
-    catchall: ZodNever.create(),
-    typeName: ZodFirstPartyTypeKind.ZodObject,
-    ...processCreateParams(params)
-  });
-};
-var ZodUnion = class extends ZodType {
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    const options = this._def.options;
-    function handleResults(results) {
-      for (const result of results) {
-        if (result.result.status === "valid") {
-          return result.result;
-        }
-      }
-      for (const result of results) {
-        if (result.result.status === "dirty") {
-          ctx.common.issues.push(...result.ctx.common.issues);
-          return result.result;
-        }
-      }
-      const unionErrors = results.map((result) => new ZodError(result.ctx.common.issues));
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_union,
-        unionErrors
-      });
-      return INVALID;
-    }
-    if (ctx.common.async) {
-      return Promise.all(options.map(async (option) => {
-        const childCtx = {
-          ...ctx,
-          common: {
-            ...ctx.common,
-            issues: []
-          },
-          parent: null
-        };
-        return {
-          result: await option._parseAsync({
-            data: ctx.data,
-            path: ctx.path,
-            parent: childCtx
-          }),
-          ctx: childCtx
-        };
-      })).then(handleResults);
-    } else {
-      let dirty = void 0;
-      const issues = [];
-      for (const option of options) {
-        const childCtx = {
-          ...ctx,
-          common: {
-            ...ctx.common,
-            issues: []
-          },
-          parent: null
-        };
-        const result = option._parseSync({
-          data: ctx.data,
-          path: ctx.path,
-          parent: childCtx
-        });
-        if (result.status === "valid") {
-          return result;
-        } else if (result.status === "dirty" && !dirty) {
-          dirty = { result, ctx: childCtx };
-        }
-        if (childCtx.common.issues.length) {
-          issues.push(childCtx.common.issues);
-        }
-      }
-      if (dirty) {
-        ctx.common.issues.push(...dirty.ctx.common.issues);
-        return dirty.result;
-      }
-      const unionErrors = issues.map((issues2) => new ZodError(issues2));
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_union,
-        unionErrors
-      });
-      return INVALID;
-    }
-  }
-  get options() {
-    return this._def.options;
-  }
-};
-ZodUnion.create = (types, params) => {
-  return new ZodUnion({
-    options: types,
-    typeName: ZodFirstPartyTypeKind.ZodUnion,
-    ...processCreateParams(params)
-  });
-};
-var getDiscriminator = (type) => {
-  if (type instanceof ZodLazy) {
-    return getDiscriminator(type.schema);
-  } else if (type instanceof ZodEffects) {
-    return getDiscriminator(type.innerType());
-  } else if (type instanceof ZodLiteral) {
-    return [type.value];
-  } else if (type instanceof ZodEnum) {
-    return type.options;
-  } else if (type instanceof ZodNativeEnum) {
-    return util.objectValues(type.enum);
-  } else if (type instanceof ZodDefault) {
-    return getDiscriminator(type._def.innerType);
-  } else if (type instanceof ZodUndefined) {
-    return [void 0];
-  } else if (type instanceof ZodNull) {
-    return [null];
-  } else if (type instanceof ZodOptional) {
-    return [void 0, ...getDiscriminator(type.unwrap())];
-  } else if (type instanceof ZodNullable) {
-    return [null, ...getDiscriminator(type.unwrap())];
-  } else if (type instanceof ZodBranded) {
-    return getDiscriminator(type.unwrap());
-  } else if (type instanceof ZodReadonly) {
-    return getDiscriminator(type.unwrap());
-  } else if (type instanceof ZodCatch) {
-    return getDiscriminator(type._def.innerType);
-  } else {
-    return [];
-  }
-};
-var ZodDiscriminatedUnion = class _ZodDiscriminatedUnion extends ZodType {
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    if (ctx.parsedType !== ZodParsedType.object) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.object,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    const discriminator = this.discriminator;
-    const discriminatorValue = ctx.data[discriminator];
-    const option = this.optionsMap.get(discriminatorValue);
-    if (!option) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_union_discriminator,
-        options: Array.from(this.optionsMap.keys()),
-        path: [discriminator]
-      });
-      return INVALID;
-    }
-    if (ctx.common.async) {
-      return option._parseAsync({
-        data: ctx.data,
-        path: ctx.path,
-        parent: ctx
-      });
-    } else {
-      return option._parseSync({
-        data: ctx.data,
-        path: ctx.path,
-        parent: ctx
-      });
-    }
-  }
-  get discriminator() {
-    return this._def.discriminator;
-  }
-  get options() {
-    return this._def.options;
-  }
-  get optionsMap() {
-    return this._def.optionsMap;
-  }
-  /**
-   * The constructor of the discriminated union schema. Its behaviour is very similar to that of the normal z.union() constructor.
-   * However, it only allows a union of objects, all of which need to share a discriminator property. This property must
-   * have a different value for each object in the union.
-   * @param discriminator the name of the discriminator property
-   * @param types an array of object schemas
-   * @param params
-   */
-  static create(discriminator, options, params) {
-    const optionsMap = /* @__PURE__ */ new Map();
-    for (const type of options) {
-      const discriminatorValues = getDiscriminator(type.shape[discriminator]);
-      if (!discriminatorValues.length) {
-        throw new Error(`A discriminator value for key \`${discriminator}\` could not be extracted from all schema options`);
-      }
-      for (const value of discriminatorValues) {
-        if (optionsMap.has(value)) {
-          throw new Error(`Discriminator property ${String(discriminator)} has duplicate value ${String(value)}`);
-        }
-        optionsMap.set(value, type);
-      }
-    }
-    return new _ZodDiscriminatedUnion({
-      typeName: ZodFirstPartyTypeKind.ZodDiscriminatedUnion,
-      discriminator,
-      options,
-      optionsMap,
-      ...processCreateParams(params)
-    });
-  }
-};
-function mergeValues(a, b) {
-  const aType = getParsedType(a);
-  const bType = getParsedType(b);
-  if (a === b) {
-    return { valid: true, data: a };
-  } else if (aType === ZodParsedType.object && bType === ZodParsedType.object) {
-    const bKeys = util.objectKeys(b);
-    const sharedKeys = util.objectKeys(a).filter((key) => bKeys.indexOf(key) !== -1);
-    const newObj = { ...a, ...b };
-    for (const key of sharedKeys) {
-      const sharedValue = mergeValues(a[key], b[key]);
-      if (!sharedValue.valid) {
-        return { valid: false };
-      }
-      newObj[key] = sharedValue.data;
-    }
-    return { valid: true, data: newObj };
-  } else if (aType === ZodParsedType.array && bType === ZodParsedType.array) {
-    if (a.length !== b.length) {
-      return { valid: false };
-    }
-    const newArray = [];
-    for (let index = 0; index < a.length; index++) {
-      const itemA = a[index];
-      const itemB = b[index];
-      const sharedValue = mergeValues(itemA, itemB);
-      if (!sharedValue.valid) {
-        return { valid: false };
-      }
-      newArray.push(sharedValue.data);
-    }
-    return { valid: true, data: newArray };
-  } else if (aType === ZodParsedType.date && bType === ZodParsedType.date && +a === +b) {
-    return { valid: true, data: a };
-  } else {
-    return { valid: false };
-  }
-}
-var ZodIntersection = class extends ZodType {
-  _parse(input) {
-    const { status, ctx } = this._processInputParams(input);
-    const handleParsed = (parsedLeft, parsedRight) => {
-      if (isAborted(parsedLeft) || isAborted(parsedRight)) {
-        return INVALID;
-      }
-      const merged = mergeValues(parsedLeft.value, parsedRight.value);
-      if (!merged.valid) {
-        addIssueToContext(ctx, {
-          code: ZodIssueCode.invalid_intersection_types
-        });
-        return INVALID;
-      }
-      if (isDirty(parsedLeft) || isDirty(parsedRight)) {
-        status.dirty();
-      }
-      return { status: status.value, value: merged.data };
-    };
-    if (ctx.common.async) {
-      return Promise.all([
-        this._def.left._parseAsync({
-          data: ctx.data,
-          path: ctx.path,
-          parent: ctx
-        }),
-        this._def.right._parseAsync({
-          data: ctx.data,
-          path: ctx.path,
-          parent: ctx
-        })
-      ]).then(([left, right]) => handleParsed(left, right));
-    } else {
-      return handleParsed(this._def.left._parseSync({
-        data: ctx.data,
-        path: ctx.path,
-        parent: ctx
-      }), this._def.right._parseSync({
-        data: ctx.data,
-        path: ctx.path,
-        parent: ctx
-      }));
-    }
-  }
-};
-ZodIntersection.create = (left, right, params) => {
-  return new ZodIntersection({
-    left,
-    right,
-    typeName: ZodFirstPartyTypeKind.ZodIntersection,
-    ...processCreateParams(params)
-  });
-};
-var ZodTuple = class _ZodTuple extends ZodType {
-  _parse(input) {
-    const { status, ctx } = this._processInputParams(input);
-    if (ctx.parsedType !== ZodParsedType.array) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.array,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    if (ctx.data.length < this._def.items.length) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.too_small,
-        minimum: this._def.items.length,
-        inclusive: true,
-        exact: false,
-        type: "array"
-      });
-      return INVALID;
-    }
-    const rest = this._def.rest;
-    if (!rest && ctx.data.length > this._def.items.length) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.too_big,
-        maximum: this._def.items.length,
-        inclusive: true,
-        exact: false,
-        type: "array"
-      });
-      status.dirty();
-    }
-    const items = [...ctx.data].map((item, itemIndex) => {
-      const schema = this._def.items[itemIndex] || this._def.rest;
-      if (!schema)
-        return null;
-      return schema._parse(new ParseInputLazyPath(ctx, item, ctx.path, itemIndex));
-    }).filter((x) => !!x);
-    if (ctx.common.async) {
-      return Promise.all(items).then((results) => {
-        return ParseStatus.mergeArray(status, results);
-      });
-    } else {
-      return ParseStatus.mergeArray(status, items);
-    }
-  }
-  get items() {
-    return this._def.items;
-  }
-  rest(rest) {
-    return new _ZodTuple({
-      ...this._def,
-      rest
-    });
-  }
-};
-ZodTuple.create = (schemas, params) => {
-  if (!Array.isArray(schemas)) {
-    throw new Error("You must pass an array of schemas to z.tuple([ ... ])");
-  }
-  return new ZodTuple({
-    items: schemas,
-    typeName: ZodFirstPartyTypeKind.ZodTuple,
-    rest: null,
-    ...processCreateParams(params)
-  });
-};
-var ZodRecord = class _ZodRecord extends ZodType {
-  get keySchema() {
-    return this._def.keyType;
-  }
-  get valueSchema() {
-    return this._def.valueType;
-  }
-  _parse(input) {
-    const { status, ctx } = this._processInputParams(input);
-    if (ctx.parsedType !== ZodParsedType.object) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.object,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    const pairs = [];
-    const keyType = this._def.keyType;
-    const valueType = this._def.valueType;
-    for (const key in ctx.data) {
-      pairs.push({
-        key: keyType._parse(new ParseInputLazyPath(ctx, key, ctx.path, key)),
-        value: valueType._parse(new ParseInputLazyPath(ctx, ctx.data[key], ctx.path, key)),
-        alwaysSet: key in ctx.data
-      });
-    }
-    if (ctx.common.async) {
-      return ParseStatus.mergeObjectAsync(status, pairs);
-    } else {
-      return ParseStatus.mergeObjectSync(status, pairs);
-    }
-  }
-  get element() {
-    return this._def.valueType;
-  }
-  static create(first, second, third) {
-    if (second instanceof ZodType) {
-      return new _ZodRecord({
-        keyType: first,
-        valueType: second,
-        typeName: ZodFirstPartyTypeKind.ZodRecord,
-        ...processCreateParams(third)
-      });
-    }
-    return new _ZodRecord({
-      keyType: ZodString.create(),
-      valueType: first,
-      typeName: ZodFirstPartyTypeKind.ZodRecord,
-      ...processCreateParams(second)
-    });
-  }
-};
-var ZodMap = class extends ZodType {
-  get keySchema() {
-    return this._def.keyType;
-  }
-  get valueSchema() {
-    return this._def.valueType;
-  }
-  _parse(input) {
-    const { status, ctx } = this._processInputParams(input);
-    if (ctx.parsedType !== ZodParsedType.map) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.map,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    const keyType = this._def.keyType;
-    const valueType = this._def.valueType;
-    const pairs = [...ctx.data.entries()].map(([key, value], index) => {
-      return {
-        key: keyType._parse(new ParseInputLazyPath(ctx, key, ctx.path, [index, "key"])),
-        value: valueType._parse(new ParseInputLazyPath(ctx, value, ctx.path, [index, "value"]))
-      };
-    });
-    if (ctx.common.async) {
-      const finalMap = /* @__PURE__ */ new Map();
-      return Promise.resolve().then(async () => {
-        for (const pair of pairs) {
-          const key = await pair.key;
-          const value = await pair.value;
-          if (key.status === "aborted" || value.status === "aborted") {
-            return INVALID;
-          }
-          if (key.status === "dirty" || value.status === "dirty") {
-            status.dirty();
-          }
-          finalMap.set(key.value, value.value);
-        }
-        return { status: status.value, value: finalMap };
-      });
-    } else {
-      const finalMap = /* @__PURE__ */ new Map();
-      for (const pair of pairs) {
-        const key = pair.key;
-        const value = pair.value;
-        if (key.status === "aborted" || value.status === "aborted") {
-          return INVALID;
-        }
-        if (key.status === "dirty" || value.status === "dirty") {
-          status.dirty();
-        }
-        finalMap.set(key.value, value.value);
-      }
-      return { status: status.value, value: finalMap };
-    }
-  }
-};
-ZodMap.create = (keyType, valueType, params) => {
-  return new ZodMap({
-    valueType,
-    keyType,
-    typeName: ZodFirstPartyTypeKind.ZodMap,
-    ...processCreateParams(params)
-  });
-};
-var ZodSet = class _ZodSet extends ZodType {
-  _parse(input) {
-    const { status, ctx } = this._processInputParams(input);
-    if (ctx.parsedType !== ZodParsedType.set) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.set,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    const def = this._def;
-    if (def.minSize !== null) {
-      if (ctx.data.size < def.minSize.value) {
-        addIssueToContext(ctx, {
-          code: ZodIssueCode.too_small,
-          minimum: def.minSize.value,
-          type: "set",
-          inclusive: true,
-          exact: false,
-          message: def.minSize.message
-        });
-        status.dirty();
-      }
-    }
-    if (def.maxSize !== null) {
-      if (ctx.data.size > def.maxSize.value) {
-        addIssueToContext(ctx, {
-          code: ZodIssueCode.too_big,
-          maximum: def.maxSize.value,
-          type: "set",
-          inclusive: true,
-          exact: false,
-          message: def.maxSize.message
-        });
-        status.dirty();
-      }
-    }
-    const valueType = this._def.valueType;
-    function finalizeSet(elements2) {
-      const parsedSet = /* @__PURE__ */ new Set();
-      for (const element of elements2) {
-        if (element.status === "aborted")
-          return INVALID;
-        if (element.status === "dirty")
-          status.dirty();
-        parsedSet.add(element.value);
-      }
-      return { status: status.value, value: parsedSet };
-    }
-    const elements = [...ctx.data.values()].map((item, i) => valueType._parse(new ParseInputLazyPath(ctx, item, ctx.path, i)));
-    if (ctx.common.async) {
-      return Promise.all(elements).then((elements2) => finalizeSet(elements2));
-    } else {
-      return finalizeSet(elements);
-    }
-  }
-  min(minSize, message) {
-    return new _ZodSet({
-      ...this._def,
-      minSize: { value: minSize, message: errorUtil.toString(message) }
-    });
-  }
-  max(maxSize, message) {
-    return new _ZodSet({
-      ...this._def,
-      maxSize: { value: maxSize, message: errorUtil.toString(message) }
-    });
-  }
-  size(size, message) {
-    return this.min(size, message).max(size, message);
-  }
-  nonempty(message) {
-    return this.min(1, message);
-  }
-};
-ZodSet.create = (valueType, params) => {
-  return new ZodSet({
-    valueType,
-    minSize: null,
-    maxSize: null,
-    typeName: ZodFirstPartyTypeKind.ZodSet,
-    ...processCreateParams(params)
-  });
-};
-var ZodFunction = class _ZodFunction extends ZodType {
-  constructor() {
-    super(...arguments);
-    this.validate = this.implement;
-  }
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    if (ctx.parsedType !== ZodParsedType.function) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.function,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    function makeArgsIssue(args, error) {
-      return makeIssue({
-        data: args,
-        path: ctx.path,
-        errorMaps: [ctx.common.contextualErrorMap, ctx.schemaErrorMap, getErrorMap(), en_default].filter((x) => !!x),
-        issueData: {
-          code: ZodIssueCode.invalid_arguments,
-          argumentsError: error
-        }
-      });
-    }
-    function makeReturnsIssue(returns, error) {
-      return makeIssue({
-        data: returns,
-        path: ctx.path,
-        errorMaps: [ctx.common.contextualErrorMap, ctx.schemaErrorMap, getErrorMap(), en_default].filter((x) => !!x),
-        issueData: {
-          code: ZodIssueCode.invalid_return_type,
-          returnTypeError: error
-        }
-      });
-    }
-    const params = { errorMap: ctx.common.contextualErrorMap };
-    const fn = ctx.data;
-    if (this._def.returns instanceof ZodPromise) {
-      const me = this;
-      return OK(async function(...args) {
-        const error = new ZodError([]);
-        const parsedArgs = await me._def.args.parseAsync(args, params).catch((e) => {
-          error.addIssue(makeArgsIssue(args, e));
-          throw error;
-        });
-        const result = await Reflect.apply(fn, this, parsedArgs);
-        const parsedReturns = await me._def.returns._def.type.parseAsync(result, params).catch((e) => {
-          error.addIssue(makeReturnsIssue(result, e));
-          throw error;
-        });
-        return parsedReturns;
-      });
-    } else {
-      const me = this;
-      return OK(function(...args) {
-        const parsedArgs = me._def.args.safeParse(args, params);
-        if (!parsedArgs.success) {
-          throw new ZodError([makeArgsIssue(args, parsedArgs.error)]);
-        }
-        const result = Reflect.apply(fn, this, parsedArgs.data);
-        const parsedReturns = me._def.returns.safeParse(result, params);
-        if (!parsedReturns.success) {
-          throw new ZodError([makeReturnsIssue(result, parsedReturns.error)]);
-        }
-        return parsedReturns.data;
-      });
-    }
-  }
-  parameters() {
-    return this._def.args;
-  }
-  returnType() {
-    return this._def.returns;
-  }
-  args(...items) {
-    return new _ZodFunction({
-      ...this._def,
-      args: ZodTuple.create(items).rest(ZodUnknown.create())
-    });
-  }
-  returns(returnType) {
-    return new _ZodFunction({
-      ...this._def,
-      returns: returnType
-    });
-  }
-  implement(func) {
-    const validatedFunc = this.parse(func);
-    return validatedFunc;
-  }
-  strictImplement(func) {
-    const validatedFunc = this.parse(func);
-    return validatedFunc;
-  }
-  static create(args, returns, params) {
-    return new _ZodFunction({
-      args: args ? args : ZodTuple.create([]).rest(ZodUnknown.create()),
-      returns: returns || ZodUnknown.create(),
-      typeName: ZodFirstPartyTypeKind.ZodFunction,
-      ...processCreateParams(params)
-    });
-  }
-};
-var ZodLazy = class extends ZodType {
-  get schema() {
-    return this._def.getter();
-  }
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    const lazySchema = this._def.getter();
-    return lazySchema._parse({ data: ctx.data, path: ctx.path, parent: ctx });
-  }
-};
-ZodLazy.create = (getter, params) => {
-  return new ZodLazy({
-    getter,
-    typeName: ZodFirstPartyTypeKind.ZodLazy,
-    ...processCreateParams(params)
-  });
-};
-var ZodLiteral = class extends ZodType {
-  _parse(input) {
-    if (input.data !== this._def.value) {
-      const ctx = this._getOrReturnCtx(input);
-      addIssueToContext(ctx, {
-        received: ctx.data,
-        code: ZodIssueCode.invalid_literal,
-        expected: this._def.value
-      });
-      return INVALID;
-    }
-    return { status: "valid", value: input.data };
-  }
-  get value() {
-    return this._def.value;
-  }
-};
-ZodLiteral.create = (value, params) => {
-  return new ZodLiteral({
-    value,
-    typeName: ZodFirstPartyTypeKind.ZodLiteral,
-    ...processCreateParams(params)
-  });
-};
-function createZodEnum(values, params) {
-  return new ZodEnum({
-    values,
-    typeName: ZodFirstPartyTypeKind.ZodEnum,
-    ...processCreateParams(params)
-  });
-}
-var ZodEnum = class _ZodEnum extends ZodType {
-  _parse(input) {
-    if (typeof input.data !== "string") {
-      const ctx = this._getOrReturnCtx(input);
-      const expectedValues = this._def.values;
-      addIssueToContext(ctx, {
-        expected: util.joinValues(expectedValues),
-        received: ctx.parsedType,
-        code: ZodIssueCode.invalid_type
-      });
-      return INVALID;
-    }
-    if (!this._cache) {
-      this._cache = new Set(this._def.values);
-    }
-    if (!this._cache.has(input.data)) {
-      const ctx = this._getOrReturnCtx(input);
-      const expectedValues = this._def.values;
-      addIssueToContext(ctx, {
-        received: ctx.data,
-        code: ZodIssueCode.invalid_enum_value,
-        options: expectedValues
-      });
-      return INVALID;
-    }
-    return OK(input.data);
-  }
-  get options() {
-    return this._def.values;
-  }
-  get enum() {
-    const enumValues = {};
-    for (const val of this._def.values) {
-      enumValues[val] = val;
-    }
-    return enumValues;
-  }
-  get Values() {
-    const enumValues = {};
-    for (const val of this._def.values) {
-      enumValues[val] = val;
-    }
-    return enumValues;
-  }
-  get Enum() {
-    const enumValues = {};
-    for (const val of this._def.values) {
-      enumValues[val] = val;
-    }
-    return enumValues;
-  }
-  extract(values, newDef = this._def) {
-    return _ZodEnum.create(values, {
-      ...this._def,
-      ...newDef
-    });
-  }
-  exclude(values, newDef = this._def) {
-    return _ZodEnum.create(this.options.filter((opt) => !values.includes(opt)), {
-      ...this._def,
-      ...newDef
-    });
-  }
-};
-ZodEnum.create = createZodEnum;
-var ZodNativeEnum = class extends ZodType {
-  _parse(input) {
-    const nativeEnumValues = util.getValidEnumValues(this._def.values);
-    const ctx = this._getOrReturnCtx(input);
-    if (ctx.parsedType !== ZodParsedType.string && ctx.parsedType !== ZodParsedType.number) {
-      const expectedValues = util.objectValues(nativeEnumValues);
-      addIssueToContext(ctx, {
-        expected: util.joinValues(expectedValues),
-        received: ctx.parsedType,
-        code: ZodIssueCode.invalid_type
-      });
-      return INVALID;
-    }
-    if (!this._cache) {
-      this._cache = new Set(util.getValidEnumValues(this._def.values));
-    }
-    if (!this._cache.has(input.data)) {
-      const expectedValues = util.objectValues(nativeEnumValues);
-      addIssueToContext(ctx, {
-        received: ctx.data,
-        code: ZodIssueCode.invalid_enum_value,
-        options: expectedValues
-      });
-      return INVALID;
-    }
-    return OK(input.data);
-  }
-  get enum() {
-    return this._def.values;
-  }
-};
-ZodNativeEnum.create = (values, params) => {
-  return new ZodNativeEnum({
-    values,
-    typeName: ZodFirstPartyTypeKind.ZodNativeEnum,
-    ...processCreateParams(params)
-  });
-};
-var ZodPromise = class extends ZodType {
-  unwrap() {
-    return this._def.type;
-  }
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    if (ctx.parsedType !== ZodParsedType.promise && ctx.common.async === false) {
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.promise,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    const promisified = ctx.parsedType === ZodParsedType.promise ? ctx.data : Promise.resolve(ctx.data);
-    return OK(promisified.then((data) => {
-      return this._def.type.parseAsync(data, {
-        path: ctx.path,
-        errorMap: ctx.common.contextualErrorMap
-      });
-    }));
-  }
-};
-ZodPromise.create = (schema, params) => {
-  return new ZodPromise({
-    type: schema,
-    typeName: ZodFirstPartyTypeKind.ZodPromise,
-    ...processCreateParams(params)
-  });
-};
-var ZodEffects = class extends ZodType {
-  innerType() {
-    return this._def.schema;
-  }
-  sourceType() {
-    return this._def.schema._def.typeName === ZodFirstPartyTypeKind.ZodEffects ? this._def.schema.sourceType() : this._def.schema;
-  }
-  _parse(input) {
-    const { status, ctx } = this._processInputParams(input);
-    const effect = this._def.effect || null;
-    const checkCtx = {
-      addIssue: (arg) => {
-        addIssueToContext(ctx, arg);
-        if (arg.fatal) {
-          status.abort();
-        } else {
-          status.dirty();
-        }
-      },
-      get path() {
-        return ctx.path;
-      }
-    };
-    checkCtx.addIssue = checkCtx.addIssue.bind(checkCtx);
-    if (effect.type === "preprocess") {
-      const processed = effect.transform(ctx.data, checkCtx);
-      if (ctx.common.async) {
-        return Promise.resolve(processed).then(async (processed2) => {
-          if (status.value === "aborted")
-            return INVALID;
-          const result = await this._def.schema._parseAsync({
-            data: processed2,
-            path: ctx.path,
-            parent: ctx
-          });
-          if (result.status === "aborted")
-            return INVALID;
-          if (result.status === "dirty")
-            return DIRTY(result.value);
-          if (status.value === "dirty")
-            return DIRTY(result.value);
-          return result;
-        });
-      } else {
-        if (status.value === "aborted")
-          return INVALID;
-        const result = this._def.schema._parseSync({
-          data: processed,
-          path: ctx.path,
-          parent: ctx
-        });
-        if (result.status === "aborted")
-          return INVALID;
-        if (result.status === "dirty")
-          return DIRTY(result.value);
-        if (status.value === "dirty")
-          return DIRTY(result.value);
-        return result;
-      }
-    }
-    if (effect.type === "refinement") {
-      const executeRefinement = (acc) => {
-        const result = effect.refinement(acc, checkCtx);
-        if (ctx.common.async) {
-          return Promise.resolve(result);
-        }
-        if (result instanceof Promise) {
-          throw new Error("Async refinement encountered during synchronous parse operation. Use .parseAsync instead.");
-        }
-        return acc;
-      };
-      if (ctx.common.async === false) {
-        const inner = this._def.schema._parseSync({
-          data: ctx.data,
-          path: ctx.path,
-          parent: ctx
-        });
-        if (inner.status === "aborted")
-          return INVALID;
-        if (inner.status === "dirty")
-          status.dirty();
-        executeRefinement(inner.value);
-        return { status: status.value, value: inner.value };
-      } else {
-        return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((inner) => {
-          if (inner.status === "aborted")
-            return INVALID;
-          if (inner.status === "dirty")
-            status.dirty();
-          return executeRefinement(inner.value).then(() => {
-            return { status: status.value, value: inner.value };
-          });
-        });
-      }
-    }
-    if (effect.type === "transform") {
-      if (ctx.common.async === false) {
-        const base = this._def.schema._parseSync({
-          data: ctx.data,
-          path: ctx.path,
-          parent: ctx
-        });
-        if (!isValid(base))
-          return INVALID;
-        const result = effect.transform(base.value, checkCtx);
-        if (result instanceof Promise) {
-          throw new Error(`Asynchronous transform encountered during synchronous parse operation. Use .parseAsync instead.`);
-        }
-        return { status: status.value, value: result };
-      } else {
-        return this._def.schema._parseAsync({ data: ctx.data, path: ctx.path, parent: ctx }).then((base) => {
-          if (!isValid(base))
-            return INVALID;
-          return Promise.resolve(effect.transform(base.value, checkCtx)).then((result) => ({
-            status: status.value,
-            value: result
-          }));
-        });
-      }
-    }
-    util.assertNever(effect);
-  }
-};
-ZodEffects.create = (schema, effect, params) => {
-  return new ZodEffects({
-    schema,
-    typeName: ZodFirstPartyTypeKind.ZodEffects,
-    effect,
-    ...processCreateParams(params)
-  });
-};
-ZodEffects.createWithPreprocess = (preprocess2, schema, params) => {
-  return new ZodEffects({
-    schema,
-    effect: { type: "preprocess", transform: preprocess2 },
-    typeName: ZodFirstPartyTypeKind.ZodEffects,
-    ...processCreateParams(params)
-  });
-};
-var ZodOptional = class extends ZodType {
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType === ZodParsedType.undefined) {
-      return OK(void 0);
-    }
-    return this._def.innerType._parse(input);
-  }
-  unwrap() {
-    return this._def.innerType;
-  }
-};
-ZodOptional.create = (type, params) => {
-  return new ZodOptional({
-    innerType: type,
-    typeName: ZodFirstPartyTypeKind.ZodOptional,
-    ...processCreateParams(params)
-  });
-};
-var ZodNullable = class extends ZodType {
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType === ZodParsedType.null) {
-      return OK(null);
-    }
-    return this._def.innerType._parse(input);
-  }
-  unwrap() {
-    return this._def.innerType;
-  }
-};
-ZodNullable.create = (type, params) => {
-  return new ZodNullable({
-    innerType: type,
-    typeName: ZodFirstPartyTypeKind.ZodNullable,
-    ...processCreateParams(params)
-  });
-};
-var ZodDefault = class extends ZodType {
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    let data = ctx.data;
-    if (ctx.parsedType === ZodParsedType.undefined) {
-      data = this._def.defaultValue();
-    }
-    return this._def.innerType._parse({
-      data,
-      path: ctx.path,
-      parent: ctx
-    });
-  }
-  removeDefault() {
-    return this._def.innerType;
-  }
-};
-ZodDefault.create = (type, params) => {
-  return new ZodDefault({
-    innerType: type,
-    typeName: ZodFirstPartyTypeKind.ZodDefault,
-    defaultValue: typeof params.default === "function" ? params.default : () => params.default,
-    ...processCreateParams(params)
-  });
-};
-var ZodCatch = class extends ZodType {
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    const newCtx = {
-      ...ctx,
-      common: {
-        ...ctx.common,
-        issues: []
-      }
-    };
-    const result = this._def.innerType._parse({
-      data: newCtx.data,
-      path: newCtx.path,
-      parent: {
-        ...newCtx
-      }
-    });
-    if (isAsync(result)) {
-      return result.then((result2) => {
-        return {
-          status: "valid",
-          value: result2.status === "valid" ? result2.value : this._def.catchValue({
-            get error() {
-              return new ZodError(newCtx.common.issues);
-            },
-            input: newCtx.data
-          })
-        };
-      });
-    } else {
-      return {
-        status: "valid",
-        value: result.status === "valid" ? result.value : this._def.catchValue({
-          get error() {
-            return new ZodError(newCtx.common.issues);
-          },
-          input: newCtx.data
-        })
-      };
-    }
-  }
-  removeCatch() {
-    return this._def.innerType;
-  }
-};
-ZodCatch.create = (type, params) => {
-  return new ZodCatch({
-    innerType: type,
-    typeName: ZodFirstPartyTypeKind.ZodCatch,
-    catchValue: typeof params.catch === "function" ? params.catch : () => params.catch,
-    ...processCreateParams(params)
-  });
-};
-var ZodNaN = class extends ZodType {
-  _parse(input) {
-    const parsedType = this._getType(input);
-    if (parsedType !== ZodParsedType.nan) {
-      const ctx = this._getOrReturnCtx(input);
-      addIssueToContext(ctx, {
-        code: ZodIssueCode.invalid_type,
-        expected: ZodParsedType.nan,
-        received: ctx.parsedType
-      });
-      return INVALID;
-    }
-    return { status: "valid", value: input.data };
-  }
-};
-ZodNaN.create = (params) => {
-  return new ZodNaN({
-    typeName: ZodFirstPartyTypeKind.ZodNaN,
-    ...processCreateParams(params)
-  });
-};
-var BRAND = Symbol("zod_brand");
-var ZodBranded = class extends ZodType {
-  _parse(input) {
-    const { ctx } = this._processInputParams(input);
-    const data = ctx.data;
-    return this._def.type._parse({
-      data,
-      path: ctx.path,
-      parent: ctx
-    });
-  }
-  unwrap() {
-    return this._def.type;
-  }
-};
-var ZodPipeline = class _ZodPipeline extends ZodType {
-  _parse(input) {
-    const { status, ctx } = this._processInputParams(input);
-    if (ctx.common.async) {
-      const handleAsync = async () => {
-        const inResult = await this._def.in._parseAsync({
-          data: ctx.data,
-          path: ctx.path,
-          parent: ctx
-        });
-        if (inResult.status === "aborted")
-          return INVALID;
-        if (inResult.status === "dirty") {
-          status.dirty();
-          return DIRTY(inResult.value);
-        } else {
-          return this._def.out._parseAsync({
-            data: inResult.value,
-            path: ctx.path,
-            parent: ctx
-          });
-        }
-      };
-      return handleAsync();
-    } else {
-      const inResult = this._def.in._parseSync({
-        data: ctx.data,
-        path: ctx.path,
-        parent: ctx
-      });
-      if (inResult.status === "aborted")
-        return INVALID;
-      if (inResult.status === "dirty") {
-        status.dirty();
-        return {
-          status: "dirty",
-          value: inResult.value
-        };
-      } else {
-        return this._def.out._parseSync({
-          data: inResult.value,
-          path: ctx.path,
-          parent: ctx
-        });
-      }
-    }
-  }
-  static create(a, b) {
-    return new _ZodPipeline({
-      in: a,
-      out: b,
-      typeName: ZodFirstPartyTypeKind.ZodPipeline
-    });
-  }
-};
-var ZodReadonly = class extends ZodType {
-  _parse(input) {
-    const result = this._def.innerType._parse(input);
-    const freeze = (data) => {
-      if (isValid(data)) {
-        data.value = Object.freeze(data.value);
-      }
-      return data;
-    };
-    return isAsync(result) ? result.then((data) => freeze(data)) : freeze(result);
-  }
-  unwrap() {
-    return this._def.innerType;
-  }
-};
-ZodReadonly.create = (type, params) => {
-  return new ZodReadonly({
-    innerType: type,
-    typeName: ZodFirstPartyTypeKind.ZodReadonly,
-    ...processCreateParams(params)
-  });
-};
-function cleanParams(params, data) {
-  const p = typeof params === "function" ? params(data) : typeof params === "string" ? { message: params } : params;
-  const p2 = typeof p === "string" ? { message: p } : p;
-  return p2;
-}
-function custom(check2, _params = {}, fatal) {
-  if (check2)
-    return ZodAny.create().superRefine((data, ctx) => {
-      const r = check2(data);
-      if (r instanceof Promise) {
-        return r.then((r2) => {
-          if (!r2) {
-            const params = cleanParams(_params, data);
-            const _fatal = params.fatal ?? fatal ?? true;
-            ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
-          }
-        });
-      }
-      if (!r) {
-        const params = cleanParams(_params, data);
-        const _fatal = params.fatal ?? fatal ?? true;
-        ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
-      }
-      return;
-    });
-  return ZodAny.create();
-}
-var late = {
-  object: ZodObject.lazycreate
-};
-var ZodFirstPartyTypeKind;
-(function(ZodFirstPartyTypeKind2) {
-  ZodFirstPartyTypeKind2["ZodString"] = "ZodString";
-  ZodFirstPartyTypeKind2["ZodNumber"] = "ZodNumber";
-  ZodFirstPartyTypeKind2["ZodNaN"] = "ZodNaN";
-  ZodFirstPartyTypeKind2["ZodBigInt"] = "ZodBigInt";
-  ZodFirstPartyTypeKind2["ZodBoolean"] = "ZodBoolean";
-  ZodFirstPartyTypeKind2["ZodDate"] = "ZodDate";
-  ZodFirstPartyTypeKind2["ZodSymbol"] = "ZodSymbol";
-  ZodFirstPartyTypeKind2["ZodUndefined"] = "ZodUndefined";
-  ZodFirstPartyTypeKind2["ZodNull"] = "ZodNull";
-  ZodFirstPartyTypeKind2["ZodAny"] = "ZodAny";
-  ZodFirstPartyTypeKind2["ZodUnknown"] = "ZodUnknown";
-  ZodFirstPartyTypeKind2["ZodNever"] = "ZodNever";
-  ZodFirstPartyTypeKind2["ZodVoid"] = "ZodVoid";
-  ZodFirstPartyTypeKind2["ZodArray"] = "ZodArray";
-  ZodFirstPartyTypeKind2["ZodObject"] = "ZodObject";
-  ZodFirstPartyTypeKind2["ZodUnion"] = "ZodUnion";
-  ZodFirstPartyTypeKind2["ZodDiscriminatedUnion"] = "ZodDiscriminatedUnion";
-  ZodFirstPartyTypeKind2["ZodIntersection"] = "ZodIntersection";
-  ZodFirstPartyTypeKind2["ZodTuple"] = "ZodTuple";
-  ZodFirstPartyTypeKind2["ZodRecord"] = "ZodRecord";
-  ZodFirstPartyTypeKind2["ZodMap"] = "ZodMap";
-  ZodFirstPartyTypeKind2["ZodSet"] = "ZodSet";
-  ZodFirstPartyTypeKind2["ZodFunction"] = "ZodFunction";
-  ZodFirstPartyTypeKind2["ZodLazy"] = "ZodLazy";
-  ZodFirstPartyTypeKind2["ZodLiteral"] = "ZodLiteral";
-  ZodFirstPartyTypeKind2["ZodEnum"] = "ZodEnum";
-  ZodFirstPartyTypeKind2["ZodEffects"] = "ZodEffects";
-  ZodFirstPartyTypeKind2["ZodNativeEnum"] = "ZodNativeEnum";
-  ZodFirstPartyTypeKind2["ZodOptional"] = "ZodOptional";
-  ZodFirstPartyTypeKind2["ZodNullable"] = "ZodNullable";
-  ZodFirstPartyTypeKind2["ZodDefault"] = "ZodDefault";
-  ZodFirstPartyTypeKind2["ZodCatch"] = "ZodCatch";
-  ZodFirstPartyTypeKind2["ZodPromise"] = "ZodPromise";
-  ZodFirstPartyTypeKind2["ZodBranded"] = "ZodBranded";
-  ZodFirstPartyTypeKind2["ZodPipeline"] = "ZodPipeline";
-  ZodFirstPartyTypeKind2["ZodReadonly"] = "ZodReadonly";
-})(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
-var instanceOfType = (cls, params = {
-  message: `Input not instance of ${cls.name}`
-}) => custom((data) => data instanceof cls, params);
-var stringType = ZodString.create;
-var numberType = ZodNumber.create;
-var nanType = ZodNaN.create;
-var bigIntType = ZodBigInt.create;
-var booleanType = ZodBoolean.create;
-var dateType = ZodDate.create;
-var symbolType = ZodSymbol.create;
-var undefinedType = ZodUndefined.create;
-var nullType = ZodNull.create;
-var anyType = ZodAny.create;
-var unknownType = ZodUnknown.create;
-var neverType = ZodNever.create;
-var voidType = ZodVoid.create;
-var arrayType = ZodArray.create;
-var objectType = ZodObject.create;
-var strictObjectType = ZodObject.strictCreate;
-var unionType = ZodUnion.create;
-var discriminatedUnionType = ZodDiscriminatedUnion.create;
-var intersectionType = ZodIntersection.create;
-var tupleType = ZodTuple.create;
-var recordType = ZodRecord.create;
-var mapType = ZodMap.create;
-var setType = ZodSet.create;
-var functionType = ZodFunction.create;
-var lazyType = ZodLazy.create;
-var literalType = ZodLiteral.create;
-var enumType = ZodEnum.create;
-var nativeEnumType = ZodNativeEnum.create;
-var promiseType = ZodPromise.create;
-var effectsType = ZodEffects.create;
-var optionalType = ZodOptional.create;
-var nullableType = ZodNullable.create;
-var preprocessType = ZodEffects.createWithPreprocess;
-var pipelineType = ZodPipeline.create;
-var ostring = () => stringType().optional();
-var onumber = () => numberType().optional();
-var oboolean = () => booleanType().optional();
-var coerce = {
-  string: (arg) => ZodString.create({ ...arg, coerce: true }),
-  number: (arg) => ZodNumber.create({ ...arg, coerce: true }),
-  boolean: (arg) => ZodBoolean.create({
-    ...arg,
-    coerce: true
-  }),
-  bigint: (arg) => ZodBigInt.create({ ...arg, coerce: true }),
-  date: (arg) => ZodDate.create({ ...arg, coerce: true })
-};
-var NEVER = INVALID;
-
 // node_modules/zod/v4/core/core.js
 var NEVER2 = Object.freeze({
   status: "aborted"
@@ -35829,13 +36723,13 @@ var $ZodRegistry = class {
     this._idmap = /* @__PURE__ */ new Map();
   }
   add(schema, ..._meta) {
-    const meta = _meta[0];
-    this._map.set(schema, meta);
-    if (meta && typeof meta === "object" && "id" in meta) {
-      if (this._idmap.has(meta.id)) {
-        throw new Error(`ID ${meta.id} already exists in the registry`);
+    const meta2 = _meta[0];
+    this._map.set(schema, meta2);
+    if (meta2 && typeof meta2 === "object" && "id" in meta2) {
+      if (this._idmap.has(meta2.id)) {
+        throw new Error(`ID ${meta2.id} already exists in the registry`);
       }
-      this._idmap.set(meta.id, schema);
+      this._idmap.set(meta2.id, schema);
     }
     return this;
   }
@@ -35845,9 +36739,9 @@ var $ZodRegistry = class {
     return this;
   }
   remove(schema) {
-    const meta = this._map.get(schema);
-    if (meta && typeof meta === "object" && "id" in meta) {
-      this._idmap.delete(meta.id);
+    const meta2 = this._map.get(schema);
+    if (meta2 && typeof meta2 === "object" && "id" in meta2) {
+      this._idmap.delete(meta2.id);
     }
     this._map.delete(schema);
     return this;
@@ -36741,6 +37635,7 @@ var JSONSchemaGenerator = class {
             _json.readOnly = true;
             break;
           }
+          // passthrough types
           case "promise": {
             this.process(def.innerType, params);
             result.ref = def.innerType;
@@ -36769,9 +37664,9 @@ var JSONSchemaGenerator = class {
         }
       }
     }
-    const meta = this.metadataRegistry.get(schema);
-    if (meta)
-      Object.assign(result.schema, meta);
+    const meta2 = this.metadataRegistry.get(schema);
+    if (meta2)
+      Object.assign(result.schema, meta2);
     if (this.io === "input" && isTransforming(schema)) {
       delete result.schema.examples;
       delete result.schema.default;
@@ -37033,6 +37928,7 @@ function isTransforming(_schema, _ctx) {
     case "set": {
       return isTransforming(def.valueType, ctx);
     }
+    // inner types
     case "promise":
     case "optional":
     case "nonoptional":
@@ -37092,10 +37988,10 @@ var ZodMiniType = /* @__PURE__ */ $constructor("ZodMiniType", (inst, def) => {
   };
   inst.clone = (_def, params) => clone(inst, _def, params);
   inst.brand = () => inst;
-  inst.register = (reg, meta) => {
-    reg.add(inst, meta);
+  inst.register = ((reg, meta2) => {
+    reg.add(inst, meta2);
     return inst;
-  };
+  });
 });
 var ZodMiniObject = /* @__PURE__ */ $constructor("ZodMiniObject", (inst, def) => {
   $ZodObject.init(inst, def);
@@ -37357,10 +38253,10 @@ var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   };
   inst.clone = (def2, params) => clone(inst, def2, params);
   inst.brand = () => inst;
-  inst.register = (reg, meta) => {
-    reg.add(inst, meta);
+  inst.register = ((reg, meta2) => {
+    reg.add(inst, meta2);
     return inst;
-  };
+  });
   inst.parse = (data, params) => parse2(inst, data, params, { callee: inst.parse });
   inst.safeParse = (data, params) => safeParse3(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync2(inst, data, params, { callee: inst.parseAsync });
@@ -39033,11 +39929,13 @@ function assertCompleteRequestPrompt(request) {
   if (request.params.ref.type !== "ref/prompt") {
     throw new TypeError(`Expected CompleteRequestPrompt, but got ${request.params.ref.type}`);
   }
+  void request;
 }
 function assertCompleteRequestResourceTemplate(request) {
   if (request.params.ref.type !== "ref/resource") {
     throw new TypeError(`Expected CompleteRequestResourceTemplate, but got ${request.params.ref.type}`);
   }
+  void request;
 }
 var CompleteResultSchema = ResultSchema.extend({
   completion: looseObject({
@@ -41258,8 +42156,8 @@ function isCompletable(schema) {
   return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
 }
 function getCompleter(schema) {
-  const meta = schema[COMPLETABLE_SYMBOL];
-  return meta === null || meta === void 0 ? void 0 : meta.complete;
+  const meta2 = schema[COMPLETABLE_SYMBOL];
+  return meta2 === null || meta2 === void 0 ? void 0 : meta2.complete;
 }
 var McpZodTypeKind;
 (function(McpZodTypeKind2) {
@@ -42075,6 +42973,15 @@ var StdioServerTransport = class {
   }
 };
 
+// dist/server/index.js
+init_zod();
+
+// dist/server/meta-tools.js
+init_zod();
+
+// dist/server/tools.js
+init_zod();
+
 // dist/engine/worldgen/heightmap.js
 var import_seedrandom = __toESM(require_seedrandom2(), 1);
 
@@ -42492,6 +43399,7 @@ function calculateOceanDistance(heightmap, seaLevel, width, height) {
 }
 
 // dist/schema/biome.js
+init_zod();
 var BiomeType;
 (function(BiomeType2) {
   BiomeType2["OCEAN"] = "ocean";
@@ -43460,6 +44368,7 @@ function generateRegions(options) {
 var import_seedrandom5 = __toESM(require_seedrandom2(), 1);
 
 // dist/schema/structure.js
+init_zod();
 var StructureType;
 (function(StructureType2) {
   StructureType2["CITY"] = "city";
@@ -43909,6 +44818,7 @@ function getWorldManager() {
 }
 
 // dist/schema/world.js
+init_zod();
 var WorldSchema = external_exports.object({
   id: external_exports.string(),
   name: external_exports.string().min(1),
@@ -44037,12 +44947,81 @@ var WorldRepository = class {
   }
 };
 
+// dist/storage/index.js
+var import_path = require("path");
+
 // dist/storage/db.js
 var import_better_sqlite3 = __toESM(require_better_sqlite3(), 1);
-function initDB(path = "rpg.db") {
-  const db = new import_better_sqlite3.default(path);
+var import_fs = require("fs");
+function checkDatabaseIntegrity(db) {
+  try {
+    const result = db.pragma("integrity_check");
+    const errors = result.map((row) => row.integrity_check).filter((msg) => msg !== "ok");
+    return {
+      ok: errors.length === 0,
+      errors
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      errors: [e.message]
+    };
+  }
+}
+function handleCorruptedDatabase(path, error) {
+  console.error(`[Database] CRITICAL: Database corruption detected at ${path}`);
+  console.error(`[Database] Error: ${error.message}`);
+  const walPath = `${path}-wal`;
+  const shmPath = `${path}-shm`;
+  console.error("[Database] Attempting recovery by removing corrupted files...");
+  try {
+    if ((0, import_fs.existsSync)(path)) {
+      (0, import_fs.unlinkSync)(path);
+      console.error(`[Database] Removed corrupted database: ${path}`);
+    }
+    if ((0, import_fs.existsSync)(walPath)) {
+      (0, import_fs.unlinkSync)(walPath);
+      console.error(`[Database] Removed WAL file: ${walPath}`);
+    }
+    if ((0, import_fs.existsSync)(shmPath)) {
+      (0, import_fs.unlinkSync)(shmPath);
+      console.error(`[Database] Removed SHM file: ${shmPath}`);
+    }
+    console.error("[Database] Recovery complete. A fresh database will be created.");
+  } catch (cleanupError) {
+    console.error(`[Database] Failed to clean up corrupted files: ${cleanupError.message}`);
+    throw new Error(`Database is corrupted and cleanup failed. Please manually delete: ${path}, ${walPath}, ${shmPath}`);
+  }
+}
+function initDB(path) {
+  console.error(`[Database] Opening database: ${path}`);
+  let db;
+  try {
+    db = new import_better_sqlite3.default(path);
+  } catch (e) {
+    const error = e;
+    if (error.message.includes("SQLITE_CORRUPT") || error.message.includes("malformed")) {
+      handleCorruptedDatabase(path, error);
+      db = new import_better_sqlite3.default(path);
+    } else {
+      throw e;
+    }
+  }
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  const integrity = checkDatabaseIntegrity(db);
+  if (!integrity.ok) {
+    console.error("[Database] Integrity check failed:");
+    integrity.errors.forEach((err) => console.error(`  - ${err}`));
+    db.close();
+    handleCorruptedDatabase(path, new Error(integrity.errors.join(", ")));
+    db = new import_better_sqlite3.default(path);
+    db.pragma("journal_mode = WAL");
+    db.pragma("foreign_keys = ON");
+    console.error("[Database] Fresh database created after corruption recovery");
+  } else {
+    console.error("[Database] Integrity check passed");
+  }
   return db;
 }
 
@@ -44238,6 +45217,67 @@ function migrate(db) {
     FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS nations(
+    id TEXT PRIMARY KEY,
+    world_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    leader TEXT NOT NULL,
+    ideology TEXT NOT NULL,
+    aggression INTEGER NOT NULL DEFAULT 50,
+    trust INTEGER NOT NULL DEFAULT 50,
+    paranoia INTEGER NOT NULL DEFAULT 50,
+    gdp REAL NOT NULL DEFAULT 1000,
+    resources TEXT NOT NULL DEFAULT '{"food":0,"metal":0,"oil":0}', --JSON
+    relations TEXT NOT NULL DEFAULT '{}', --JSON
+    private_memory TEXT, --JSON
+    public_intent TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_nations_world ON nations(world_id);
+
+  CREATE TABLE IF NOT EXISTS diplomatic_relations(
+    from_nation_id TEXT NOT NULL,
+    to_nation_id TEXT NOT NULL,
+    opinion INTEGER NOT NULL DEFAULT 0,
+    is_allied INTEGER NOT NULL DEFAULT 0,
+    truce_until INTEGER,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(from_nation_id, to_nation_id),
+    FOREIGN KEY(from_nation_id) REFERENCES nations(id) ON DELETE CASCADE,
+    FOREIGN KEY(to_nation_id) REFERENCES nations(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS territorial_claims(
+    id TEXT PRIMARY KEY,
+    nation_id TEXT NOT NULL,
+    region_id TEXT NOT NULL,
+    claim_strength INTEGER NOT NULL DEFAULT 50,
+    justification TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(nation_id) REFERENCES nations(id) ON DELETE CASCADE,
+    FOREIGN KEY(region_id) REFERENCES regions(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_territorial_claims_nation ON territorial_claims(nation_id);
+  CREATE INDEX IF NOT EXISTS idx_territorial_claims_region ON territorial_claims(region_id);
+
+  CREATE TABLE IF NOT EXISTS nation_events(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    world_id TEXT NOT NULL,
+    turn_number INTEGER NOT NULL,
+    event_type TEXT NOT NULL,
+    involved_nations TEXT NOT NULL, --JSON array
+    details TEXT NOT NULL, --JSON
+    timestamp TEXT NOT NULL,
+    FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_nation_events_world ON nation_events(world_id);
+  CREATE INDEX IF NOT EXISTS idx_nation_events_turn ON nation_events(world_id, turn_number);
+
   CREATE TABLE IF NOT EXISTS secrets(
     id TEXT PRIMARY KEY,
     world_id TEXT NOT NULL,
@@ -44300,6 +45340,260 @@ function migrate(db) {
   CREATE INDEX IF NOT EXISTS idx_parties_status ON parties(status);
   CREATE INDEX IF NOT EXISTS idx_parties_world ON parties(world_id);
   -- idx_parties_position moved to createPostMigrationIndexes (depends on position_x column)
+
+  -- HIGH-004: NPC Memory System
+  CREATE TABLE IF NOT EXISTS npc_relationships(
+    character_id TEXT NOT NULL,
+    npc_id TEXT NOT NULL,
+    familiarity TEXT NOT NULL DEFAULT 'stranger' CHECK (familiarity IN ('stranger', 'acquaintance', 'friend', 'close_friend', 'rival', 'enemy')),
+    disposition TEXT NOT NULL DEFAULT 'neutral' CHECK (disposition IN ('hostile', 'unfriendly', 'neutral', 'friendly', 'helpful')),
+    notes TEXT,
+    first_met_at TEXT NOT NULL,
+    last_interaction_at TEXT NOT NULL,
+    interaction_count INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY(character_id, npc_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS conversation_memories(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id TEXT NOT NULL,
+    npc_id TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    importance TEXT NOT NULL DEFAULT 'medium' CHECK (importance IN ('low', 'medium', 'high', 'critical')),
+    topics TEXT NOT NULL DEFAULT '[]', --JSON array of topic keywords
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_npc_relationships_char ON npc_relationships(character_id);
+  CREATE INDEX IF NOT EXISTS idx_npc_relationships_npc ON npc_relationships(npc_id);
+  CREATE INDEX IF NOT EXISTS idx_conversation_memories_char_npc ON conversation_memories(character_id, npc_id);
+  CREATE INDEX IF NOT EXISTS idx_conversation_memories_importance ON conversation_memories(importance);
+
+  -- HIGH-008: Stolen Items System
+  CREATE TABLE IF NOT EXISTS stolen_items(
+    id TEXT PRIMARY KEY,
+    item_id TEXT NOT NULL,
+    stolen_from TEXT NOT NULL,
+    stolen_by TEXT NOT NULL,
+    stolen_at TEXT NOT NULL,
+    stolen_location TEXT,
+
+    heat_level TEXT NOT NULL DEFAULT 'burning' CHECK (heat_level IN ('burning', 'hot', 'warm', 'cool', 'cold')),
+    heat_updated_at TEXT NOT NULL,
+
+    reported_to_guards INTEGER NOT NULL DEFAULT 0,
+    bounty INTEGER NOT NULL DEFAULT 0,
+    witnesses TEXT NOT NULL DEFAULT '[]',
+
+    recovered INTEGER NOT NULL DEFAULT 0,
+    recovered_at TEXT,
+    fenced INTEGER NOT NULL DEFAULT 0,
+    fenced_at TEXT,
+    fenced_to TEXT,
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+
+    FOREIGN KEY(item_id) REFERENCES items(id) ON DELETE CASCADE,
+    FOREIGN KEY(stolen_from) REFERENCES characters(id),
+    FOREIGN KEY(stolen_by) REFERENCES characters(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_item ON stolen_items(item_id);
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_thief ON stolen_items(stolen_by);
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_victim ON stolen_items(stolen_from);
+  CREATE INDEX IF NOT EXISTS idx_stolen_items_heat ON stolen_items(heat_level);
+
+  CREATE TABLE IF NOT EXISTS fence_npcs(
+    npc_id TEXT PRIMARY KEY,
+    faction_id TEXT,
+    buy_rate REAL NOT NULL DEFAULT 0.4,
+    max_heat_level TEXT NOT NULL DEFAULT 'hot',
+    daily_heat_capacity INTEGER NOT NULL DEFAULT 100,
+    current_daily_heat INTEGER NOT NULL DEFAULT 0,
+    last_reset_at TEXT NOT NULL,
+    specializations TEXT NOT NULL DEFAULT '[]',
+    cooldown_days INTEGER NOT NULL DEFAULT 7,
+    reputation INTEGER NOT NULL DEFAULT 50,
+    FOREIGN KEY(npc_id) REFERENCES characters(id) ON DELETE CASCADE
+  );
+
+  -- FAILED-004: Corpse/Loot System
+  CREATE TABLE IF NOT EXISTS corpses(
+    id TEXT PRIMARY KEY,
+    character_id TEXT NOT NULL,
+    character_name TEXT NOT NULL,
+    character_type TEXT NOT NULL,
+    creature_type TEXT,
+    cr REAL,
+
+    world_id TEXT,
+    region_id TEXT,
+    position_x INTEGER,
+    position_y INTEGER,
+    encounter_id TEXT,
+
+    state TEXT NOT NULL DEFAULT 'fresh' CHECK (state IN ('fresh', 'decaying', 'skeletal', 'gone')),
+    state_updated_at TEXT NOT NULL,
+
+    loot_generated INTEGER NOT NULL DEFAULT 0,
+    looted INTEGER NOT NULL DEFAULT 0,
+    looted_by TEXT,
+    looted_at TEXT,
+
+    harvestable INTEGER NOT NULL DEFAULT 0,
+    harvestable_resources TEXT NOT NULL DEFAULT '[]',
+
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_corpses_encounter ON corpses(encounter_id);
+  CREATE INDEX IF NOT EXISTS idx_corpses_world_position ON corpses(world_id, position_x, position_y);
+  CREATE INDEX IF NOT EXISTS idx_corpses_state ON corpses(state);
+  CREATE INDEX IF NOT EXISTS idx_corpses_character ON corpses(character_id);
+
+  CREATE TABLE IF NOT EXISTS corpse_inventory(
+    corpse_id TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    looted INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(corpse_id, item_id),
+    FOREIGN KEY(corpse_id) REFERENCES corpses(id) ON DELETE CASCADE,
+    FOREIGN KEY(item_id) REFERENCES items(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS loot_tables(
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    creature_types TEXT NOT NULL DEFAULT '[]',
+    cr_min REAL,
+    cr_max REAL,
+    guaranteed_drops TEXT NOT NULL DEFAULT '[]',
+    random_drops TEXT NOT NULL DEFAULT '[]',
+    currency_range TEXT,
+    harvestable_resources TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_loot_tables_name ON loot_tables(name);
+
+  -- IMPROVISATION SYSTEMS: Custom Effects Table
+  -- Tracks divine boons, curses, transformations, and player-invented conditions
+  CREATE TABLE IF NOT EXISTS custom_effects(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id TEXT NOT NULL,
+    target_type TEXT NOT NULL CHECK (target_type IN ('character', 'npc')),
+    name TEXT NOT NULL,
+    description TEXT,
+    source_type TEXT NOT NULL CHECK (source_type IN ('divine', 'arcane', 'natural', 'cursed', 'psionic', 'unknown')),
+    source_entity_id TEXT,
+    source_entity_name TEXT,
+    category TEXT NOT NULL CHECK (category IN ('boon', 'curse', 'neutral', 'transformative')),
+    power_level INTEGER NOT NULL CHECK (power_level BETWEEN 1 AND 5),
+    mechanics TEXT NOT NULL DEFAULT '[]', -- JSON array of mechanic objects
+    duration_type TEXT NOT NULL CHECK (duration_type IN ('rounds', 'minutes', 'hours', 'days', 'permanent', 'until_removed')),
+    duration_value INTEGER,
+    rounds_remaining INTEGER,
+    triggers TEXT NOT NULL DEFAULT '[]', -- JSON array of trigger objects
+    removal_conditions TEXT NOT NULL DEFAULT '[]', -- JSON array of removal condition objects
+    stackable INTEGER NOT NULL DEFAULT 0, -- boolean
+    max_stacks INTEGER NOT NULL DEFAULT 1,
+    current_stacks INTEGER NOT NULL DEFAULT 1,
+    is_active INTEGER NOT NULL DEFAULT 1, -- boolean
+    created_at TEXT NOT NULL,
+    expires_at TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_custom_effects_target ON custom_effects(target_id, target_type);
+  CREATE INDEX IF NOT EXISTS idx_custom_effects_active ON custom_effects(is_active);
+  CREATE INDEX IF NOT EXISTS idx_custom_effects_name ON custom_effects(name);
+
+  -- IMPROVISATION SYSTEMS: Synthesized Spells Table
+  -- Tracks spells permanently learned through Arcane Synthesis mastery
+  CREATE TABLE IF NOT EXISTS synthesized_spells(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    level INTEGER NOT NULL CHECK (level BETWEEN 1 AND 9),
+    school TEXT NOT NULL,
+    effect_type TEXT NOT NULL,
+    effect_dice TEXT,
+    damage_type TEXT,
+    targeting_type TEXT NOT NULL,
+    targeting_range INTEGER NOT NULL,
+    targeting_area_size INTEGER,
+    targeting_max_targets INTEGER,
+    saving_throw_ability TEXT,
+    saving_throw_effect TEXT,
+    components_verbal INTEGER NOT NULL DEFAULT 1,
+    components_somatic INTEGER NOT NULL DEFAULT 1,
+    components_material TEXT, -- JSON object or null
+    concentration INTEGER NOT NULL DEFAULT 0,
+    duration TEXT NOT NULL,
+    synthesis_dc INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    mastered_at TEXT NOT NULL,
+    times_cast INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(character_id, name)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_synthesized_spells_character ON synthesized_spells(character_id);
+  CREATE INDEX IF NOT EXISTS idx_synthesized_spells_school ON synthesized_spells(school);
+
+  -- PHASE-1: Spatial Graph System - Room Nodes
+  CREATE TABLE IF NOT EXISTS room_nodes(
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL CHECK(length(trim(name)) > 0 AND length(name) <= 100),
+    base_description TEXT NOT NULL CHECK(length(trim(base_description)) >= 10 AND length(base_description) <= 2000),
+    biome_context TEXT NOT NULL CHECK(biome_context IN (
+      'forest', 'mountain', 'urban', 'dungeon', 'coastal', 'cavern', 'divine', 'arcane'
+    )),
+    atmospherics TEXT NOT NULL DEFAULT '[]', -- JSON array of atmospheric effects
+    exits TEXT NOT NULL DEFAULT '[]', -- JSON array of exit objects {direction, targetNodeId, type, dc?, description?}
+    entity_ids TEXT NOT NULL DEFAULT '[]', -- JSON array of UUID strings
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    visited_count INTEGER NOT NULL DEFAULT 0,
+    last_visited_at TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_room_nodes_biome ON room_nodes(biome_context);
+  CREATE INDEX IF NOT EXISTS idx_room_nodes_visited ON room_nodes(last_visited_at DESC);
+
+  -- Concentration System - tracks active concentration spells
+  CREATE TABLE IF NOT EXISTS concentration(
+    character_id TEXT PRIMARY KEY,
+    active_spell TEXT NOT NULL,
+    spell_level INTEGER NOT NULL CHECK (spell_level BETWEEN 0 AND 9),
+    target_ids TEXT, -- JSON array of target IDs
+    started_at INTEGER NOT NULL, -- Round number
+    max_duration INTEGER, -- Maximum rounds (null = indefinite)
+    save_dc_base INTEGER NOT NULL DEFAULT 10, -- Base DC for concentration saves
+    FOREIGN KEY(character_id) REFERENCES characters(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_concentration_character ON concentration(character_id);
+
+  -- Aura System - tracks active area-effect auras centered on characters
+  CREATE TABLE IF NOT EXISTS auras(
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    spell_name TEXT NOT NULL,
+    spell_level INTEGER NOT NULL CHECK (spell_level BETWEEN 0 AND 9),
+    radius INTEGER NOT NULL CHECK (radius > 0), -- Radius in feet
+    affects_allies INTEGER NOT NULL DEFAULT 0, -- boolean
+    affects_enemies INTEGER NOT NULL DEFAULT 0, -- boolean
+    affects_self INTEGER NOT NULL DEFAULT 0, -- boolean
+    effects TEXT NOT NULL, -- JSON array of AuraEffect objects
+    started_at INTEGER NOT NULL, -- Round number
+    max_duration INTEGER, -- Maximum rounds (null = indefinite)
+    requires_concentration INTEGER NOT NULL DEFAULT 0, -- boolean
+    FOREIGN KEY(owner_id) REFERENCES characters(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_auras_owner ON auras(owner_id);
   `);
   runMigrations(db);
   createPostMigrationIndexes(db);
@@ -44310,6 +45604,17 @@ function runMigrations(db) {
   if (!hasCharacterType) {
     console.error("[Migration] Adding character_type column to characters table");
     db.exec(`ALTER TABLE characters ADD COLUMN character_type TEXT DEFAULT 'pc';`);
+  }
+  const regionColumns = db.prepare("PRAGMA table_info(regions)").all();
+  const hasOwnerNationId = regionColumns.some((col) => col.name === "owner_nation_id");
+  const hasControlLevel = regionColumns.some((col) => col.name === "control_level");
+  if (!hasOwnerNationId) {
+    console.error("[Migration] Adding owner_nation_id column to regions table");
+    db.exec(`ALTER TABLE regions ADD COLUMN owner_nation_id TEXT REFERENCES nations(id) ON DELETE SET NULL;`);
+  }
+  if (!hasControlLevel) {
+    console.error("[Migration] Adding control_level column to regions table");
+    db.exec(`ALTER TABLE regions ADD COLUMN control_level INTEGER NOT NULL DEFAULT 0;`);
   }
   const partyColumns = db.prepare("PRAGMA table_info(parties)").all();
   const hasPositionX = partyColumns.some((col) => col.name === "position_x");
@@ -44328,9 +45633,167 @@ function runMigrations(db) {
     db.exec(`ALTER TABLE parties ADD COLUMN current_poi TEXT;`);
   }
   db.exec(`
-    UPDATE parties 
-    SET position_x = 50, position_y = 50 
+    UPDATE parties
+    SET position_x = 50, position_y = 50
     WHERE position_x IS NULL;
+  `);
+  const hasCharacterClass = charColumns.some((col) => col.name === "character_class");
+  const hasSpellSlots = charColumns.some((col) => col.name === "spell_slots");
+  const hasPactMagicSlots = charColumns.some((col) => col.name === "pact_magic_slots");
+  const hasKnownSpells = charColumns.some((col) => col.name === "known_spells");
+  const hasPreparedSpells = charColumns.some((col) => col.name === "prepared_spells");
+  const hasCantripsKnown = charColumns.some((col) => col.name === "cantrips_known");
+  const hasMaxSpellLevel = charColumns.some((col) => col.name === "max_spell_level");
+  const hasConcentratingOn = charColumns.some((col) => col.name === "concentrating_on");
+  const hasConditions = charColumns.some((col) => col.name === "conditions");
+  if (!hasCharacterClass) {
+    console.error("[Migration] Adding character_class column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN character_class TEXT DEFAULT 'fighter';`);
+  }
+  if (!hasSpellSlots) {
+    console.error("[Migration] Adding spell_slots column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN spell_slots TEXT;`);
+  }
+  if (!hasPactMagicSlots) {
+    console.error("[Migration] Adding pact_magic_slots column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN pact_magic_slots TEXT;`);
+  }
+  if (!hasKnownSpells) {
+    console.error("[Migration] Adding known_spells column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN known_spells TEXT DEFAULT '[]';`);
+  }
+  if (!hasPreparedSpells) {
+    console.error("[Migration] Adding prepared_spells column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN prepared_spells TEXT DEFAULT '[]';`);
+  }
+  if (!hasCantripsKnown) {
+    console.error("[Migration] Adding cantrips_known column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN cantrips_known TEXT DEFAULT '[]';`);
+  }
+  if (!hasMaxSpellLevel) {
+    console.error("[Migration] Adding max_spell_level column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN max_spell_level INTEGER DEFAULT 0;`);
+  }
+  if (!hasConcentratingOn) {
+    console.error("[Migration] Adding concentrating_on column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN concentrating_on TEXT;`);
+  }
+  if (!hasConditions) {
+    console.error("[Migration] Adding conditions column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN conditions TEXT DEFAULT '[]';`);
+  }
+  const hasLegendaryActions = charColumns.some((col) => col.name === "legendary_actions");
+  const hasLegendaryActionsRemaining = charColumns.some((col) => col.name === "legendary_actions_remaining");
+  const hasLegendaryResistances = charColumns.some((col) => col.name === "legendary_resistances");
+  const hasLegendaryResistancesRemaining = charColumns.some((col) => col.name === "legendary_resistances_remaining");
+  const hasLairActions = charColumns.some((col) => col.name === "has_lair_actions");
+  const hasResistances = charColumns.some((col) => col.name === "resistances");
+  const hasVulnerabilities = charColumns.some((col) => col.name === "vulnerabilities");
+  const hasImmunities = charColumns.some((col) => col.name === "immunities");
+  if (!hasLegendaryActions) {
+    console.error("[Migration] Adding legendary_actions column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN legendary_actions INTEGER;`);
+  }
+  if (!hasLegendaryActionsRemaining) {
+    console.error("[Migration] Adding legendary_actions_remaining column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN legendary_actions_remaining INTEGER;`);
+  }
+  if (!hasLegendaryResistances) {
+    console.error("[Migration] Adding legendary_resistances column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN legendary_resistances INTEGER;`);
+  }
+  if (!hasLegendaryResistancesRemaining) {
+    console.error("[Migration] Adding legendary_resistances_remaining column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN legendary_resistances_remaining INTEGER;`);
+  }
+  if (!hasLairActions) {
+    console.error("[Migration] Adding has_lair_actions column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN has_lair_actions INTEGER DEFAULT 0;`);
+  }
+  if (!hasResistances) {
+    console.error("[Migration] Adding resistances column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN resistances TEXT DEFAULT '[]';`);
+  }
+  if (!hasVulnerabilities) {
+    console.error("[Migration] Adding vulnerabilities column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN vulnerabilities TEXT DEFAULT '[]';`);
+  }
+  if (!hasImmunities) {
+    console.error("[Migration] Adding immunities column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN immunities TEXT DEFAULT '[]';`);
+  }
+  const hasCurrency = charColumns.some((col) => col.name === "currency");
+  if (!hasCurrency) {
+    console.error("[Migration] Adding currency column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN currency TEXT DEFAULT '{"gold":0,"silver":0,"copper":0}';`);
+  }
+  const corpseColumns = db.prepare("PRAGMA table_info(corpses)").all();
+  const hasCorpseCurrency = corpseColumns.some((col) => col.name === "currency");
+  if (!hasCorpseCurrency) {
+    console.error("[Migration] Adding currency column to corpses table");
+    db.exec(`ALTER TABLE corpses ADD COLUMN currency TEXT DEFAULT '{"gold":0,"silver":0,"copper":0}';`);
+  }
+  const hasCorpseCurrencyLooted = corpseColumns.some((col) => col.name === "currency_looted");
+  if (!hasCorpseCurrencyLooted) {
+    console.error("[Migration] Adding currency_looted column to corpses table");
+    db.exec(`ALTER TABLE corpses ADD COLUMN currency_looted INTEGER NOT NULL DEFAULT 0;`);
+  }
+  const hasCurrentRoomId = charColumns.some((col) => col.name === "current_room_id");
+  if (!hasCurrentRoomId) {
+    console.error("[Migration] Adding current_room_id column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN current_room_id TEXT REFERENCES room_nodes(id) ON DELETE SET NULL;`);
+  }
+  const hasPerceptionBonus = charColumns.some((col) => col.name === "perception_bonus");
+  const hasStealthBonus = charColumns.some((col) => col.name === "stealth_bonus");
+  if (!hasPerceptionBonus) {
+    console.error("[Migration] Adding perception_bonus column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN perception_bonus INTEGER DEFAULT 0;`);
+  }
+  if (!hasStealthBonus) {
+    console.error("[Migration] Adding stealth_bonus column to characters table");
+    db.exec(`ALTER TABLE characters ADD COLUMN stealth_bonus INTEGER DEFAULT 0;`);
+  }
+  const roomColumns = db.prepare("PRAGMA table_info(room_nodes)").all();
+  const hasNetworkId = roomColumns.some((col) => col.name === "network_id");
+  const hasLocalX = roomColumns.some((col) => col.name === "local_x");
+  const hasLocalY = roomColumns.some((col) => col.name === "local_y");
+  const hasWorldX = roomColumns.some((col) => col.name === "world_x");
+  const hasWorldY = roomColumns.some((col) => col.name === "world_y");
+  if (hasWorldX && !hasLocalX) {
+    console.error("[Migration] Renaming world_x to local_x in room_nodes table");
+    db.exec(`ALTER TABLE room_nodes RENAME COLUMN world_x TO local_x;`);
+  } else if (!hasLocalX && !hasWorldX) {
+    console.error("[Migration] Adding local_x column to room_nodes table");
+    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_x INTEGER;`);
+  }
+  if (hasWorldY && !hasLocalY) {
+    console.error("[Migration] Renaming world_y to local_y in room_nodes table");
+    db.exec(`ALTER TABLE room_nodes RENAME COLUMN world_y TO local_y;`);
+  } else if (!hasLocalY && !hasWorldY) {
+    console.error("[Migration] Adding local_y column to room_nodes table");
+    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_y INTEGER;`);
+  }
+  if (!hasNetworkId) {
+    console.error("[Migration] Adding network_id column to room_nodes table");
+    db.exec(`ALTER TABLE room_nodes ADD COLUMN network_id TEXT REFERENCES node_networks(id) ON DELETE SET NULL;`);
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS node_networks(
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL CHECK(length(trim(name)) > 0 AND length(name) <= 100),
+      type TEXT NOT NULL CHECK(type IN ('cluster', 'linear')),
+      world_id TEXT NOT NULL,
+      center_x INTEGER NOT NULL,
+      center_y INTEGER NOT NULL,
+      bounding_box TEXT, -- JSON: {minX, maxX, minY, maxY}
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_node_networks_coords ON node_networks(center_x, center_y);
+    CREATE INDEX IF NOT EXISTS idx_node_networks_world ON node_networks(world_id);
+    CREATE INDEX IF NOT EXISTS idx_room_nodes_local_coords ON room_nodes(local_x, local_y);
+    CREATE INDEX IF NOT EXISTS idx_room_nodes_network ON room_nodes(network_id);
   `);
 }
 function createPostMigrationIndexes(db) {
@@ -44344,9 +45807,15 @@ function createPostMigrationIndexes(db) {
   } catch (e) {
     console.error("[Migration] Note: Could not create idx_parties_position:", e.message);
   }
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_regions_owner_nation ON regions(owner_nation_id);`);
+  } catch (e) {
+    console.error("[Migration] Note: Could not create idx_regions_owner_nation:", e.message);
+  }
 }
 
 // dist/schema/audit.js
+init_zod();
 var AuditLogSchema = external_exports.object({
   id: external_exports.number().int().optional(),
   // Auto-increment
@@ -44406,18 +45875,64 @@ var AuditRepository = class {
 
 // dist/storage/index.js
 var dbInstance = null;
-function getDb(path = "rpg.db") {
+var configuredDbPath = null;
+function getDefaultDbPath() {
+  if (process.env.RPG_MCP_DB_PATH) {
+    return process.env.RPG_MCP_DB_PATH;
+  }
+  const args = process.argv;
+  const dbPathIndex = args.indexOf("--db-path");
+  if (dbPathIndex !== -1 && args[dbPathIndex + 1]) {
+    return args[dbPathIndex + 1];
+  }
+  const exePath = process.execPath;
+  const exeDir = (0, import_path.dirname)(exePath);
+  if (process.pkg || exePath.includes("rpg-mcp-server")) {
+    return (0, import_path.join)(exeDir, "rpg.db");
+  }
+  return (0, import_path.join)(process.cwd(), "rpg.db");
+}
+function resolveDbPath(path) {
+  const dbPath = path || configuredDbPath || getDefaultDbPath();
+  if (dbPath === ":memory:") {
+    return dbPath;
+  }
+  if ((0, import_path.isAbsolute)(dbPath)) {
+    return dbPath;
+  }
+  return (0, import_path.join)(process.cwd(), dbPath);
+}
+function getDbPath() {
+  return resolveDbPath();
+}
+function getDb(path) {
   if (!dbInstance) {
-    dbInstance = initDB(path);
+    const resolvedPath = resolveDbPath(path);
+    console.error(`[Database] Initializing database at: ${resolvedPath}`);
+    dbInstance = initDB(resolvedPath);
     migrate(dbInstance);
   }
   return dbInstance;
+}
+function closeDb() {
+  if (dbInstance) {
+    try {
+      dbInstance.pragma("wal_checkpoint(TRUNCATE)");
+      console.error("[Database] WAL checkpoint completed");
+    } catch (e) {
+      console.error("[Database] WAL checkpoint failed:", e.message);
+    }
+    dbInstance.close();
+    dbInstance = null;
+    console.error("[Database] Database closed");
+  }
 }
 
 // dist/server/tools.js
 var zlib = __toESM(require("zlib"), 1);
 
 // dist/engine/dsl/schema.js
+init_zod();
 var CommandType;
 (function(CommandType2) {
   CommandType2["ADD_STRUCTURE"] = "ADD_STRUCTURE";
@@ -44707,14 +46222,7 @@ function setWorldPubSub(instance3) {
 var Tools = {
   GENERATE_WORLD: {
     name: "generate_world",
-    description: `Generates a new RPG world with the specified parameters.
-        
-Examples:
-{
-  "seed": "campaign-2024",
-  "width": 50,
-  "height": 50
-}`,
+    description: "Generate a new procedural RPG world with seed, width, and height parameters.",
     inputSchema: external_exports.object({
       seed: external_exports.string().describe("Seed for random number generation"),
       width: external_exports.number().int().min(10).max(1e3).describe("Width of the world grid"),
@@ -44730,18 +46238,7 @@ Examples:
   },
   APPLY_MAP_PATCH: {
     name: "apply_map_patch",
-    description: `Applies a DSL patch script to the current world.
-
-IMPORTANT: Structure placements are validated against terrain. Cities, towns, villages cannot be placed in water (ocean, lake) or on glaciers. Use find_valid_poi_location to get suitable coordinates first.
-
-Supported Commands:
-- ADD_STRUCTURE type x y (e.g., "ADD_STRUCTURE town 12 15")
-- SET_BIOME type x y (e.g., "SET_BIOME forest 10 10")
-- EDIT_TILE x y elevation (e.g., "EDIT_TILE 5 5 0.8")
-
-Example Script:
-ADD_STRUCTURE city 25 25
-SET_BIOME mountain 26 25`,
+    description: "Apply DSL commands to modify the world map. Use find_valid_poi_location first for structure placement.",
     inputSchema: external_exports.object({
       worldId: external_exports.string().describe("The ID of the world to patch"),
       script: external_exports.string().describe("The DSL script containing patch commands.")
@@ -44779,14 +46276,7 @@ SET_BIOME mountain 26 25`,
   },
   FIND_VALID_POI_LOCATION: {
     name: "find_valid_poi_location",
-    description: `Finds valid locations for placing a POI/structure based on terrain and preferences.
-
-Use this BEFORE calling apply_map_patch to get coordinates that are actually valid for the structure type. Returns multiple candidate locations ranked by suitability score.
-
-Examples:
-- Find location for a city near water: { "worldId": "...", "poiType": "city", "nearWater": true }
-- Find location for a dungeon in mountains: { "worldId": "...", "poiType": "dungeon", "preferredBiomes": ["taiga", "tundra"] }
-- Find 5 possible town locations: { "worldId": "...", "poiType": "town", "count": 5 }`,
+    description: "Find terrain-valid locations for placing a POI/structure. Returns ranked candidates by suitability.",
     inputSchema: external_exports.object({
       worldId: external_exports.string().describe("The ID of the world"),
       poiType: external_exports.enum(["city", "town", "village", "castle", "ruins", "dungeon", "temple"]).describe("Type of POI to place"),
@@ -44800,16 +46290,7 @@ Examples:
   },
   SUGGEST_POI_LOCATIONS: {
     name: "suggest_poi_locations",
-    description: `Returns a batch of suggested locations for multiple POI types at once. Useful for initial world setup.
-
-Example: Get suggestions for 3 cities and 5 towns:
-{
-  "worldId": "...",
-  "requests": [
-    { "poiType": "city", "count": 3, "nearWater": true },
-    { "poiType": "town", "count": 5 }
-  ]
-}`,
+    description: "Batch suggest locations for multiple POI types at once. Returns DSL script for easy application.",
     inputSchema: external_exports.object({
       worldId: external_exports.string().describe("The ID of the world"),
       requests: external_exports.array(external_exports.object({
@@ -45481,6 +46962,9 @@ async function handleSuggestPoiLocations(args, ctx) {
   };
 }
 
+// dist/server/combat-tools.js
+init_zod();
+
 // dist/engine/combat/rng.js
 var import_seedrandom6 = __toESM(require_seedrandom2(), 1);
 var CombatRNG = class {
@@ -45905,6 +47389,8 @@ var CombatEngine = class {
   /**
    * Start a new combat encounter
    * Rolls initiative for all participants and establishes turn order
+   *
+   * If any participant has hasLairActions=true, adds 'LAIR' to turn order at initiative 20
    */
   startEncounter(participants) {
     const participantsWithInitiative = participants.map((p) => {
@@ -45913,20 +47399,36 @@ var CombatEngine = class {
         ...p,
         initiative: rolledInitiative,
         // Auto-detect isEnemy if not explicitly set
-        isEnemy: p.isEnemy ?? this.detectIsEnemy(p.id, p.name)
+        isEnemy: p.isEnemy ?? this.detectIsEnemy(p.id, p.name),
+        // Initialize legendary actions remaining to max if applicable
+        legendaryActionsRemaining: p.legendaryActions ?? p.legendaryActionsRemaining,
+        legendaryResistancesRemaining: p.legendaryResistances ?? p.legendaryResistancesRemaining
       };
     });
+    const lairOwner = participantsWithInitiative.find((p) => p.hasLairActions);
+    const hasLairActions = !!lairOwner;
     participantsWithInitiative.sort((a, b) => {
       if (b.initiative !== a.initiative) {
         return b.initiative - a.initiative;
       }
       return a.id.localeCompare(b.id);
     });
+    let turnOrder = participantsWithInitiative.map((r) => r.id);
+    if (hasLairActions) {
+      const lairIndex = participantsWithInitiative.findIndex((p) => (p.initiative ?? 0) <= 20);
+      if (lairIndex === -1) {
+        turnOrder.push("LAIR");
+      } else {
+        turnOrder.splice(lairIndex, 0, "LAIR");
+      }
+    }
     this.state = {
       participants: participantsWithInitiative,
-      turnOrder: participantsWithInitiative.map((r) => r.id),
+      turnOrder,
       currentTurnIndex: 0,
-      round: 1
+      round: 1,
+      hasLairActions,
+      lairOwnerId: lairOwner?.id
     };
     this.emitter?.publish("combat", {
       type: "encounter_started",
@@ -45964,7 +47466,12 @@ var CombatEngine = class {
       "bat",
       "slime",
       "ghost",
-      "wraith"
+      "wraith",
+      "dracolich",
+      "lich",
+      "vampire",
+      "golem",
+      "elemental"
     ];
     for (const pattern of enemyPatterns) {
       if (idLower.includes(pattern) || nameLower.includes(pattern)) {
@@ -46000,12 +47507,123 @@ var CombatEngine = class {
   }
   /**
    * Get the participant whose turn it currently is
+   * Returns null if it's LAIR's turn
    */
   getCurrentParticipant() {
     if (!this.state)
       return null;
     const currentId = this.state.turnOrder[this.state.currentTurnIndex];
+    if (currentId === "LAIR")
+      return null;
     return this.state.participants.find((p) => p.id === currentId) || null;
+  }
+  /**
+   * Check if it's currently the LAIR's turn (initiative 20)
+   */
+  isLairActionPending() {
+    if (!this.state)
+      return false;
+    return this.state.turnOrder[this.state.currentTurnIndex] === "LAIR";
+  }
+  /**
+   * Check if a legendary creature can use a legendary action
+   * Rules: Can only use at the end of another creature's turn, not their own
+   */
+  canUseLegendaryAction(participantId) {
+    if (!this.state)
+      return false;
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (!participant)
+      return false;
+    if (!participant.legendaryActions || participant.legendaryActions <= 0)
+      return false;
+    if (!participant.legendaryActionsRemaining || participant.legendaryActionsRemaining <= 0)
+      return false;
+    const currentId = this.state.turnOrder[this.state.currentTurnIndex];
+    if (currentId === participantId)
+      return false;
+    if (currentId === "LAIR")
+      return false;
+    return true;
+  }
+  /**
+   * Use a legendary action
+   * @param participantId - ID of the legendary creature
+   * @param cost - How many legendary actions this use costs (default 1)
+   * @returns Result with success status and remaining actions
+   */
+  useLegendaryAction(participantId, cost = 1) {
+    if (!this.state) {
+      return { success: false, remaining: 0, error: "No active combat" };
+    }
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (!participant) {
+      return { success: false, remaining: 0, error: "Participant not found" };
+    }
+    if (!this.canUseLegendaryAction(participantId)) {
+      return {
+        success: false,
+        remaining: participant.legendaryActionsRemaining ?? 0,
+        error: "Cannot use legendary action (own turn, no actions, or none remaining)"
+      };
+    }
+    const remaining = participant.legendaryActionsRemaining ?? 0;
+    if (remaining < cost) {
+      return {
+        success: false,
+        remaining,
+        error: `Not enough legendary actions (need ${cost}, have ${remaining})`
+      };
+    }
+    participant.legendaryActionsRemaining = remaining - cost;
+    this.emitter?.publish("combat", {
+      type: "legendary_action_used",
+      participantId,
+      cost,
+      remaining: participant.legendaryActionsRemaining
+    });
+    return {
+      success: true,
+      remaining: participant.legendaryActionsRemaining
+    };
+  }
+  /**
+   * Use a legendary resistance to automatically succeed on a failed save
+   * Unlike legendary actions, these do NOT reset each round
+   */
+  useLegendaryResistance(participantId) {
+    if (!this.state) {
+      return { success: false, remaining: 0, error: "No active combat" };
+    }
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (!participant) {
+      return { success: false, remaining: 0, error: "Participant not found" };
+    }
+    if (!participant.legendaryResistances || participant.legendaryResistances <= 0) {
+      return { success: false, remaining: 0, error: "No legendary resistances" };
+    }
+    const remaining = participant.legendaryResistancesRemaining ?? 0;
+    if (remaining <= 0) {
+      return { success: false, remaining: 0, error: "No legendary resistances remaining" };
+    }
+    participant.legendaryResistancesRemaining = remaining - 1;
+    this.emitter?.publish("combat", {
+      type: "legendary_resistance_used",
+      participantId,
+      remaining: participant.legendaryResistancesRemaining
+    });
+    return {
+      success: true,
+      remaining: participant.legendaryResistancesRemaining
+    };
+  }
+  /**
+   * Reset legendary actions for a participant (called at start of their turn)
+   */
+  resetLegendaryActions(participant) {
+    if (participant.legendaryActions && participant.legendaryActions > 0) {
+      participant.legendaryActionsRemaining = participant.legendaryActions;
+    }
   }
   /**
    * Advance to the next turn
@@ -46022,10 +47640,29 @@ var CombatEngine = class {
     return this.getCurrentParticipant();
   }
   /**
+   * HIGH-002: Calculate damage after applying resistance/vulnerability/immunity
+   */
+  calculateDamageWithModifiers(baseDamage, damageType, target) {
+    if (!damageType) {
+      return { finalDamage: baseDamage, modifier: "normal" };
+    }
+    const typeLC = damageType.toLowerCase();
+    if (target.immunities?.some((i) => i.toLowerCase() === typeLC)) {
+      return { finalDamage: 0, modifier: "immune" };
+    }
+    if (target.resistances?.some((r) => r.toLowerCase() === typeLC)) {
+      return { finalDamage: Math.floor(baseDamage / 2), modifier: "resistant" };
+    }
+    if (target.vulnerabilities?.some((v) => v.toLowerCase() === typeLC)) {
+      return { finalDamage: baseDamage * 2, modifier: "vulnerable" };
+    }
+    return { finalDamage: baseDamage, modifier: "normal" };
+  }
+  /**
    * Execute an attack with full transparency
    * Returns detailed breakdown of what happened
    */
-  executeAttack(actorId, targetId, attackBonus, dc, damage) {
+  executeAttack(actorId, targetId, attackBonus, dc, damage, damageType) {
     if (!this.state)
       throw new Error("No active combat");
     const actor = this.state.participants.find((p) => p.id === actorId);
@@ -46037,8 +47674,12 @@ var CombatEngine = class {
     const hpBefore = target.hp;
     const attackRoll = this.rng.checkDegreeDetailed(attackBonus, dc);
     let damageDealt = 0;
+    let damageModifier = "normal";
     if (attackRoll.isHit) {
-      damageDealt = attackRoll.isCrit ? damage * 2 : damage;
+      const baseDamage = attackRoll.isCrit ? damage * 2 : damage;
+      const modResult = this.calculateDamageWithModifiers(baseDamage, damageType, target);
+      damageDealt = modResult.finalDamage;
+      damageModifier = modResult.modifier;
       target.hp = Math.max(0, target.hp - damageDealt);
     }
     const defeated = target.hp <= 0;
@@ -46054,9 +47695,18 @@ var CombatEngine = class {
     breakdown += `   ${attackRoll.isHit ? "\u2705 HIT" : "\u274C MISS"}`;
     if (attackRoll.isHit) {
       breakdown += attackRoll.isCrit ? " (CRITICAL!)" : "";
+      const typeStr = damageType ? ` ${damageType}` : "";
+      let modStr = "";
+      if (damageModifier === "immune") {
+        modStr = " [IMMUNE - No damage!]";
+      } else if (damageModifier === "resistant") {
+        modStr = " [Resistant - Halved!]";
+      } else if (damageModifier === "vulnerable") {
+        modStr = " [Vulnerable - Doubled!]";
+      }
       breakdown += `
 
-\u{1F4A5} Damage: ${damageDealt}${attackRoll.isCrit ? " (doubled from crit)" : ""}
+\u{1F4A5} Damage: ${damageDealt}${typeStr}${attackRoll.isCrit ? " (crit)" : ""}${modStr}
 `;
       breakdown += `   ${target.name}: ${hpBefore} \u2192 ${target.hp}/${target.maxHp} HP`;
       if (defeated) {
@@ -46167,13 +47817,20 @@ var CombatEngine = class {
   }
   /**
    * Heal a participant
+   * MED-003: Also resets death saves if healing from 0 HP
    */
   heal(participantId, amount) {
     if (!this.state)
       return;
     const participant = this.state.participants.find((p) => p.id === participantId);
     if (participant) {
+      const wasAtZero = participant.hp === 0;
       participant.hp = Math.min(participant.maxHp, participant.hp + amount);
+      if (wasAtZero && participant.hp > 0) {
+        participant.deathSaveSuccesses = 0;
+        participant.deathSaveFailures = 0;
+        participant.isStabilized = false;
+      }
       this.emitter?.publish("combat", {
         type: "healed",
         participantId,
@@ -46181,6 +47838,105 @@ var CombatEngine = class {
         newHp: participant.hp
       });
     }
+  }
+  /**
+   * MED-003: Roll a death saving throw for a participant at 0 HP
+   * D&D 5e Rules:
+   * - Roll d20
+   * - 10+ = success
+   * - 9 or less = failure
+   * - Natural 20 = regain 1 HP (conscious again)
+   * - Natural 1 = counts as 2 failures
+   * - 3 successes = stabilized (unconscious but won't die)
+   * - 3 failures = dead
+   */
+  rollDeathSave(participantId) {
+    if (!this.state)
+      return null;
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (!participant)
+      return null;
+    if (participant.hp > 0) {
+      return null;
+    }
+    if (participant.isDead) {
+      return null;
+    }
+    if (participant.isStabilized) {
+      return null;
+    }
+    if (participant.deathSaveSuccesses === void 0) {
+      participant.deathSaveSuccesses = 0;
+    }
+    if (participant.deathSaveFailures === void 0) {
+      participant.deathSaveFailures = 0;
+    }
+    const roll = Math.floor(Math.random() * 20) + 1;
+    const isNat20 = roll === 20;
+    const isNat1 = roll === 1;
+    const success = roll >= 10;
+    if (isNat20) {
+      participant.hp = 1;
+      participant.deathSaveSuccesses = 0;
+      participant.deathSaveFailures = 0;
+      participant.isStabilized = false;
+    } else if (isNat1) {
+      participant.deathSaveFailures = Math.min(3, participant.deathSaveFailures + 2);
+    } else if (success) {
+      participant.deathSaveSuccesses = Math.min(3, participant.deathSaveSuccesses + 1);
+    } else {
+      participant.deathSaveFailures = Math.min(3, participant.deathSaveFailures + 1);
+    }
+    if (participant.deathSaveSuccesses >= 3) {
+      participant.isStabilized = true;
+    }
+    if (participant.deathSaveFailures >= 3) {
+      participant.isDead = true;
+    }
+    const result = {
+      roll,
+      isNat20,
+      isNat1,
+      success,
+      successes: participant.deathSaveSuccesses,
+      failures: participant.deathSaveFailures,
+      isStabilized: participant.isStabilized ?? false,
+      isDead: participant.isDead ?? false,
+      regainedHp: isNat20
+    };
+    this.emitter?.publish("combat", {
+      type: "death_save",
+      participantId,
+      result
+    });
+    return result;
+  }
+  /**
+   * MED-003: Apply damage at 0 HP (causes automatic death save failures)
+   * D&D 5e Rules: Taking damage at 0 HP = 1 failure (crit = 2 failures)
+   */
+  applyDamageAtZeroHp(participantId, isCritical = false) {
+    if (!this.state)
+      return;
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (!participant || participant.hp > 0 || participant.isDead)
+      return;
+    if (participant.deathSaveFailures === void 0) {
+      participant.deathSaveFailures = 0;
+    }
+    const failures = isCritical ? 2 : 1;
+    participant.deathSaveFailures = Math.min(3, participant.deathSaveFailures + failures);
+    if (participant.deathSaveFailures >= 3) {
+      participant.isDead = true;
+    }
+    participant.isStabilized = false;
+    this.emitter?.publish("combat", {
+      type: "death_save_failure",
+      participantId,
+      failures,
+      total: participant.deathSaveFailures,
+      isDead: participant.isDead
+    });
   }
   /**
    * Check if a participant is still conscious (hp > 0)
@@ -46260,9 +48016,18 @@ var CombatEngine = class {
     return participant ? [...participant.conditions] : [];
   }
   /**
+   * HIGH-003: Reset reaction and disengage status at start of turn
+   */
+  resetTurnResources(participant) {
+    participant.reactionUsed = false;
+    participant.hasDisengaged = false;
+  }
+  /**
    * Process start-of-turn condition effects
    */
   processStartOfTurnConditions(participant) {
+    this.resetTurnResources(participant);
+    this.resetLegendaryActions(participant);
     for (const condition of [...participant.conditions]) {
       if (condition.ongoingEffects) {
         for (const effect of condition.ongoingEffects) {
@@ -46329,7 +48094,7 @@ var CombatEngine = class {
     return Math.floor((score - 10) / 2);
   }
   /**
-   * Enhanced nextTurn with condition processing
+   * Enhanced nextTurn with condition processing and legendary action reset
    */
   nextTurnWithConditions() {
     if (!this.state)
@@ -46350,7 +48115,8 @@ var CombatEngine = class {
     this.emitter?.publish("combat", {
       type: "turn_changed",
       round: this.state.round,
-      activeParticipantId: newParticipant?.id
+      activeParticipantId: newParticipant?.id,
+      isLairAction: this.isLairActionPending()
     });
     return newParticipant;
   }
@@ -46383,6 +48149,136 @@ var CombatEngine = class {
     });
   }
   /**
+   * HIGH-003: Check if two positions are adjacent (within 1 tile - 8-directional)
+   */
+  isAdjacent(pos1, pos2) {
+    const dx = Math.abs(pos1.x - pos2.x);
+    const dy = Math.abs(pos1.y - pos2.y);
+    return dx <= 1 && dy <= 1 && !(dx === 0 && dy === 0);
+  }
+  /**
+   * HIGH-003: Get adjacent enemies that could make opportunity attacks
+   * @param moverId - The creature that is moving
+   * @param fromPos - Starting position
+   * @param toPos - Target position
+   * @returns Array of participants who can make opportunity attacks
+   */
+  getOpportunityAttackers(moverId, fromPos, toPos) {
+    if (!this.state)
+      return [];
+    const mover = this.state.participants.find((p) => p.id === moverId);
+    if (!mover)
+      return [];
+    if (mover.hasDisengaged)
+      return [];
+    const attackers = [];
+    for (const p of this.state.participants) {
+      if (p.id === moverId)
+        continue;
+      if (p.hp <= 0)
+        continue;
+      if (p.isEnemy === mover.isEnemy)
+        continue;
+      if (p.reactionUsed)
+        continue;
+      if (!p.position)
+        continue;
+      const wasAdjacent = this.isAdjacent(fromPos, p.position);
+      const stillAdjacent = this.isAdjacent(toPos, p.position);
+      if (wasAdjacent && !stillAdjacent) {
+        attackers.push(p);
+      }
+    }
+    return attackers;
+  }
+  /**
+   * HIGH-003: Execute an opportunity attack
+   * Uses simplified attack: d20 + attacker's initiative bonus vs target's initiative + 10
+   * Damage is fixed at 1d6 + 2 for simplicity
+   */
+  executeOpportunityAttack(attackerId, targetId) {
+    if (!this.state)
+      throw new Error("No active combat");
+    const attacker = this.state.participants.find((p) => p.id === attackerId);
+    const target = this.state.participants.find((p) => p.id === targetId);
+    if (!attacker)
+      throw new Error(`Attacker ${attackerId} not found`);
+    if (!target)
+      throw new Error(`Target ${targetId} not found`);
+    attacker.reactionUsed = true;
+    const attackBonus = attacker.initiativeBonus + 2;
+    const targetAC = 10 + (target.initiativeBonus > 0 ? Math.floor(target.initiativeBonus / 2) : 0);
+    const baseDamage = this.rng.roll("1d6") + 2;
+    const hpBefore = target.hp;
+    const attackRoll = this.rng.checkDegreeDetailed(attackBonus, targetAC);
+    let damageDealt = 0;
+    if (attackRoll.isHit) {
+      damageDealt = attackRoll.isCrit ? baseDamage * 2 : baseDamage;
+      target.hp = Math.max(0, target.hp - damageDealt);
+    }
+    const defeated = target.hp <= 0;
+    let breakdown = `\u26A1 OPPORTUNITY ATTACK by ${attacker.name}!
+`;
+    breakdown += `\u{1F3B2} Attack Roll: d20(${attackRoll.roll}) + ${attackBonus} = ${attackRoll.total} vs AC ${targetAC}
+`;
+    if (attackRoll.isNat20) {
+      breakdown += `   \u2B50 NATURAL 20!
+`;
+    } else if (attackRoll.isNat1) {
+      breakdown += `   \u{1F480} NATURAL 1!
+`;
+    }
+    breakdown += `   ${attackRoll.isHit ? "\u2705 HIT" : "\u274C MISS"}`;
+    if (attackRoll.isHit) {
+      breakdown += attackRoll.isCrit ? " (CRITICAL!)" : "";
+      breakdown += `
+
+\u{1F4A5} Damage: ${damageDealt}${attackRoll.isCrit ? " (crit)" : ""}
+`;
+      breakdown += `   ${target.name}: ${hpBefore} \u2192 ${target.hp}/${target.maxHp} HP`;
+      if (defeated) {
+        breakdown += ` [DEFEATED]`;
+      }
+    }
+    const message = attackRoll.isHit ? `OPPORTUNITY ATTACK HIT! ${attacker.name} strikes ${target.name} for ${damageDealt} damage` : `OPPORTUNITY ATTACK MISS! ${attacker.name}'s attack misses ${target.name}`;
+    this.emitter?.publish("combat", {
+      type: "opportunity_attack",
+      result: {
+        attacker: attacker.name,
+        target: target.name,
+        roll: attackRoll.roll,
+        total: attackRoll.total,
+        ac: targetAC,
+        hit: attackRoll.isHit,
+        crit: attackRoll.isCrit,
+        damage: damageDealt,
+        targetHp: target.hp
+      }
+    });
+    return {
+      type: "attack",
+      actor: { id: attacker.id, name: attacker.name },
+      target: { id: target.id, name: target.name, hpBefore, hpAfter: target.hp, maxHp: target.maxHp },
+      attackRoll,
+      damage: damageDealt,
+      success: attackRoll.isHit,
+      defeated,
+      message,
+      detailedBreakdown: breakdown
+    };
+  }
+  /**
+   * HIGH-003: Mark a participant as having taken the disengage action
+   */
+  disengage(participantId) {
+    if (!this.state)
+      return;
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (participant) {
+      participant.hasDisengaged = true;
+    }
+  }
+  /**
    * Check if attacks against a participant have advantage
    */
   attacksAgainstHaveAdvantage(participantId) {
@@ -46409,6 +48305,708 @@ var CombatEngine = class {
       const effects = CONDITION_EFFECTS[c.type];
       return effects.attackDisadvantage === true;
     });
+  }
+};
+
+// dist/engine/spatial/heap.js
+var MinHeap = class {
+  keyFn;
+  heap = [];
+  itemMap = /* @__PURE__ */ new Map();
+  // Maps stringified item to index
+  constructor(keyFn) {
+    this.keyFn = keyFn;
+  }
+  /**
+   * Insert an item with a given priority.
+   * Time complexity: O(log n)
+   */
+  insert(item, priority) {
+    const key = this.keyFn(item);
+    if (this.itemMap.has(key)) {
+      this.decreaseKey(item, priority);
+      return;
+    }
+    this.heap.push({ item, priority });
+    const index = this.heap.length - 1;
+    this.itemMap.set(key, index);
+    this.bubbleUp(index);
+  }
+  /**
+   * Extract and return the item with minimum priority.
+   * Time complexity: O(log n)
+   */
+  extractMin() {
+    if (this.heap.length === 0)
+      return null;
+    if (this.heap.length === 1) {
+      const { item } = this.heap.pop();
+      this.itemMap.clear();
+      return item;
+    }
+    const min = this.heap[0];
+    const last = this.heap.pop();
+    this.heap[0] = last;
+    this.itemMap.delete(this.keyFn(min.item));
+    this.itemMap.set(this.keyFn(last.item), 0);
+    this.bubbleDown(0);
+    return min.item;
+  }
+  /**
+   * Decrease the priority of an existing item.
+   * Time complexity: O(log n)
+   */
+  decreaseKey(item, newPriority) {
+    const key = this.keyFn(item);
+    const index = this.itemMap.get(key);
+    if (index === void 0)
+      return;
+    const oldPriority = this.heap[index].priority;
+    if (newPriority >= oldPriority)
+      return;
+    this.heap[index].priority = newPriority;
+    this.bubbleUp(index);
+  }
+  /**
+   * Check if the heap is empty.
+   */
+  isEmpty() {
+    return this.heap.length === 0;
+  }
+  /**
+   * Get the current size of the heap.
+   */
+  size() {
+    return this.heap.length;
+  }
+  /**
+   * Bubble up an item to maintain heap property.
+   */
+  bubbleUp(index) {
+    while (index > 0) {
+      const parentIndex = Math.floor((index - 1) / 2);
+      if (this.heap[index].priority >= this.heap[parentIndex].priority) {
+        break;
+      }
+      this.swap(index, parentIndex);
+      index = parentIndex;
+    }
+  }
+  /**
+   * Bubble down an item to maintain heap property.
+   */
+  bubbleDown(index) {
+    while (true) {
+      const leftChild = 2 * index + 1;
+      const rightChild = 2 * index + 2;
+      let smallest = index;
+      if (leftChild < this.heap.length && this.heap[leftChild].priority < this.heap[smallest].priority) {
+        smallest = leftChild;
+      }
+      if (rightChild < this.heap.length && this.heap[rightChild].priority < this.heap[smallest].priority) {
+        smallest = rightChild;
+      }
+      if (smallest === index)
+        break;
+      this.swap(index, smallest);
+      index = smallest;
+    }
+  }
+  /**
+   * Swap two elements in the heap and update the item map.
+   */
+  swap(i, j) {
+    const temp = this.heap[i];
+    this.heap[i] = this.heap[j];
+    this.heap[j] = temp;
+    this.itemMap.set(this.keyFn(this.heap[i].item), i);
+    this.itemMap.set(this.keyFn(this.heap[j].item), j);
+  }
+};
+
+// dist/engine/spatial/engine.js
+var SpatialEngine = class {
+  // AoE shape cache for common radii
+  circleCache = /* @__PURE__ */ new Map();
+  MAX_CACHED_RADIUS = 10;
+  /**
+   * Validates that a point has finite numeric coordinates and is within optional bounds.
+   * @throws Error if coordinates are not finite numbers or out of bounds
+   */
+  validatePoint(p, paramName, bounds) {
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) {
+      throw new Error(`Invalid ${paramName}: coordinates must be finite numbers (got x=${p.x}, y=${p.y})`);
+    }
+    if (p.z !== void 0 && !Number.isFinite(p.z)) {
+      throw new Error(`Invalid ${paramName}: z-coordinate must be a finite number (got z=${p.z})`);
+    }
+    if (bounds) {
+      if (p.x < bounds.min.x || p.x > bounds.max.x || p.y < bounds.min.y || p.y > bounds.max.y) {
+        throw new Error(`Invalid ${paramName}: out of bounds (got ${p.x},${p.y}; bounds: ${bounds.min.x},${bounds.min.y} to ${bounds.max.x},${bounds.max.y})`);
+      }
+      if (p.z !== void 0 && (bounds.min.z !== void 0 && bounds.max.z !== void 0)) {
+        if (p.z < bounds.min.z || p.z > bounds.max.z) {
+          throw new Error(`Invalid ${paramName}: z-coordinate out of bounds`);
+        }
+      }
+    }
+  }
+  /**
+   * Calculates distance between two points using the specified metric.
+   * Automatically handles 2D and 3D points.
+   *
+   * @param p1 First point
+   * @param p2 Second point
+   * @param metric Distance metric to use (default: 'euclidean')
+   * @returns Distance between points
+   *
+   * @example
+   * ```typescript
+   * const engine = new SpatialEngine();
+   * // 2D
+   * engine.getDistance({x: 0, y: 0}, {x: 3, y: 4}); // 5
+   * // 3D
+   * engine.getDistance({x: 0, y: 0, z: 0}, {x: 3, y: 4, z: 12}); // 13
+   * ```
+   */
+  getDistance(p1, p2, metric = "euclidean") {
+    this.validatePoint(p1, "p1");
+    this.validatePoint(p2, "p2");
+    const dx = Math.abs(p1.x - p2.x);
+    const dy = Math.abs(p1.y - p2.y);
+    const dz = Math.abs((p1.z ?? 0) - (p2.z ?? 0));
+    switch (metric) {
+      case "manhattan":
+        return dx + dy + dz;
+      case "chebyshev":
+        return Math.max(dx, dy, dz);
+      case "euclidean":
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+  }
+  /**
+   * Returns all tiles within a given radius of a center point.
+   * Uses Euclidean distance for circular shape.
+   * Automatically caches results for radii <= 10 for performance.
+   *
+   * @param center Center point of the circle
+   * @param radius Radius in grid units (must be non-negative)
+   * @param useCache Whether to use caching (default: true)
+   * @returns Array of points within the radius
+   *
+   * @example
+   * ```typescript
+   * const engine = new SpatialEngine();
+   * // Get tiles in a 5-unit radius (cached)
+   * const tiles = engine.getCircleTiles({x: 10, y: 10}, 5);
+   * // Large radius without caching
+   * const largeTiles = engine.getCircleTiles({x: 0, y: 0}, 50, false);
+   * ```
+   */
+  getCircleTiles(center, radius, useCache = true) {
+    this.validatePoint(center, "center");
+    if (!Number.isFinite(radius) || radius < 0) {
+      throw new Error(`Invalid radius: must be a non-negative finite number (got ${radius})`);
+    }
+    if (useCache && radius <= this.MAX_CACHED_RADIUS && !center.z) {
+      const cacheKey = radius.toString();
+      if (!this.circleCache.has(cacheKey)) {
+        const origin = { x: 0, y: 0 };
+        const offsets2 = this.computeCircleTiles(origin, radius);
+        this.circleCache.set(cacheKey, offsets2);
+      }
+      const offsets = this.circleCache.get(cacheKey);
+      return offsets.map((offset) => ({
+        x: center.x + offset.x,
+        y: center.y + offset.y
+      }));
+    }
+    return this.computeCircleTiles(center, radius);
+  }
+  /**
+   * Internal method to compute circle tiles without caching.
+   * @private
+   */
+  computeCircleTiles(center, radius) {
+    const tiles = [];
+    const rCeil = Math.ceil(radius);
+    if (center.z !== void 0) {
+      for (let x = center.x - rCeil; x <= center.x + rCeil; x++) {
+        for (let y = center.y - rCeil; y <= center.y + rCeil; y++) {
+          for (let z = center.z - rCeil; z <= center.z + rCeil; z++) {
+            const p = { x, y, z };
+            if (this.getDistance(center, p) <= radius) {
+              tiles.push(p);
+            }
+          }
+        }
+      }
+    } else {
+      for (let x = center.x - rCeil; x <= center.x + rCeil; x++) {
+        for (let y = center.y - rCeil; y <= center.y + rCeil; y++) {
+          const p = { x, y };
+          if (this.getDistance(center, p) <= radius) {
+            tiles.push(p);
+          }
+        }
+      }
+    }
+    return tiles;
+  }
+  /**
+   * Returns tiles within a cone defined by origin, direction, length, and angle.
+   *
+   * @param origin Origin point of the cone (typically the caster's position)
+   * @param direction Direction vector (NOT a target point). For example, {x: 1, y: 0} points East.
+   * @param length Maximum distance from origin in grid units
+   * @param angleDegrees Total angle of the cone in degrees (e.g., 90 for a quarter-circle)
+   * @returns Array of points within the cone
+   *
+   * @example
+   * ```typescript
+   * const engine = new SpatialEngine();
+   * // 90-degree cone facing East, 10 units long
+   * const tiles = engine.getConeTiles(
+   *     {x: 0, y: 0},           // origin
+   *     {x: 1, y: 0},           // direction vector (East)
+   *     10,                     // length
+   *     90                      // angle in degrees
+   * );
+   * ```
+   */
+  getConeTiles(origin, direction, length, angleDegrees) {
+    this.validatePoint(origin, "origin");
+    this.validatePoint(direction, "direction");
+    if (!Number.isFinite(length) || length < 0) {
+      throw new Error(`Invalid length: must be non-negative (got ${length})`);
+    }
+    if (!Number.isFinite(angleDegrees) || angleDegrees <= 0 || angleDegrees > 360) {
+      throw new Error(`Invalid angle: must be between 0 and 360 degrees (got ${angleDegrees})`);
+    }
+    const tiles = [];
+    const halfAngleRad = angleDegrees / 2 * (Math.PI / 180);
+    const dirLen = Math.sqrt(direction.x * direction.x + direction.y * direction.y + (direction.z ?? 0) * (direction.z ?? 0));
+    if (dirLen === 0) {
+      throw new Error("Invalid direction vector: length cannot be zero");
+    }
+    const dirNorm = {
+      x: direction.x / dirLen,
+      y: direction.y / dirLen,
+      z: (direction.z ?? 0) / dirLen
+    };
+    const lCeil = Math.ceil(length);
+    if (origin.z !== void 0) {
+      for (let x = origin.x - lCeil; x <= origin.x + lCeil; x++) {
+        for (let y = origin.y - lCeil; y <= origin.y + lCeil; y++) {
+          for (let z = origin.z - lCeil; z <= origin.z + lCeil; z++) {
+            const p = { x, y, z };
+            if (this.isInCone(origin, p, dirNorm, length, halfAngleRad)) {
+              tiles.push(p);
+            }
+          }
+        }
+      }
+    } else {
+      for (let x = origin.x - lCeil; x <= origin.x + lCeil; x++) {
+        for (let y = origin.y - lCeil; y <= origin.y + lCeil; y++) {
+          const p = { x, y };
+          if (this.isInCone(origin, p, dirNorm, length, halfAngleRad)) {
+            tiles.push(p);
+          }
+        }
+      }
+    }
+    return tiles;
+  }
+  /**
+   * Helper to check if a point is within a cone.
+   * @private
+   */
+  isInCone(origin, p, dirNorm, length, halfAngleRad) {
+    const dist = this.getDistance(origin, p);
+    if (dist > length)
+      return false;
+    if (dist === 0)
+      return true;
+    const px = p.x - origin.x;
+    const py = p.y - origin.y;
+    const pz = (p.z ?? 0) - (origin.z ?? 0);
+    const dot = px * dirNorm.x + py * dirNorm.y + pz * (dirNorm.z ?? 0);
+    const cosTheta = dot / dist;
+    return cosTheta >= Math.cos(halfAngleRad) - 1e-4;
+  }
+  /**
+   * Returns tiles along a line from start to end using Bresenham's algorithm.
+   *
+   * @param start Start point of the line
+   * @param end End point of the line
+   * @returns Array of points along the line (including endpoints)
+   */
+  getLineTiles(start, end) {
+    this.validatePoint(start, "start");
+    this.validatePoint(end, "end");
+    return this.bresenhamLine(start, end);
+  }
+  /**
+   * Finds the shortest path between start and end using A* algorithm with binary heap optimization.
+   * Supports custom movement costs including diagonal costs and terrain modifiers.
+   *
+   * @param start Starting point
+   * @param end Target point
+   * @param obstacles Set of blocked tiles in "x,y" or "x,y,z" format
+   * @param options Optional configuration
+   * @returns Array of points representing the path, or null if no path exists
+   *
+   * @example
+   * ```typescript
+   * const engine = new SpatialEngine();
+   * const obstacles = new Set(['5,5', '5,6', '5,7']); // Wall
+   *
+   * // Basic pathfinding
+   * const path1 = engine.findPath({x: 0, y: 0}, {x: 10, y: 0}, obstacles);
+   *
+   * // With D&D 5e diagonal costs
+   * const path2 = engine.findPath({x: 0, y: 0}, {x: 10, y: 10}, obstacles, {
+   *     diagonalCost: 'alternating' // 5-10-5 rule
+   * });
+   *
+   * // With terrain costs
+   * const terrainMap = { getTileCost: (p) => p.y > 5 ? 2 : 1 }; // Difficult terrain above y=5
+   * const path3 = engine.findPath({x: 0, y: 0}, {x: 10, y: 10}, obstacles, {
+   *     terrainCosts: terrainMap
+   * });
+   * ```
+   */
+  findPath(start, end, obstacles, options = {}) {
+    this.validatePoint(start, "start", options.bounds);
+    this.validatePoint(end, "end", options.bounds);
+    const maxIterations = options.maxIterations ?? 1e4;
+    const startKey = this.pointToKey(start);
+    const endKey = this.pointToKey(end);
+    const is3D = start.z !== void 0 || end.z !== void 0;
+    if (startKey === endKey) {
+      return [start];
+    }
+    if (obstacles.has(endKey)) {
+      return null;
+    }
+    const getCost = this.createCostFunction(options);
+    const openHeap = new MinHeap(this.pointToKey);
+    const closedSet = /* @__PURE__ */ new Set();
+    const cameFrom = /* @__PURE__ */ new Map();
+    const gScore = /* @__PURE__ */ new Map();
+    gScore.set(startKey, 0);
+    const fScore = this.getDistance(start, end, "chebyshev");
+    openHeap.insert(start, fScore);
+    let iterations = 0;
+    while (!openHeap.isEmpty()) {
+      iterations++;
+      if (iterations > maxIterations) {
+        return null;
+      }
+      const current = openHeap.extractMin();
+      const currentKey = this.pointToKey(current);
+      if (this.pointsEqual(current, end)) {
+        return this.reconstructPath(cameFrom, current);
+      }
+      closedSet.add(currentKey);
+      const neighbors = this.getNeighbors(current, is3D);
+      for (const neighbor of neighbors) {
+        const neighborKey = this.pointToKey(neighbor);
+        if (obstacles.has(neighborKey) || closedSet.has(neighborKey)) {
+          continue;
+        }
+        const baseCost = getCost(current, neighbor);
+        const terrainMultiplier = options.terrainCosts?.getTileCost(neighbor) ?? 1;
+        if (terrainMultiplier === Infinity) {
+          continue;
+        }
+        const moveCost = baseCost * terrainMultiplier;
+        const tentativeG = gScore.get(currentKey) + moveCost;
+        if (tentativeG < (gScore.get(neighborKey) ?? Infinity)) {
+          cameFrom.set(neighborKey, current);
+          gScore.set(neighborKey, tentativeG);
+          const f = tentativeG + this.getDistance(neighbor, end, "chebyshev");
+          openHeap.insert(neighbor, f);
+        }
+      }
+    }
+    return null;
+  }
+  /**
+   * Creates a cost function based on pathfinding options.
+   * @private
+   */
+  createCostFunction(options) {
+    if (options.movementCostFn) {
+      return options.movementCostFn;
+    }
+    const diagCost = options.diagonalCost ?? "uniform";
+    return (from, to) => {
+      const dx = Math.abs(to.x - from.x);
+      const dy = Math.abs(to.y - from.y);
+      const dz = Math.abs((to.z ?? 0) - (from.z ?? 0));
+      const isDiagonal = dx + dy + dz > 1;
+      if (diagCost === "uniform") {
+        return 1;
+      } else if (diagCost === "alternating") {
+        return isDiagonal ? 1.5 : 1;
+      } else {
+        return isDiagonal ? diagCost : 1;
+      }
+    };
+  }
+  /**
+   * Gets neighboring tiles (8 for 2D, 26 for 3D).
+   * @private
+   */
+  getNeighbors(point, is3D) {
+    const neighbors = [];
+    const deltas = is3D ? [-1, 0, 1] : [-1, 0, 1];
+    for (const dx of deltas) {
+      for (const dy of deltas) {
+        if (is3D && point.z !== void 0) {
+          for (const dz of [-1, 0, 1]) {
+            if (dx === 0 && dy === 0 && dz === 0)
+              continue;
+            neighbors.push({
+              x: point.x + dx,
+              y: point.y + dy,
+              z: point.z + dz
+            });
+          }
+        } else {
+          if (dx === 0 && dy === 0)
+            continue;
+          neighbors.push({
+            x: point.x + dx,
+            y: point.y + dy
+          });
+        }
+      }
+    }
+    return neighbors;
+  }
+  /**
+   * Smooths a path by removing unnecessary waypoints using line-of-sight checks.
+   * Uses the "string pulling" algorithm.
+   *
+   * @param path Original path from pathfinding
+   * @param obstacles Obstacle set used for LOS checks
+   * @returns Smoothed path with fewer waypoints
+   *
+   * @example
+   * ```typescript
+   * const obstacles = new Set(['5,5']);
+   * const path = engine.findPath({x: 0, y: 0}, {x: 10, y: 10}, obstacles);
+   * const smoothed = engine.smoothPath(path!, obstacles);
+   * // smoothed.length <= path.length
+   * ```
+   */
+  smoothPath(path, obstacles) {
+    if (path.length <= 2)
+      return path;
+    const smoothed = [path[0]];
+    let current = 0;
+    while (current < path.length - 1) {
+      let farthest = current + 1;
+      for (let i = path.length - 1; i > current + 1; i--) {
+        if (this.hasLineOfSight(path[current], path[i], obstacles)) {
+          farthest = i;
+          break;
+        }
+      }
+      smoothed.push(path[farthest]);
+      current = farthest;
+    }
+    return smoothed;
+  }
+  /**
+   * Computes field of view (all visible tiles) from an origin using shadowcasting.
+   * This is much more efficient than calling hasLineOfSight multiple times.
+   *
+   * @param origin Viewer position
+   * @param range Maximum vision range
+   * @param obstacles Set of opaque tiles
+   * @returns Set of visible tile keys in "x,y" format
+   *
+   * @example
+   * ```typescript
+   * const obstacles = new Set(['5,5', '6,5']);
+   * const fov = engine.getFieldOfView({x: 0, y: 0}, 10, obstacles);
+   * console.log(fov.has('3,3')); // true - visible
+   * console.log(fov.has('7,5')); // false - blocked by wall
+   * ```
+   */
+  getFieldOfView(origin, range, obstacles) {
+    const visible = /* @__PURE__ */ new Set();
+    visible.add(this.pointToKey(origin));
+    for (let octant = 0; octant < 8; octant++) {
+      this.castLight(origin, range, 1, 1, 0, octant, obstacles, visible);
+    }
+    return visible;
+  }
+  /**
+   * Recursive shadowcasting for one octant.
+   * Based on the algorithm by Björn Bergström.
+   * @private
+   */
+  castLight(origin, range, row, startSlope, endSlope, octant, obstacles, visible) {
+    if (startSlope < endSlope)
+      return;
+    let nextStartSlope = startSlope;
+    for (let i = row; i <= range; i++) {
+      let blocked = false;
+      for (let dy = -i; dy <= 0; dy++) {
+        const dx = -i - dy;
+        const tile = this.transformOctant(origin, dx, dy, octant);
+        const dist = this.getDistance(origin, tile);
+        if (dist > range)
+          continue;
+        const lSlope = (dy - 0.5) / (dx + 0.5);
+        const rSlope = (dy + 0.5) / (dx - 0.5);
+        if (startSlope < rSlope) {
+          continue;
+        } else if (endSlope > lSlope) {
+          break;
+        }
+        const tileKey = this.pointToKey(tile);
+        visible.add(tileKey);
+        if (blocked) {
+          if (obstacles.has(tileKey)) {
+            nextStartSlope = rSlope;
+            continue;
+          } else {
+            blocked = false;
+            startSlope = nextStartSlope;
+          }
+        } else if (obstacles.has(tileKey) && i < range) {
+          blocked = true;
+          this.castLight(origin, range, i + 1, startSlope, lSlope, octant, obstacles, visible);
+          nextStartSlope = rSlope;
+        }
+      }
+      if (blocked)
+        break;
+    }
+  }
+  /**
+   * Transforms coordinates based on octant for shadowcasting.
+   * @private
+   */
+  transformOctant(origin, dx, dy, octant) {
+    switch (octant) {
+      case 0:
+        return { x: origin.x + dx, y: origin.y + dy };
+      case 1:
+        return { x: origin.x + dy, y: origin.y + dx };
+      case 2:
+        return { x: origin.x - dy, y: origin.y + dx };
+      case 3:
+        return { x: origin.x - dx, y: origin.y + dy };
+      case 4:
+        return { x: origin.x - dx, y: origin.y - dy };
+      case 5:
+        return { x: origin.x - dy, y: origin.y - dx };
+      case 6:
+        return { x: origin.x + dy, y: origin.y - dx };
+      case 7:
+        return { x: origin.x + dx, y: origin.y - dy };
+      default:
+        return origin;
+    }
+  }
+  /**
+   * Checks if there is a clear line of sight between start and end points.
+   * Uses Bresenham's line algorithm to check for obstacles on the path.
+   * The start and end points themselves are not checked (you can see *to* an obstacle).
+   *
+   * @param start The starting point (viewer position)
+   * @param end The ending point (target position)
+   * @param obstacles Set of blocked tiles in "x,y" format
+   * @returns true if the path is clear, false if blocked
+   */
+  hasLineOfSight(start, end, obstacles) {
+    this.validatePoint(start, "start");
+    this.validatePoint(end, "end");
+    const line = this.bresenhamLine(start, end);
+    for (let i = 1; i < line.length - 1; i++) {
+      const p = line[i];
+      if (obstacles.has(this.pointToKey(p))) {
+        return false;
+      }
+    }
+    return true;
+  }
+  /**
+   * Bresenham's line algorithm implementation.
+   * Returns all points on the line from start to end (inclusive).
+   *
+   * @private
+   * @param start Start point
+   * @param end End point
+   * @returns Array of points on the line
+   */
+  bresenhamLine(start, end) {
+    const points = [];
+    let x0 = start.x;
+    let y0 = start.y;
+    const x1 = end.x;
+    const y1 = end.y;
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+      points.push({ x: x0, y: y0 });
+      if (x0 === x1 && y0 === y1)
+        break;
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        x0 += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        y0 += sy;
+      }
+    }
+    return points;
+  }
+  /**
+   * Reconstructs the path from A* cameFrom map.
+   *
+   * @private
+   * @param cameFrom Map of point keys to their predecessors
+   * @param current The goal point
+   * @returns Array of points from start to goal
+   */
+  reconstructPath(cameFrom, current) {
+    const totalPath = [current];
+    let curr = current;
+    while (true) {
+      const currKey = this.pointToKey(curr);
+      if (!cameFrom.has(currKey))
+        break;
+      curr = cameFrom.get(currKey);
+      totalPath.unshift(curr);
+    }
+    return totalPath;
+  }
+  /**
+   * Converts a point to a string key.
+   * @private
+   */
+  pointToKey(p) {
+    return p.z !== void 0 ? `${p.x},${p.y},${p.z}` : `${p.x},${p.y}`;
+  }
+  /**
+   * Checks if two points are equal.
+   * @private
+   */
+  pointsEqual(p1, p2) {
+    return p1.x === p2.x && p1.y === p2.y && (p1.z ?? 0) === (p2.z ?? 0);
   }
 };
 
@@ -46439,6 +49037,7 @@ function getCombatManager() {
 }
 
 // dist/schema/encounter.js
+init_zod();
 var ConditionSchema = external_exports.object({
   id: external_exports.string(),
   type: external_exports.string(),
@@ -46449,6 +49048,11 @@ var ConditionSchema = external_exports.object({
   saveAbility: external_exports.string().optional(),
   ongoingEffects: external_exports.array(external_exports.any()).optional(),
   metadata: external_exports.record(external_exports.any()).optional()
+});
+var PositionSchema = external_exports.object({
+  x: external_exports.number(),
+  y: external_exports.number(),
+  z: external_exports.number().optional()
 });
 var TokenSchema = external_exports.object({
   id: external_exports.string(),
@@ -46461,6 +49065,8 @@ var TokenSchema = external_exports.object({
   hp: external_exports.number(),
   maxHp: external_exports.number(),
   conditions: external_exports.array(ConditionSchema),
+  position: PositionSchema.optional(),
+  // CRIT-003: Spatial position for movement
   abilityScores: external_exports.object({
     strength: external_exports.number(),
     dexterity: external_exports.number(),
@@ -46470,6 +49076,12 @@ var TokenSchema = external_exports.object({
     charisma: external_exports.number()
   }).optional()
 });
+var TerrainSchema = external_exports.object({
+  obstacles: external_exports.array(external_exports.string()).default([]),
+  // "x,y" format for blocking tiles
+  difficultTerrain: external_exports.array(external_exports.string()).optional()
+  // Future: 2x movement cost
+});
 var EncounterSchema = external_exports.object({
   id: external_exports.string(),
   regionId: external_exports.string().optional(),
@@ -46478,6 +49090,8 @@ var EncounterSchema = external_exports.object({
   round: external_exports.number().int().min(0),
   activeTokenId: external_exports.string().optional(),
   status: external_exports.enum(["active", "completed", "paused"]),
+  terrain: TerrainSchema.optional(),
+  // CRIT-003: Terrain obstacles
   createdAt: external_exports.string().datetime(),
   updatedAt: external_exports.string().datetime()
 });
@@ -46545,7 +49159,1435 @@ var EncounterRepository = class {
     const stmt = this.db.prepare("SELECT * FROM encounters WHERE id = ?");
     return stmt.get(id);
   }
+  delete(id) {
+    const stmt = this.db.prepare("DELETE FROM encounters WHERE id = ?");
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
 };
+
+// dist/engine/magic/spell-database.js
+var SPELL_DATABASE = /* @__PURE__ */ new Map();
+function registerSpell(input) {
+  const spell = {
+    ...input,
+    ritual: input.ritual ?? false
+  };
+  SPELL_DATABASE.set(spell.name.toLowerCase(), spell);
+}
+registerSpell({
+  id: "fire-bolt",
+  name: "Fire Bolt",
+  level: 0,
+  school: "evocation",
+  castingTime: "action",
+  range: 120,
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "You hurl a mote of fire at a creature or object within range.",
+  classes: ["sorcerer", "wizard", "artificer"],
+  targetType: "creature",
+  effects: [{
+    type: "damage",
+    dice: "1d10",
+    // Scales: 2d10 at 5th, 3d10 at 11th, 4d10 at 17th
+    damageType: "fire",
+    saveType: "none"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "sacred-flame",
+  name: "Sacred Flame",
+  level: 0,
+  school: "evocation",
+  castingTime: "action",
+  range: 60,
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "Flame-like radiance descends on a creature that you can see within range.",
+  classes: ["cleric"],
+  targetType: "creature",
+  effects: [{
+    type: "damage",
+    dice: "1d8",
+    // Scales like Fire Bolt
+    damageType: "radiant",
+    saveType: "dexterity",
+    saveEffect: "none"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "eldritch-blast",
+  name: "Eldritch Blast",
+  level: 0,
+  school: "evocation",
+  castingTime: "action",
+  range: 120,
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "A beam of crackling energy streaks toward a creature within range.",
+  classes: ["warlock"],
+  targetType: "creature",
+  effects: [{
+    type: "damage",
+    dice: "1d10",
+    // Multiple beams at higher levels
+    damageType: "force",
+    saveType: "none"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "magic-missile",
+  name: "Magic Missile",
+  level: 1,
+  school: "evocation",
+  castingTime: "action",
+  range: 120,
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "You create three glowing darts of magical force. Each dart hits and deals 1d4+1 force damage.",
+  higherLevels: "One additional dart for each slot level above 1st.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "creature",
+  effects: [{
+    type: "damage",
+    dice: "3d4+3",
+    // 3 darts at 1d4+1 each
+    damageType: "force",
+    saveType: "none",
+    upcastBonus: { dice: "1d4+1", perLevel: 1 }
+    // +1 dart per level
+  }],
+  autoHit: true
+  // Magic Missile never misses
+});
+registerSpell({
+  id: "shield",
+  name: "Shield",
+  level: 1,
+  school: "abjuration",
+  castingTime: "reaction",
+  range: "self",
+  components: { verbal: true, somatic: true, material: false },
+  duration: "1 round",
+  concentration: false,
+  description: "An invisible barrier of magical force appears and protects you. +5 AC until the start of your next turn.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "self",
+  effects: [{
+    type: "buff",
+    conditions: ["AC_BONUS_5"]
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "cure-wounds",
+  name: "Cure Wounds",
+  level: 1,
+  school: "evocation",
+  castingTime: "action",
+  range: "touch",
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "A creature you touch regains a number of hit points equal to 1d8 + your spellcasting ability modifier.",
+  higherLevels: "Healing increases by 1d8 for each slot level above 1st.",
+  classes: ["bard", "cleric", "druid", "paladin", "ranger", "artificer"],
+  targetType: "creature",
+  effects: [{
+    type: "healing",
+    dice: "1d8",
+    upcastBonus: { dice: "1d8", perLevel: 1 }
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "hex",
+  name: "Hex",
+  level: 1,
+  school: "enchantment",
+  castingTime: "bonus_action",
+  range: 90,
+  components: { verbal: true, somatic: true, material: true, materialDescription: "the petrified eye of a newt" },
+  duration: "Concentration, up to 1 hour",
+  concentration: true,
+  description: "You place a curse on a creature that you can see within range. Deal extra 1d6 necrotic damage on hits.",
+  higherLevels: "Duration increases with higher slots.",
+  classes: ["warlock"],
+  targetType: "creature",
+  effects: [{
+    type: "debuff",
+    dice: "1d6",
+    damageType: "necrotic",
+    conditions: ["HEXED"]
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "burning-hands",
+  name: "Burning Hands",
+  level: 1,
+  school: "evocation",
+  castingTime: "action",
+  range: "self",
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "A thin sheet of flames shoots forth from your outstretched fingertips.",
+  higherLevels: "Damage increases by 1d6 for each slot level above 1st.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "area",
+  areaOfEffect: { shape: "cone", size: 15 },
+  effects: [{
+    type: "damage",
+    dice: "3d6",
+    damageType: "fire",
+    saveType: "dexterity",
+    saveEffect: "half",
+    upcastBonus: { dice: "1d6", perLevel: 1 }
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "misty-step",
+  name: "Misty Step",
+  level: 2,
+  school: "conjuration",
+  castingTime: "bonus_action",
+  range: "self",
+  components: { verbal: true, somatic: false, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "Briefly surrounded by silvery mist, you teleport up to 30 feet to an unoccupied space.",
+  classes: ["sorcerer", "warlock", "wizard"],
+  targetType: "self",
+  effects: [{
+    type: "utility"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "hold-person",
+  name: "Hold Person",
+  level: 2,
+  school: "enchantment",
+  castingTime: "action",
+  range: 60,
+  components: { verbal: true, somatic: true, material: true, materialDescription: "a small, straight piece of iron" },
+  duration: "Concentration, up to 1 minute",
+  concentration: true,
+  description: "Choose a humanoid that you can see within range. The target must succeed on a Wisdom saving throw or be paralyzed.",
+  higherLevels: "Target one additional humanoid for each slot level above 2nd.",
+  classes: ["bard", "cleric", "druid", "sorcerer", "warlock", "wizard"],
+  targetType: "creature",
+  effects: [{
+    type: "debuff",
+    saveType: "wisdom",
+    saveEffect: "none",
+    conditions: ["PARALYZED"]
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "spiritual-weapon",
+  name: "Spiritual Weapon",
+  level: 2,
+  school: "evocation",
+  castingTime: "bonus_action",
+  range: 60,
+  components: { verbal: true, somatic: true, material: false },
+  duration: "1 minute",
+  concentration: false,
+  description: "You create a floating, spectral weapon within range that lasts for the duration.",
+  higherLevels: "Damage increases by 1d8 for every two slot levels above 2nd.",
+  classes: ["cleric"],
+  targetType: "point",
+  effects: [{
+    type: "damage",
+    dice: "1d8",
+    damageType: "force",
+    upcastBonus: { dice: "1d8", perLevel: 2 }
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "fireball",
+  name: "Fireball",
+  level: 3,
+  school: "evocation",
+  castingTime: "action",
+  range: 150,
+  components: { verbal: true, somatic: true, material: true, materialDescription: "a tiny ball of bat guano and sulfur" },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame.",
+  higherLevels: "Damage increases by 1d6 for each slot level above 3rd.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "point",
+  areaOfEffect: { shape: "sphere", size: 20 },
+  effects: [{
+    type: "damage",
+    dice: "8d6",
+    damageType: "fire",
+    saveType: "dexterity",
+    saveEffect: "half",
+    upcastBonus: { dice: "1d6", perLevel: 1 }
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "lightning-bolt",
+  name: "Lightning Bolt",
+  level: 3,
+  school: "evocation",
+  castingTime: "action",
+  range: "self",
+  components: { verbal: true, somatic: true, material: true, materialDescription: "a bit of fur and a rod of amber, crystal, or glass" },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "A stroke of lightning forming a line 100 feet long and 5 feet wide blasts out from you.",
+  higherLevels: "Damage increases by 1d6 for each slot level above 3rd.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "area",
+  areaOfEffect: { shape: "line", size: 100 },
+  effects: [{
+    type: "damage",
+    dice: "8d6",
+    damageType: "lightning",
+    saveType: "dexterity",
+    saveEffect: "half",
+    upcastBonus: { dice: "1d6", perLevel: 1 }
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "counterspell",
+  name: "Counterspell",
+  level: 3,
+  school: "abjuration",
+  castingTime: "reaction",
+  range: 60,
+  components: { verbal: false, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "You attempt to interrupt a creature in the process of casting a spell.",
+  higherLevels: "Automatically counter spells of 3rd level or lower. Higher levels require ability check.",
+  classes: ["sorcerer", "warlock", "wizard"],
+  targetType: "creature",
+  effects: [{
+    type: "utility"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "dimension-door",
+  name: "Dimension Door",
+  level: 4,
+  school: "conjuration",
+  castingTime: "action",
+  range: 500,
+  components: { verbal: true, somatic: false, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "You teleport yourself to any spot within range.",
+  classes: ["bard", "sorcerer", "warlock", "wizard"],
+  targetType: "self",
+  effects: [{
+    type: "utility"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "haste",
+  name: "Haste",
+  level: 3,
+  school: "transmutation",
+  castingTime: "action",
+  range: 30,
+  components: { verbal: true, somatic: true, material: true, materialDescription: "a shaving of licorice root" },
+  duration: "Concentration, up to 1 minute",
+  concentration: true,
+  description: "Choose a willing creature. Until the spell ends, the target's speed is doubled, it gains +2 AC, has advantage on Dexterity saving throws, and gains an additional action.",
+  classes: ["sorcerer", "wizard", "artificer"],
+  targetType: "creature",
+  effects: [{
+    type: "buff",
+    conditions: ["HASTED"]
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "fly",
+  name: "Fly",
+  level: 3,
+  school: "transmutation",
+  castingTime: "action",
+  range: "touch",
+  components: { verbal: true, somatic: true, material: true, materialDescription: "a wing feather from any bird" },
+  duration: "Concentration, up to 10 minutes",
+  concentration: true,
+  description: "You touch a willing creature. The target gains a flying speed of 60 feet for the duration.",
+  higherLevels: "Target one additional creature for each slot level above 3rd.",
+  classes: ["sorcerer", "warlock", "wizard", "artificer"],
+  targetType: "creature",
+  effects: [{
+    type: "buff",
+    conditions: ["FLYING"]
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "disintegrate",
+  name: "Disintegrate",
+  level: 6,
+  school: "transmutation",
+  castingTime: "action",
+  range: 60,
+  components: { verbal: true, somatic: true, material: true, materialDescription: "a lodestone and a pinch of dust" },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "A thin green ray springs from your pointing finger. The target takes 10d6+40 force damage.",
+  higherLevels: "Damage increases by 3d6 for each slot level above 6th.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "creature",
+  effects: [{
+    type: "damage",
+    dice: "10d6+40",
+    damageType: "force",
+    saveType: "dexterity",
+    saveEffect: "none",
+    // All or nothing
+    upcastBonus: { dice: "3d6", perLevel: 1 }
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "meteor-swarm",
+  name: "Meteor Swarm",
+  level: 9,
+  school: "evocation",
+  castingTime: "action",
+  range: "self",
+  // 1 mile actually but self for targeting
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "Blazing orbs of fire plummet to the ground at four different points you can see within range.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "point",
+  areaOfEffect: { shape: "sphere", size: 40 },
+  effects: [{
+    type: "damage",
+    dice: "40d6",
+    // 20d6 fire + 20d6 bludgeoning
+    damageType: "fire",
+    saveType: "dexterity",
+    saveEffect: "half"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "power-word-kill",
+  name: "Power Word Kill",
+  level: 9,
+  school: "enchantment",
+  castingTime: "action",
+  range: 60,
+  components: { verbal: true, somatic: false, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "You utter a word of power that can compel one creature you can see within range to die instantly if it has 100 HP or less.",
+  classes: ["bard", "sorcerer", "warlock", "wizard"],
+  targetType: "creature",
+  effects: [{
+    type: "damage",
+    conditions: ["INSTANT_DEATH"]
+  }],
+  autoHit: true
+});
+registerSpell({
+  id: "wish",
+  name: "Wish",
+  level: 9,
+  school: "conjuration",
+  castingTime: "action",
+  range: "self",
+  components: { verbal: true, somatic: false, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "Wish is the mightiest spell a mortal creature can cast. By simply speaking aloud, you can alter the very foundations of reality in accord with your desires.",
+  classes: ["sorcerer", "wizard"],
+  targetType: "self",
+  effects: [{
+    type: "utility"
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "bless",
+  name: "Bless",
+  level: 1,
+  school: "enchantment",
+  castingTime: "action",
+  range: 30,
+  components: { verbal: true, somatic: true, material: true, materialDescription: "a sprinkling of holy water" },
+  duration: "Concentration, up to 1 minute",
+  concentration: true,
+  description: "You bless up to three creatures of your choice within range. Whenever a target makes an attack roll or saving throw, they can roll a d4 and add to the roll.",
+  higherLevels: "One additional creature for each slot level above 1st.",
+  classes: ["cleric", "paladin"],
+  targetType: "creatures",
+  effects: [{
+    type: "buff",
+    dice: "1d4",
+    conditions: ["BLESSED"]
+  }],
+  autoHit: false
+});
+registerSpell({
+  id: "guiding-bolt",
+  name: "Guiding Bolt",
+  level: 1,
+  school: "evocation",
+  castingTime: "action",
+  range: 120,
+  components: { verbal: true, somatic: true, material: false },
+  duration: "Instantaneous",
+  concentration: false,
+  description: "A flash of light streaks toward a creature of your choice within range. On hit, the target takes 4d6 radiant damage and the next attack against it has advantage.",
+  higherLevels: "Damage increases by 1d6 for each slot level above 1st.",
+  classes: ["cleric"],
+  targetType: "creature",
+  effects: [{
+    type: "damage",
+    dice: "4d6",
+    damageType: "radiant",
+    saveType: "none",
+    upcastBonus: { dice: "1d6", perLevel: 1 },
+    conditions: ["GLOWING"]
+  }],
+  autoHit: false
+});
+function getSpell(name) {
+  return SPELL_DATABASE.get(name.toLowerCase());
+}
+function isSpellAvailableToClass(spellName, characterClass) {
+  const spell = getSpell(spellName);
+  if (!spell)
+    return false;
+  return spell.classes.includes(characterClass);
+}
+function calculateUpcastDice(spell, slotLevel) {
+  const effect = spell.effects.find((e) => e.dice);
+  if (!effect?.dice)
+    return "";
+  const baseDice = effect.dice;
+  const upcastBonus = effect.upcastBonus;
+  if (!upcastBonus || slotLevel <= spell.level) {
+    return baseDice;
+  }
+  const levelsAbove = slotLevel - spell.level;
+  const bonusLevels = Math.floor(levelsAbove / upcastBonus.perLevel);
+  const baseDiceMatch = baseDice.match(/(\d+)d(\d+)/);
+  const bonusDiceMatch = upcastBonus.dice.match(/(\d+)d(\d+)/);
+  if (!baseDiceMatch)
+    return baseDice;
+  let totalCount = parseInt(baseDiceMatch[1]);
+  const diceSize = baseDiceMatch[2];
+  if (bonusDiceMatch) {
+    totalCount += parseInt(bonusDiceMatch[1]) * bonusLevels;
+  }
+  const modMatch = baseDice.match(/([+-]\d+)$/);
+  const modifier = modMatch ? modMatch[1] : "";
+  return `${totalCount}d${diceSize}${modifier}`;
+}
+var SPELL_COUNT = SPELL_DATABASE.size;
+
+// dist/engine/magic/spell-validator.js
+var SPELLCASTING_CONFIG = {
+  barbarian: { canCast: false, startLevel: 999, ability: "charisma", fullCaster: false, preparationRequired: false, pactMagic: false },
+  bard: { canCast: true, startLevel: 1, ability: "charisma", fullCaster: true, preparationRequired: false, pactMagic: false },
+  cleric: { canCast: true, startLevel: 1, ability: "wisdom", fullCaster: true, preparationRequired: true, pactMagic: false },
+  druid: { canCast: true, startLevel: 1, ability: "wisdom", fullCaster: true, preparationRequired: true, pactMagic: false },
+  fighter: { canCast: false, startLevel: 3, ability: "intelligence", fullCaster: false, preparationRequired: false, pactMagic: false },
+  // Eldritch Knight
+  monk: { canCast: false, startLevel: 999, ability: "wisdom", fullCaster: false, preparationRequired: false, pactMagic: false },
+  paladin: { canCast: true, startLevel: 2, ability: "charisma", fullCaster: false, preparationRequired: true, pactMagic: false },
+  ranger: { canCast: true, startLevel: 2, ability: "wisdom", fullCaster: false, preparationRequired: false, pactMagic: false },
+  rogue: { canCast: false, startLevel: 3, ability: "intelligence", fullCaster: false, preparationRequired: false, pactMagic: false },
+  // Arcane Trickster
+  sorcerer: { canCast: true, startLevel: 1, ability: "charisma", fullCaster: true, preparationRequired: false, pactMagic: false },
+  warlock: { canCast: true, startLevel: 1, ability: "charisma", fullCaster: false, preparationRequired: false, pactMagic: true },
+  wizard: { canCast: true, startLevel: 1, ability: "intelligence", fullCaster: true, preparationRequired: true, pactMagic: false },
+  artificer: { canCast: true, startLevel: 1, ability: "intelligence", fullCaster: false, preparationRequired: true, pactMagic: false }
+};
+var FULL_CASTER_SLOTS = {
+  1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+  2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+  3: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+  4: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+  5: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+  6: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+  7: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+  8: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+  9: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+  10: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+  11: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+  12: [4, 3, 3, 3, 2, 1, 0, 0, 0],
+  13: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+  14: [4, 3, 3, 3, 2, 1, 1, 0, 0],
+  15: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+  16: [4, 3, 3, 3, 2, 1, 1, 1, 0],
+  17: [4, 3, 3, 3, 2, 1, 1, 1, 1],
+  18: [4, 3, 3, 3, 3, 1, 1, 1, 1],
+  19: [4, 3, 3, 3, 3, 2, 1, 1, 1],
+  20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+};
+var HALF_CASTER_SLOTS = {
+  2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+  3: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+  4: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+  5: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+  6: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+  7: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+  8: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+  9: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+  10: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+  11: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+  12: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+  13: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+  14: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+  15: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+  16: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+  17: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+  18: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+  19: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+  20: [4, 3, 3, 3, 2, 0, 0, 0, 0]
+};
+var WARLOCK_SLOTS = {
+  1: { count: 1, level: 1 },
+  2: { count: 2, level: 1 },
+  3: { count: 2, level: 2 },
+  4: { count: 2, level: 2 },
+  5: { count: 2, level: 3 },
+  6: { count: 2, level: 3 },
+  7: { count: 2, level: 4 },
+  8: { count: 2, level: 4 },
+  9: { count: 2, level: 5 },
+  10: { count: 2, level: 5 },
+  11: { count: 3, level: 5 },
+  12: { count: 3, level: 5 },
+  13: { count: 3, level: 5 },
+  14: { count: 3, level: 5 },
+  15: { count: 3, level: 5 },
+  16: { count: 3, level: 5 },
+  17: { count: 4, level: 5 },
+  18: { count: 4, level: 5 },
+  19: { count: 4, level: 5 },
+  20: { count: 4, level: 5 }
+};
+function getMaxSpellLevel(characterClass, level) {
+  const config2 = SPELLCASTING_CONFIG[characterClass];
+  if (!config2.canCast)
+    return 0;
+  if (level < config2.startLevel)
+    return 0;
+  if (config2.pactMagic) {
+    const warlockSlots = WARLOCK_SLOTS[level];
+    return warlockSlots?.level || 0;
+  }
+  if (config2.fullCaster) {
+    const slots = FULL_CASTER_SLOTS[level];
+    if (!slots)
+      return 0;
+    for (let i = 8; i >= 0; i--) {
+      if (slots[i] > 0)
+        return i + 1;
+    }
+    return 0;
+  } else {
+    const effectiveLevel = level >= config2.startLevel ? level : 0;
+    const slots = HALF_CASTER_SLOTS[effectiveLevel];
+    if (!slots)
+      return 0;
+    for (let i = 8; i >= 0; i--) {
+      if (slots[i] > 0)
+        return i + 1;
+    }
+    return 0;
+  }
+}
+function getInitialSpellSlots(characterClass, level) {
+  const config2 = SPELLCASTING_CONFIG[characterClass];
+  const empty = {
+    level1: { current: 0, max: 0 },
+    level2: { current: 0, max: 0 },
+    level3: { current: 0, max: 0 },
+    level4: { current: 0, max: 0 },
+    level5: { current: 0, max: 0 },
+    level6: { current: 0, max: 0 },
+    level7: { current: 0, max: 0 },
+    level8: { current: 0, max: 0 },
+    level9: { current: 0, max: 0 }
+  };
+  if (!config2.canCast || level < config2.startLevel) {
+    return empty;
+  }
+  let slots;
+  if (config2.fullCaster) {
+    slots = FULL_CASTER_SLOTS[level] || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  } else if (config2.pactMagic) {
+    return empty;
+  } else {
+    slots = HALF_CASTER_SLOTS[level] || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  }
+  return {
+    level1: { current: slots[0], max: slots[0] },
+    level2: { current: slots[1], max: slots[1] },
+    level3: { current: slots[2], max: slots[2] },
+    level4: { current: slots[3], max: slots[3] },
+    level5: { current: slots[4], max: slots[4] },
+    level6: { current: slots[5], max: slots[5] },
+    level7: { current: slots[6], max: slots[6] },
+    level8: { current: slots[7], max: slots[7] },
+    level9: { current: slots[8], max: slots[8] }
+  };
+}
+function calculateSpellSaveDC(character) {
+  const config2 = SPELLCASTING_CONFIG[character.characterClass || "fighter"];
+  if (!config2.canCast)
+    return 0;
+  const profBonus = Math.floor((character.level - 1) / 4) + 2;
+  const abilityMod = getAbilityModifier(character, config2.ability);
+  return 8 + profBonus + abilityMod;
+}
+function calculateSpellAttackBonus(character) {
+  const config2 = SPELLCASTING_CONFIG[character.characterClass || "fighter"];
+  if (!config2.canCast)
+    return 0;
+  const profBonus = Math.floor((character.level - 1) / 4) + 2;
+  const abilityMod = getAbilityModifier(character, config2.ability);
+  return profBonus + abilityMod;
+}
+function getAbilityModifier(character, ability) {
+  const statMap = {
+    intelligence: "int",
+    wisdom: "wis",
+    charisma: "cha"
+  };
+  const stat = character.stats[statMap[ability]];
+  return Math.floor((stat - 10) / 2);
+}
+function canCastSpells(character) {
+  const charClass = character.characterClass || "fighter";
+  const config2 = SPELLCASTING_CONFIG[charClass];
+  if (!config2.canCast) {
+    return {
+      canCast: false,
+      reason: `${charClass} is not a spellcasting class`
+    };
+  }
+  if (character.level < config2.startLevel) {
+    return {
+      canCast: false,
+      reason: `${charClass} gains spellcasting at level ${config2.startLevel}`
+    };
+  }
+  const conditions = character.conditions || [];
+  if (conditions.includes("INCAPACITATED") || conditions.includes("STUNNED") || conditions.includes("PARALYZED") || conditions.includes("UNCONSCIOUS")) {
+    return {
+      canCast: false,
+      reason: "Cannot take actions while incapacitated"
+    };
+  }
+  return { canCast: true };
+}
+function characterKnowsSpell(character, spellName) {
+  const spell = getSpell(spellName);
+  if (!spell) {
+    return { knows: false, reason: `Unknown spell: ${spellName}` };
+  }
+  const charClass = character.characterClass || "fighter";
+  const config2 = SPELLCASTING_CONFIG[charClass];
+  if (!isSpellAvailableToClass(spellName, charClass)) {
+    return {
+      knows: false,
+      reason: `${spell.name} is not available to ${charClass} class`
+    };
+  }
+  if (spell.level === 0) {
+    const cantrips = character.cantripsKnown || [];
+    if (!cantrips.some((c) => c.toLowerCase() === spellName.toLowerCase())) {
+      return {
+        knows: false,
+        reason: `${spell.name} is not in your known cantrips`
+      };
+    }
+    return { knows: true };
+  }
+  const knownSpells = character.knownSpells || [];
+  const preparedSpells = character.preparedSpells || [];
+  if (config2.preparationRequired) {
+    if (!preparedSpells.some((s) => s.toLowerCase() === spellName.toLowerCase())) {
+      if (knownSpells.some((s) => s.toLowerCase() === spellName.toLowerCase())) {
+        return {
+          knows: false,
+          reason: `${spell.name} is not prepared`
+        };
+      }
+      return {
+        knows: false,
+        reason: `${spell.name} is not in your spellbook`
+      };
+    }
+  } else {
+    if (!knownSpells.some((s) => s.toLowerCase() === spellName.toLowerCase())) {
+      return {
+        knows: false,
+        reason: `${spell.name} is not in your known spells`
+      };
+    }
+  }
+  return { knows: true };
+}
+function hasSpellSlotAvailable(character, minLevel) {
+  const charClass = character.characterClass || "fighter";
+  const config2 = SPELLCASTING_CONFIG[charClass];
+  if (config2.pactMagic) {
+    const pactSlots = character.pactMagicSlots;
+    if (!pactSlots || pactSlots.current <= 0) {
+      return { available: false, reason: "No pact magic slots remaining" };
+    }
+    if (pactSlots.slotLevel < minLevel) {
+      return { available: false, reason: `Pact magic slot level (${pactSlots.slotLevel}) is lower than spell minimum (${minLevel})` };
+    }
+    return { available: true, availableLevel: pactSlots.slotLevel };
+  }
+  const slots = character.spellSlots;
+  if (!slots) {
+    return { available: false, reason: "No spell slots available" };
+  }
+  const slotKeys = ["level1", "level2", "level3", "level4", "level5", "level6", "level7", "level8", "level9"];
+  for (let i = minLevel - 1; i < 9; i++) {
+    const key = slotKeys[i];
+    if (slots[key] && slots[key].current > 0) {
+      return { available: true, availableLevel: i + 1 };
+    }
+  }
+  return { available: false, reason: `No level ${minLevel}+ spell slots available` };
+}
+function validateSpellCast(character, spellName, requestedSlotLevel) {
+  if (!spellName || spellName.trim() === "") {
+    return {
+      valid: false,
+      error: { code: "EMPTY_SPELL_NAME", message: "Spell name is required" }
+    };
+  }
+  const spell = getSpell(spellName);
+  if (!spell) {
+    return {
+      valid: false,
+      error: { code: "UNKNOWN_SPELL", message: `Unknown spell: ${spellName}` }
+    };
+  }
+  const castCheck = canCastSpells(character);
+  if (!castCheck.canCast) {
+    return {
+      valid: false,
+      error: { code: "CANNOT_CAST", message: castCheck.reason }
+    };
+  }
+  const knowsCheck = characterKnowsSpell(character, spellName);
+  if (!knowsCheck.knows) {
+    return {
+      valid: false,
+      error: { code: "SPELL_NOT_KNOWN", message: knowsCheck.reason }
+    };
+  }
+  const conditions = character.conditions || [];
+  if (conditions.includes("SILENCED") && spell.components.verbal) {
+    return {
+      valid: false,
+      error: { code: "SILENCED", message: "Cannot cast spells with verbal components while silenced" }
+    };
+  }
+  if (spell.level === 0) {
+    return {
+      valid: true,
+      spell,
+      effectiveSlotLevel: 0
+    };
+  }
+  const maxLevel = getMaxSpellLevel(character.characterClass || "fighter", character.level);
+  const spellLevel = spell.level;
+  if (spellLevel > maxLevel) {
+    return {
+      valid: false,
+      error: {
+        code: "SPELL_LEVEL_TOO_HIGH",
+        message: `Cannot cast level ${spellLevel} spells (max spell level: ${maxLevel})`
+      }
+    };
+  }
+  let targetSlotLevel = requestedSlotLevel || spellLevel;
+  if (targetSlotLevel < spellLevel) {
+    return {
+      valid: false,
+      error: {
+        code: "CANNOT_DOWNCAST",
+        message: `${spell.name} requires minimum slot level ${spellLevel}`
+      }
+    };
+  }
+  if (targetSlotLevel > maxLevel) {
+    return {
+      valid: false,
+      error: {
+        code: "SLOT_LEVEL_TOO_HIGH",
+        message: `Cannot cast at level ${targetSlotLevel} (max available: ${maxLevel})`
+      }
+    };
+  }
+  const slotCheck = hasSpellSlotAvailable(character, targetSlotLevel);
+  if (!slotCheck.available) {
+    return {
+      valid: false,
+      error: { code: "NO_SLOTS", message: slotCheck.reason }
+    };
+  }
+  const config2 = SPELLCASTING_CONFIG[character.characterClass || "fighter"];
+  if (config2.pactMagic) {
+    targetSlotLevel = slotCheck.availableLevel;
+  }
+  return {
+    valid: true,
+    spell,
+    effectiveSlotLevel: targetSlotLevel
+  };
+}
+function consumeSpellSlot(character, slotLevel) {
+  const charClass = character.characterClass || "fighter";
+  const config2 = SPELLCASTING_CONFIG[charClass];
+  if (config2.pactMagic) {
+    if (character.pactMagicSlots && character.pactMagicSlots.current > 0) {
+      return {
+        ...character,
+        pactMagicSlots: {
+          ...character.pactMagicSlots,
+          current: character.pactMagicSlots.current - 1
+        }
+      };
+    }
+    return character;
+  }
+  if (!character.spellSlots)
+    return character;
+  const slotKey = `level${slotLevel}`;
+  const currentSlot = character.spellSlots[slotKey];
+  if (currentSlot && currentSlot.current > 0) {
+    return {
+      ...character,
+      spellSlots: {
+        ...character.spellSlots,
+        [slotKey]: {
+          ...currentSlot,
+          current: currentSlot.current - 1
+        }
+      }
+    };
+  }
+  return character;
+}
+function restoreAllSpellSlots(character) {
+  const charClass = character.characterClass || "fighter";
+  const config2 = SPELLCASTING_CONFIG[charClass];
+  if (!config2.canCast || character.level < config2.startLevel) {
+    return character;
+  }
+  if (config2.pactMagic) {
+    const warlockSlots = WARLOCK_SLOTS[character.level];
+    return {
+      ...character,
+      pactMagicSlots: {
+        current: warlockSlots.count,
+        max: warlockSlots.count,
+        slotLevel: warlockSlots.level
+      }
+    };
+  }
+  const slots = getInitialSpellSlots(charClass, character.level);
+  return {
+    ...character,
+    spellSlots: slots
+  };
+}
+function restorePactSlots(character) {
+  const charClass = character.characterClass || "fighter";
+  const config2 = SPELLCASTING_CONFIG[charClass];
+  if (!config2.pactMagic) {
+    return character;
+  }
+  const warlockSlots = WARLOCK_SLOTS[character.level];
+  return {
+    ...character,
+    pactMagicSlots: {
+      current: warlockSlots.count,
+      max: warlockSlots.count,
+      slotLevel: warlockSlots.level
+    }
+  };
+}
+function getSpellcastingConfig(characterClass) {
+  const normalizedClass = characterClass.toLowerCase();
+  const config2 = SPELLCASTING_CONFIG[normalizedClass];
+  if (config2) {
+    return config2;
+  }
+  return {
+    canCast: false,
+    startLevel: 999,
+    ability: "intelligence",
+    fullCaster: false,
+    preparationRequired: false,
+    pactMagic: false
+  };
+}
+
+// dist/engine/magic/spell-resolver.js
+function rollDice(diceNotation) {
+  const notation = diceNotation.trim();
+  const rolls = [];
+  let total = 0;
+  const match = notation.match(/^(\d+)d(\d+)([+-]\d+)?$/);
+  if (!match) {
+    const num = parseInt(notation);
+    if (!isNaN(num)) {
+      return { total: num, rolls: [num], notation };
+    }
+    return { total: 0, rolls: [], notation };
+  }
+  const count = parseInt(match[1]);
+  const size = parseInt(match[2]);
+  const modifier = match[3] ? parseInt(match[3]) : 0;
+  for (let i = 0; i < count; i++) {
+    const roll = Math.floor(Math.random() * size) + 1;
+    rolls.push(roll);
+    total += roll;
+  }
+  total += modifier;
+  return { total: Math.max(0, total), rolls, notation };
+}
+function getCantripDamage(baseDice, characterLevel) {
+  const match = baseDice.match(/^(\d+)d(\d+)/);
+  if (!match)
+    return baseDice;
+  const baseCount = parseInt(match[1]);
+  const diceSize = match[2];
+  let diceCount = baseCount;
+  if (characterLevel >= 5)
+    diceCount = baseCount * 2;
+  if (characterLevel >= 11)
+    diceCount = baseCount * 3;
+  if (characterLevel >= 17)
+    diceCount = baseCount * 4;
+  return `${diceCount}d${diceSize}`;
+}
+function getMagicMissileDarts(slotLevel) {
+  return 3 + (slotLevel - 1);
+}
+function resolveSpell(spell, caster, slotLevel, options = {}) {
+  const result = {
+    success: true,
+    spellName: spell.name,
+    slotUsed: spell.level === 0 ? void 0 : slotLevel,
+    diceRolled: "",
+    concentration: spell.concentration
+  };
+  const spellSaveDC = caster.spellSaveDC || calculateSpellSaveDC(caster);
+  const spellAttackBonus = caster.spellAttackBonus || calculateSpellAttackBonus(caster);
+  for (const effect of spell.effects) {
+    switch (effect.type) {
+      case "damage": {
+        let diceNotation;
+        if (spell.level === 0) {
+          diceNotation = getCantripDamage(effect.dice || "1d10", caster.level);
+        } else {
+          diceNotation = calculateUpcastDice(spell, slotLevel);
+        }
+        result.diceRolled = diceNotation;
+        result.damageType = effect.damageType;
+        if (spell.name.toLowerCase() === "magic missile") {
+          const darts = getMagicMissileDarts(slotLevel);
+          result.dartCount = darts;
+          let totalDamage = 0;
+          for (let i = 0; i < darts; i++) {
+            totalDamage += Math.floor(Math.random() * 4) + 1 + 1;
+          }
+          result.damage = totalDamage;
+          result.damageRolled = totalDamage;
+          result.damageApplied = totalDamage;
+          result.autoHit = true;
+          result.diceRolled = `${darts}d4+${darts}`;
+          break;
+        }
+        const damageRoll = rollDice(diceNotation);
+        result.damageRolled = damageRoll.total;
+        if (spell.autoHit) {
+          result.autoHit = true;
+          result.damageApplied = damageRoll.total;
+          result.damage = damageRoll.total;
+        } else if (effect.saveType && effect.saveType !== "none") {
+          result.saveDC = spellSaveDC;
+          const saveRoll = options.targetSaveRoll ?? Math.floor(Math.random() * 20) + 1;
+          const saveTotal = saveRoll;
+          if (saveTotal >= spellSaveDC) {
+            result.saveResult = "passed";
+            if (effect.saveEffect === "half") {
+              result.damageApplied = Math.floor(damageRoll.total / 2);
+            } else {
+              result.damageApplied = 0;
+            }
+          } else {
+            result.saveResult = "failed";
+            result.damageApplied = damageRoll.total;
+          }
+          result.damage = result.damageApplied;
+        } else {
+          const attackRoll = Math.floor(Math.random() * 20) + 1;
+          result.attackRoll = attackRoll;
+          result.attackTotal = attackRoll + spellAttackBonus;
+          const targetAC = options.targetAC ?? 10;
+          result.hit = result.attackTotal >= targetAC;
+          if (result.hit) {
+            result.damageApplied = damageRoll.total;
+            result.damage = damageRoll.total;
+          } else {
+            result.damageApplied = 0;
+            result.damage = 0;
+          }
+        }
+        if (effect.conditions && effect.conditions.length > 0) {
+          result.conditionsApplied = effect.conditions;
+        }
+        break;
+      }
+      case "healing": {
+        let healingDice = effect.dice || "1d8";
+        if (effect.upcastBonus && slotLevel > spell.level) {
+          const bonusLevels = Math.floor((slotLevel - spell.level) / effect.upcastBonus.perLevel);
+          const bonusMatch = effect.upcastBonus.dice.match(/^(\d+)d(\d+)/);
+          const baseMatch = healingDice.match(/^(\d+)d(\d+)/);
+          if (bonusMatch && baseMatch) {
+            const newCount = parseInt(baseMatch[1]) + parseInt(bonusMatch[1]) * bonusLevels;
+            healingDice = `${newCount}d${baseMatch[2]}`;
+          }
+        }
+        result.diceRolled = healingDice;
+        const healingRoll = rollDice(healingDice);
+        const abilityMod = options.casterAbilityMod ?? Math.floor((caster.stats.wis - 10) / 2);
+        result.healing = healingRoll.total + abilityMod;
+        break;
+      }
+      case "buff": {
+        if (effect.conditions && effect.conditions.length > 0) {
+          result.conditionsApplied = effect.conditions;
+          if (effect.conditions.includes("AC_BONUS_5")) {
+            result.acBonus = 5;
+          }
+        }
+        if (effect.dice) {
+          result.diceRolled = effect.dice;
+        }
+        break;
+      }
+      case "debuff": {
+        if (effect.saveType && effect.saveType !== "none") {
+          result.saveDC = spellSaveDC;
+          const saveRoll = options.targetSaveRoll ?? Math.floor(Math.random() * 20) + 1;
+          if (saveRoll >= spellSaveDC) {
+            result.saveResult = "passed";
+          } else {
+            result.saveResult = "failed";
+            if (effect.conditions && effect.conditions.length > 0) {
+              result.conditionsApplied = effect.conditions;
+            }
+          }
+        } else {
+          if (effect.conditions && effect.conditions.length > 0) {
+            result.conditionsApplied = effect.conditions;
+          }
+        }
+        break;
+      }
+      case "utility": {
+        result.success = true;
+        break;
+      }
+      case "summon": {
+        result.success = true;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+// dist/server/combat-tools.js
+init_character_repo();
+
+// dist/schema/concentration.js
+init_zod();
+var ConcentrationStateSchema = external_exports.object({
+  characterId: external_exports.string(),
+  activeSpell: external_exports.string(),
+  // Spell name
+  spellLevel: external_exports.number().int().min(0).max(9),
+  targetIds: external_exports.array(external_exports.string()).optional(),
+  // Targets affected by the spell
+  startedAt: external_exports.number().int().min(1),
+  // Round number when concentration started
+  maxDuration: external_exports.number().int().optional(),
+  // Maximum rounds (null = indefinite)
+  saveDCBase: external_exports.number().int().default(10)
+  // Base DC for concentration saves (min 10 or half damage)
+});
+var ConcentrationCheckResultSchema = external_exports.object({
+  characterId: external_exports.string(),
+  spell: external_exports.string(),
+  broken: external_exports.boolean(),
+  reason: external_exports.enum(["damage", "incapacitated", "death", "new_spell", "voluntary", "duration", "failed_save"]),
+  saveRoll: external_exports.number().int().optional(),
+  // d20 roll result
+  saveDC: external_exports.number().int().optional(),
+  // DC of the save
+  saveTotal: external_exports.number().int().optional(),
+  // Roll + modifier
+  damageAmount: external_exports.number().int().optional(),
+  // Damage that triggered the check
+  constitutionModifier: external_exports.number().int().optional()
+});
+var BreakConcentrationRequestSchema = external_exports.object({
+  characterId: external_exports.string(),
+  reason: external_exports.enum(["damage", "incapacitated", "death", "new_spell", "voluntary", "duration"]),
+  damageAmount: external_exports.number().int().optional()
+  // Required if reason is 'damage'
+});
+
+// dist/storage/repos/concentration.repo.js
+var ConcentrationRepository = class {
+  db;
+  constructor(db) {
+    this.db = db;
+  }
+  /**
+   * Start concentration on a spell
+   */
+  create(concentration) {
+    const valid = ConcentrationStateSchema.parse(concentration);
+    const stmt = this.db.prepare(`
+            INSERT INTO concentration (
+                character_id, active_spell, spell_level, target_ids,
+                started_at, max_duration, save_dc_base
+            )
+            VALUES (@characterId, @activeSpell, @spellLevel, @targetIds,
+                    @startedAt, @maxDuration, @saveDCBase)
+        `);
+    stmt.run({
+      characterId: valid.characterId,
+      activeSpell: valid.activeSpell,
+      spellLevel: valid.spellLevel,
+      targetIds: valid.targetIds ? JSON.stringify(valid.targetIds) : null,
+      startedAt: valid.startedAt,
+      maxDuration: valid.maxDuration ?? null,
+      saveDCBase: valid.saveDCBase
+    });
+  }
+  /**
+   * Get active concentration for a character
+   */
+  findByCharacterId(characterId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM concentration WHERE character_id = ?
+        `);
+    const row = stmt.get(characterId);
+    if (!row)
+      return null;
+    return ConcentrationStateSchema.parse({
+      characterId: row.character_id,
+      activeSpell: row.active_spell,
+      spellLevel: row.spell_level,
+      targetIds: row.target_ids ? JSON.parse(row.target_ids) : void 0,
+      startedAt: row.started_at,
+      maxDuration: row.max_duration ?? void 0,
+      saveDCBase: row.save_dc_base
+    });
+  }
+  /**
+   * Break concentration (delete the record)
+   */
+  delete(characterId) {
+    const stmt = this.db.prepare(`
+            DELETE FROM concentration WHERE character_id = ?
+        `);
+    const result = stmt.run(characterId);
+    return result.changes > 0;
+  }
+  /**
+   * Check if a character is concentrating
+   */
+  isConcentrating(characterId) {
+    const stmt = this.db.prepare(`
+            SELECT COUNT(*) as count FROM concentration WHERE character_id = ?
+        `);
+    const row = stmt.get(characterId);
+    return row.count > 0;
+  }
+  /**
+   * Get all active concentrations (for debugging/admin)
+   */
+  findAll() {
+    const stmt = this.db.prepare(`SELECT * FROM concentration`);
+    const rows = stmt.all();
+    return rows.map((row) => ConcentrationStateSchema.parse({
+      characterId: row.character_id,
+      activeSpell: row.active_spell,
+      spellLevel: row.spell_level,
+      targetIds: row.target_ids ? JSON.parse(row.target_ids) : void 0,
+      startedAt: row.started_at,
+      maxDuration: row.max_duration ?? void 0,
+      saveDCBase: row.save_dc_base
+    }));
+  }
+};
+
+// dist/engine/magic/concentration.js
+function calculateConcentrationDC(damageAmount) {
+  const halfDamage = Math.floor(damageAmount / 2);
+  return Math.max(10, halfDamage);
+}
+function rollConcentrationSave(constitutionModifier) {
+  const roll = Math.floor(Math.random() * 20) + 1;
+  const total = roll + constitutionModifier;
+  return { roll, total };
+}
+function checkConcentration(character, damageAmount, concentrationRepo) {
+  const concentration = concentrationRepo.findByCharacterId(character.id);
+  if (!concentration) {
+    return {
+      characterId: character.id,
+      spell: "none",
+      broken: false,
+      reason: "damage"
+    };
+  }
+  const dc = calculateConcentrationDC(damageAmount);
+  const constitutionModifier = Math.floor((character.stats.con - 10) / 2);
+  const { roll, total } = rollConcentrationSave(constitutionModifier);
+  const success = total >= dc;
+  return {
+    characterId: character.id,
+    spell: concentration.activeSpell,
+    broken: !success,
+    reason: success ? "damage" : "failed_save",
+    saveRoll: roll,
+    saveDC: dc,
+    saveTotal: total,
+    damageAmount,
+    constitutionModifier
+  };
+}
+function breakConcentration(request, concentrationRepo, characterRepo) {
+  const concentration = concentrationRepo.findByCharacterId(request.characterId);
+  if (!concentration) {
+    return {
+      characterId: request.characterId,
+      spell: "none",
+      broken: false,
+      reason: request.reason
+    };
+  }
+  const spell = concentration.activeSpell;
+  concentrationRepo.delete(request.characterId);
+  const character = characterRepo.findById(request.characterId);
+  if (character) {
+    characterRepo.update(request.characterId, {
+      concentratingOn: null
+    });
+  }
+  return {
+    characterId: request.characterId,
+    spell,
+    broken: true,
+    reason: request.reason,
+    damageAmount: request.damageAmount
+  };
+}
+function startConcentration(characterId, spellName, spellLevel, currentRound, maxDuration, targetIds, concentrationRepo, characterRepo) {
+  if (concentrationRepo.isConcentrating(characterId)) {
+    breakConcentration({ characterId, reason: "new_spell" }, concentrationRepo, characterRepo);
+  }
+  const concentration = {
+    characterId,
+    activeSpell: spellName,
+    spellLevel,
+    startedAt: currentRound,
+    maxDuration,
+    targetIds,
+    saveDCBase: 10
+  };
+  concentrationRepo.create(concentration);
+  characterRepo.update(characterId, {
+    concentratingOn: spellName
+  });
+}
+function checkConcentrationDuration(characterId, currentRound, concentrationRepo, characterRepo) {
+  const concentration = concentrationRepo.findByCharacterId(characterId);
+  if (!concentration) {
+    return null;
+  }
+  if (!concentration.maxDuration) {
+    return null;
+  }
+  const roundsElapsed = currentRound - concentration.startedAt;
+  if (roundsElapsed >= concentration.maxDuration) {
+    return breakConcentration({ characterId, reason: "duration" }, concentrationRepo, characterRepo);
+  }
+  return null;
+}
+function getConcentration(characterId, concentrationRepo) {
+  return concentrationRepo.findByCharacterId(characterId);
+}
+function checkAutomaticConcentrationBreak(character, concentrationRepo, characterRepo) {
+  if (!concentrationRepo.isConcentrating(character.id)) {
+    return null;
+  }
+  if (character.hp <= 0) {
+    return breakConcentration({ characterId: character.id, reason: "death" }, concentrationRepo, characterRepo);
+  }
+  const incapacitatingConditions = [
+    "unconscious",
+    "stunned",
+    "paralyzed",
+    "petrified"
+  ];
+  const hasIncapacitatingCondition = character.conditions?.some((condition) => {
+    if (typeof condition === "string") {
+      return incapacitatingConditions.includes(condition.toLowerCase());
+    }
+    return incapacitatingConditions.includes(condition.type.toLowerCase());
+  });
+  if (hasIncapacitatingCondition) {
+    return breakConcentration({ characterId: character.id, reason: "incapacitated" }, concentrationRepo, characterRepo);
+  }
+  return null;
+}
 
 // dist/server/combat-tools.js
 var pubsub2 = null;
@@ -46577,7 +50619,11 @@ function buildStateJson(state, encounterId) {
       conditions: p.conditions.map((c) => c.type),
       isDefeated: p.hp <= 0,
       isCurrentTurn: p.id === currentParticipant?.id
-    }))
+    })),
+    // HIGH-006: Lair action status
+    isLairActionPending: state.turnOrder[state.currentTurnIndex] === "LAIR",
+    hasLairActions: state.hasLairActions ?? false,
+    lairOwnerId: state.lairOwnerId
   };
 }
 function formatCombatStateText(state) {
@@ -46680,6 +50726,124 @@ function formatHealResult(result) {
 \u2192 Call advance_turn to proceed`;
   return output;
 }
+function formatSpellCastResult(casterName, resolution, target, targetHpBefore) {
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u2728 SPELL CAST
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += `${casterName} casts ${resolution.spellName}!
+
+`;
+  if (resolution.diceRolled) {
+    output += `\u{1F3B2} Rolled: ${resolution.diceRolled}
+`;
+  }
+  if (resolution.dartCount) {
+    output += `\u2728 Darts: ${resolution.dartCount}
+`;
+  }
+  if (resolution.saveResult && resolution.saveDC) {
+    const saveIcon = resolution.saveResult === "passed" ? "\u2713" : "\u2717";
+    output += `\u{1F6E1}\uFE0F Save DC ${resolution.saveDC}: ${saveIcon} ${resolution.saveResult}
+`;
+  }
+  if (resolution.autoHit) {
+    output += `\u{1F3AF} Auto-hit!
+`;
+  }
+  if (resolution.damage && resolution.damage > 0) {
+    const damageType = resolution.damageType || "magical";
+    output += `\u{1F4A5} Damage: ${resolution.damage} ${damageType}
+`;
+    if (target) {
+      output += `
+${target.name}: ${targetHpBefore} \u2192 ${target.hp} HP`;
+      if (target.hp <= 0) {
+        output += ` \u{1F480} DEFEATED!`;
+      }
+    }
+  }
+  if (resolution.healing && resolution.healing > 0) {
+    output += `\u{1F49A} Healing: ${resolution.healing}
+`;
+    if (target) {
+      output += `
+${target.name}: ${targetHpBefore} \u2192 ${target.hp} HP`;
+    }
+  }
+  if (resolution.concentration) {
+    output += `
+\u26A1 Concentration required`;
+  }
+  output += `
+
+\u2192 Call advance_turn to proceed`;
+  return output;
+}
+function formatDisengageResult(actorName) {
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F3C3} DISENGAGE ACTION
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += `${actorName} takes the Disengage action.
+`;
+  output += `Movement this turn will not provoke opportunity attacks.
+`;
+  output += `
+\u2192 Call advance_turn to proceed (or move first)`;
+  return output;
+}
+function formatOpportunityAttackResult(result) {
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u26A1 OPPORTUNITY ATTACK
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += result.detailedBreakdown;
+  return output;
+}
+function formatMoveResult(actorName, fromPos, toPos, success, failReason, distance) {
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F6B6} MOVE ACTION
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  if (success) {
+    if (fromPos) {
+      output += `${actorName} moved from (${fromPos.x}, ${fromPos.y}) to (${toPos.x}, ${toPos.y})`;
+      if (distance !== void 0) {
+        output += ` [${distance} tiles]`;
+      }
+      output += `
+`;
+    } else {
+      output += `${actorName} placed at (${toPos.x}, ${toPos.y})
+`;
+    }
+  } else {
+    output += `${actorName} cannot move to (${toPos.x}, ${toPos.y})
+`;
+    output += `Reason: ${failReason}
+`;
+  }
+  output += `
+\u2192 Call advance_turn to proceed`;
+  return output;
+}
 var CombatTools = {
   CREATE_ENCOUNTER: {
     name: "create_encounter",
@@ -46718,8 +50882,17 @@ Example:
         hp: external_exports.number().int().positive(),
         maxHp: external_exports.number().int().positive(),
         isEnemy: external_exports.boolean().optional().describe("Whether this is an enemy (auto-detected if not set)"),
-        conditions: external_exports.array(external_exports.any()).default([])
-      })).min(1)
+        conditions: external_exports.array(external_exports.string()).default([]),
+        position: external_exports.object({ x: external_exports.number(), y: external_exports.number(), z: external_exports.number().optional() }).optional().describe("CRIT-003: Spatial position for movement (x, y coordinates)"),
+        // HIGH-002: Damage modifiers
+        resistances: external_exports.array(external_exports.string()).optional().describe('Damage types that deal half damage (e.g., ["fire", "cold"])'),
+        vulnerabilities: external_exports.array(external_exports.string()).optional().describe("Damage types that deal double damage"),
+        immunities: external_exports.array(external_exports.string()).optional().describe("Damage types that deal no damage")
+      })).min(1),
+      terrain: external_exports.object({
+        obstacles: external_exports.array(external_exports.string()).default([]).describe('Array of "x,y" strings for blocking tiles'),
+        difficultTerrain: external_exports.array(external_exports.string()).optional().describe('Array of "x,y" strings for difficult terrain')
+      }).optional().describe("CRIT-003: Terrain configuration for collision")
     })
   },
   GET_ENCOUNTER_STATE: {
@@ -46731,7 +50904,7 @@ Example:
   },
   EXECUTE_COMBAT_ACTION: {
     name: "execute_combat_action",
-    description: `Execute a combat action (attack, heal, etc.).
+    description: `Execute a combat action (attack, heal, move, cast_spell, etc.).
 
 Examples:
 {
@@ -46748,16 +50921,40 @@ Examples:
   "actorId": "cleric-1",
   "targetId": "hero-1",
   "amount": 8
+}
+
+{
+  "action": "move",
+  "actorId": "hero-1",
+  "targetPosition": { "x": 5, "y": 3 }
+}
+
+{
+  "action": "disengage",
+  "actorId": "hero-1"
+}
+
+{
+  "action": "cast_spell",
+  "actorId": "wizard-1",
+  "spellName": "Fireball",
+  "targetId": "goblin-1",
+  "slotLevel": 3
 }`,
     inputSchema: external_exports.object({
       encounterId: external_exports.string().describe("The ID of the encounter"),
-      action: external_exports.enum(["attack", "heal"]),
+      action: external_exports.enum(["attack", "heal", "move", "disengage", "cast_spell"]),
       actorId: external_exports.string(),
-      targetId: external_exports.string(),
+      targetId: external_exports.string().optional().describe("Target ID for attack/heal/cast_spell actions"),
       attackBonus: external_exports.number().int().optional(),
       dc: external_exports.number().int().optional(),
       damage: external_exports.number().int().optional(),
-      amount: external_exports.number().int().optional()
+      damageType: external_exports.string().optional().describe('HIGH-002: Damage type (e.g., "fire", "cold", "slashing") for resistance calculation'),
+      amount: external_exports.number().int().optional(),
+      targetPosition: external_exports.object({ x: external_exports.number(), y: external_exports.number() }).optional().describe("CRIT-003: Target position for move action"),
+      // CRIT-006: Spell casting fields
+      spellName: external_exports.string().optional().describe("CRIT-006: Name of the spell to cast (must exist in spell database)"),
+      slotLevel: external_exports.number().int().min(1).max(9).optional().describe("CRIT-006: Spell slot level to use (for upcasting)")
     })
   },
   ADVANCE_TURN: {
@@ -46780,6 +50977,30 @@ Examples:
     inputSchema: external_exports.object({
       encounterId: external_exports.string().describe("The ID of the encounter to load")
     })
+  },
+  ROLL_DEATH_SAVE: {
+    name: "roll_death_save",
+    description: "Roll a d20 death saving throw for a character at 0 HP. 10+ success, nat 20 regains 1 HP, nat 1 counts as 2 failures.",
+    inputSchema: external_exports.object({
+      encounterId: external_exports.string().describe("The ID of the encounter"),
+      characterId: external_exports.string().describe("The ID of the character at 0 HP")
+    })
+  },
+  EXECUTE_LAIR_ACTION: {
+    name: "execute_lair_action",
+    description: "Execute a lair action at initiative 20 when isLairActionPending is true. Apply environmental effects to targets.",
+    inputSchema: external_exports.object({
+      encounterId: external_exports.string().describe("The ID of the encounter"),
+      actionDescription: external_exports.string().describe("Description of the lair action"),
+      targetIds: external_exports.array(external_exports.string()).optional().describe("IDs of affected participants (optional)"),
+      damage: external_exports.number().int().min(0).optional().describe("Damage dealt by the lair action"),
+      damageType: external_exports.string().optional().describe("Type of damage (fire, cold, etc.)"),
+      savingThrow: external_exports.object({
+        ability: external_exports.enum(["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]),
+        dc: external_exports.number().int().min(1).max(30)
+      }).optional().describe("Saving throw required to avoid/reduce effect"),
+      halfDamageOnSave: external_exports.boolean().default(true).describe("Whether successful save halves damage")
+    })
   }
 };
 async function handleCreateEncounter(args, ctx) {
@@ -46793,9 +51014,18 @@ async function handleCreateEncounter(args, ctx) {
     maxHp: p.maxHp,
     isEnemy: p.isEnemy,
     // Will be auto-detected in startEncounter if undefined
-    conditions: []
+    conditions: [],
+    position: p.position,
+    // CRIT-003: Preserve spatial position
+    // HIGH-002: Preserve damage modifiers
+    resistances: p.resistances,
+    vulnerabilities: p.vulnerabilities,
+    immunities: p.immunities
   }));
   const state = engine.startEncounter(participants);
+  if (parsed.terrain && state) {
+    state.terrain = parsed.terrain;
+  }
   const encounterId = `encounter-${parsed.seed}-${Date.now()}`;
   getCombatManager().create(`${ctx.sessionId}:${encounterId}`, engine);
   const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
@@ -46883,14 +51113,256 @@ async function handleExecuteCombatAction(args, ctx) {
     if (parsed.attackBonus === void 0 || parsed.dc === void 0 || parsed.damage === void 0) {
       throw new Error("Attack action requires attackBonus, dc, and damage");
     }
-    result = engine.executeAttack(parsed.actorId, parsed.targetId, parsed.attackBonus, parsed.dc, parsed.damage);
+    if (!parsed.targetId) {
+      throw new Error("Attack action requires targetId");
+    }
+    result = engine.executeAttack(
+      parsed.actorId,
+      parsed.targetId,
+      parsed.attackBonus,
+      parsed.dc,
+      parsed.damage,
+      parsed.damageType
+      // HIGH-002: Pass damage type for resistance calculation
+    );
+    if (result.success && result.damage && result.damage > 0) {
+      const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+      const concentrationRepo = new ConcentrationRepository(db);
+      const charRepo = new CharacterRepository(db);
+      const targetChar = charRepo.findById(parsed.targetId);
+      if (targetChar && concentrationRepo.isConcentrating(parsed.targetId)) {
+        const concentrationCheck = checkConcentration(targetChar, result.damage, concentrationRepo);
+        if (concentrationCheck.broken) {
+          breakConcentration({ characterId: parsed.targetId, reason: "damage", damageAmount: result.damage }, concentrationRepo, charRepo);
+        }
+      }
+    }
     output = formatAttackResult(result);
   } else if (parsed.action === "heal") {
     if (parsed.amount === void 0) {
       throw new Error("Heal action requires amount");
     }
+    if (!parsed.targetId) {
+      throw new Error("Heal action requires targetId");
+    }
     result = engine.executeHeal(parsed.actorId, parsed.targetId, parsed.amount);
     output = formatHealResult(result);
+  } else if (parsed.action === "disengage") {
+    const currentState = engine.getState();
+    if (!currentState) {
+      throw new Error("No combat state");
+    }
+    const actor = currentState.participants.find((p) => p.id === parsed.actorId);
+    if (!actor) {
+      throw new Error(`Actor ${parsed.actorId} not found`);
+    }
+    engine.disengage(parsed.actorId);
+    output = formatDisengageResult(actor.name);
+    result = {
+      type: "attack",
+      // Placeholder type
+      success: true,
+      actor: { id: actor.id, name: actor.name },
+      target: { id: actor.id, name: actor.name, hpBefore: actor.hp, hpAfter: actor.hp, maxHp: actor.maxHp },
+      defeated: false,
+      message: `${actor.name} disengages`,
+      detailedBreakdown: output
+    };
+  } else if (parsed.action === "move") {
+    if (!parsed.targetPosition) {
+      throw new Error("Move action requires targetPosition");
+    }
+    const currentState = engine.getState();
+    if (!currentState) {
+      throw new Error("No combat state");
+    }
+    const actor = currentState.participants.find((p) => p.id === parsed.actorId);
+    if (!actor) {
+      throw new Error(`Actor ${parsed.actorId} not found`);
+    }
+    const actorPos = actor.position;
+    if (!actorPos) {
+      actor.position = parsed.targetPosition;
+      output = formatMoveResult(actor.name, void 0, parsed.targetPosition, true, null);
+    } else {
+      const opportunityAttackers = engine.getOpportunityAttackers(parsed.actorId, actorPos, parsed.targetPosition);
+      let opportunityAttackOutput = "";
+      for (const attacker of opportunityAttackers) {
+        const oaResult = engine.executeOpportunityAttack(attacker.id, parsed.actorId);
+        opportunityAttackOutput += formatOpportunityAttackResult(oaResult) + "\n";
+        if (oaResult.defeated) {
+          output = opportunityAttackOutput;
+          output += `
+${actor.name} was defeated while attempting to move and cannot complete the movement!`;
+          result = {
+            type: "attack",
+            success: false,
+            actor: { id: actor.id, name: actor.name },
+            target: { id: actor.id, name: actor.name, hpBefore: oaResult.target.hpBefore, hpAfter: oaResult.target.hpAfter, maxHp: actor.maxHp },
+            defeated: true,
+            message: `${actor.name} defeated by opportunity attack`,
+            detailedBreakdown: output
+          };
+          break;
+        }
+      }
+      const updatedActor = currentState.participants.find((p) => p.id === parsed.actorId);
+      if (updatedActor && updatedActor.hp > 0) {
+        const obstacles = /* @__PURE__ */ new Set();
+        for (const p of currentState.participants) {
+          if (p.id !== parsed.actorId && p.position) {
+            const pos = p.position;
+            obstacles.add(`${pos.x},${pos.y}`);
+          }
+        }
+        const terrain = currentState.terrain;
+        if (terrain?.obstacles) {
+          for (const obs of terrain.obstacles) {
+            obstacles.add(obs);
+          }
+        }
+        const destKey = `${parsed.targetPosition.x},${parsed.targetPosition.y}`;
+        if (obstacles.has(destKey)) {
+          output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, false, "Destination is blocked");
+        } else {
+          const spatial = new SpatialEngine();
+          const path = spatial.findPath({ x: actorPos.x, y: actorPos.y }, { x: parsed.targetPosition.x, y: parsed.targetPosition.y }, obstacles);
+          if (path === null) {
+            output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, false, "No valid path - blocked by obstacles");
+          } else {
+            updatedActor.position = parsed.targetPosition;
+            output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, true, null, path.length - 1);
+          }
+        }
+        result = {
+          type: "attack",
+          success: output.includes("moved"),
+          actor: { id: actor.id, name: actor.name },
+          target: { id: actor.id, name: actor.name, hpBefore: actor.hp, hpAfter: updatedActor.hp, maxHp: actor.maxHp },
+          defeated: updatedActor.hp <= 0,
+          message: output.includes("moved") ? `${actor.name} moved` : `${actor.name} could not move`,
+          detailedBreakdown: output
+        };
+      }
+    }
+    if (!result) {
+      result = {
+        type: "attack",
+        success: output.includes("moved") || output.includes("placed"),
+        actor: { id: actor.id, name: actor.name },
+        target: { id: actor.id, name: actor.name, hpBefore: actor.hp, hpAfter: actor.hp, maxHp: actor.maxHp },
+        defeated: false,
+        message: `${actor.name} moved`,
+        detailedBreakdown: output
+      };
+    }
+  } else if (parsed.action === "cast_spell") {
+    if (!parsed.spellName) {
+      throw new Error("cast_spell action requires spellName");
+    }
+    if (parsed.damage !== void 0) {
+      throw new Error("damage parameter not allowed for cast_spell - damage is calculated from spell");
+    }
+    const currentState = engine.getState();
+    if (!currentState) {
+      throw new Error("No combat state");
+    }
+    const actor = currentState.participants.find((p) => p.id === parsed.actorId);
+    if (!actor) {
+      throw new Error(`Actor ${parsed.actorId} not found`);
+    }
+    const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+    const charRepo = new CharacterRepository(db);
+    let casterChar = null;
+    try {
+      casterChar = charRepo.findById(parsed.actorId);
+    } catch {
+    }
+    if (!casterChar) {
+      throw new Error(`Character ${parsed.actorId} not found in database. Spellcasting requires a character record with class and spell slots.`);
+    }
+    const validation = validateSpellCast(casterChar, parsed.spellName, parsed.slotLevel);
+    if (!validation.valid) {
+      throw new Error(validation.error?.message || "Invalid spell cast");
+    }
+    const spell = validation.spell;
+    const effectiveSlotLevel = validation.effectiveSlotLevel || spell.level;
+    let target = currentState.participants.find((p) => p.id === parsed.targetId);
+    const targetHpBefore = target?.hp || 0;
+    const resolution = resolveSpell(spell, casterChar, effectiveSlotLevel, {
+      targetAC: target ? target.ac || 10 : 10
+    });
+    if (resolution.damage && resolution.damage > 0 && target) {
+      const damageType = resolution.damageType || "force";
+      engine.executeAttack(
+        parsed.actorId,
+        parsed.targetId,
+        100,
+        // Auto-hit for spell damage
+        0,
+        // DC doesn't matter
+        resolution.damage,
+        damageType
+      );
+      target = currentState.participants.find((p) => p.id === parsed.targetId);
+      if (target) {
+        const db2 = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+        const concentrationRepo = new ConcentrationRepository(db2);
+        const targetChar = charRepo.findById(parsed.targetId);
+        if (targetChar && concentrationRepo.isConcentrating(parsed.targetId)) {
+          const concentrationCheck = checkConcentration(targetChar, resolution.damage, concentrationRepo);
+          if (concentrationCheck.broken) {
+            breakConcentration({ characterId: parsed.targetId, reason: "damage", damageAmount: resolution.damage }, concentrationRepo, charRepo);
+          }
+        }
+      }
+    }
+    if (resolution.healing && resolution.healing > 0 && target) {
+      engine.executeHeal(parsed.actorId, parsed.targetId, resolution.healing);
+      target = currentState.participants.find((p) => p.id === parsed.targetId);
+    }
+    if (effectiveSlotLevel > 0) {
+      const updatedChar = consumeSpellSlot(casterChar, effectiveSlotLevel);
+      charRepo.update(casterChar.id, updatedChar);
+    }
+    if (spell.concentration) {
+      const db2 = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+      const concentrationRepo = new ConcentrationRepository(db2);
+      const currentState2 = engine.getState();
+      let maxDuration;
+      const durationMatch = spell.duration.match(/(\d+)\s+(minute|hour)/i);
+      if (durationMatch) {
+        const value = parseInt(durationMatch[1]);
+        const unit = durationMatch[2].toLowerCase();
+        if (unit === "minute") {
+          maxDuration = value * 10;
+        } else if (unit === "hour") {
+          maxDuration = value * 600;
+        }
+      }
+      startConcentration(casterChar.id, spell.name, effectiveSlotLevel, currentState2?.round || 1, maxDuration, parsed.targetId ? [parsed.targetId] : void 0, concentrationRepo, charRepo);
+    }
+    output = formatSpellCastResult(actor.name, resolution, target, targetHpBefore);
+    output += `
+[SPELL: ${spell.name}, SLOT: ${effectiveSlotLevel > 0 ? effectiveSlotLevel : "cantrip"}, DMG: ${resolution.damage || 0}, HEAL: ${resolution.healing || 0}]`;
+    result = {
+      type: "attack",
+      success: resolution.success,
+      actor: { id: actor.id, name: actor.name },
+      target: target ? {
+        id: target.id,
+        name: target.name,
+        hpBefore: targetHpBefore,
+        hpAfter: target.hp,
+        maxHp: target.maxHp
+      } : { id: "none", name: "none", hpBefore: 0, hpAfter: 0, maxHp: 0 },
+      defeated: target ? target.hp <= 0 : false,
+      message: `${actor.name} cast ${spell.name}`,
+      // CRIT-006: Include spell damage/healing in result for testing and frontend
+      damage: resolution.damage,
+      healAmount: resolution.healing,
+      detailedBreakdown: output
+    };
   } else {
     throw new Error(`Unknown action: ${parsed.action}`);
   }
@@ -46960,19 +51432,59 @@ STATE_JSON -->`;
 }
 async function handleEndEncounter(args, ctx) {
   const parsed = CombatTools.END_ENCOUNTER.inputSchema.parse(args);
-  const success = getCombatManager().delete(`${ctx.sessionId}:${parsed.encounterId}`);
-  if (!success) {
+  const namespacedId = `${ctx.sessionId}:${parsed.encounterId}`;
+  const engine = getCombatManager().get(namespacedId);
+  if (!engine) {
     throw new Error(`Encounter ${parsed.encounterId} not found.`);
   }
+  const finalState = engine.getState();
+  const syncResults = [];
+  if (finalState) {
+    const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+    const { CharacterRepository: CharacterRepository2 } = await Promise.resolve().then(() => (init_character_repo(), character_repo_exports));
+    const charRepo = new CharacterRepository2(db);
+    for (const participant of finalState.participants) {
+      const character = charRepo.findById(participant.id);
+      if (character) {
+        charRepo.update(participant.id, { hp: participant.hp });
+        syncResults.push({
+          id: participant.id,
+          name: participant.name,
+          hp: participant.hp,
+          synced: true
+        });
+      } else {
+        syncResults.push({
+          id: participant.id,
+          name: participant.name,
+          hp: participant.hp,
+          synced: false
+        });
+      }
+    }
+  }
+  getCombatManager().delete(namespacedId);
+  let output = `
+\u{1F3C1} COMBAT ENDED
+Encounter ID: ${parsed.encounterId}
+
+`;
+  const syncedChars = syncResults.filter((r) => r.synced);
+  if (syncedChars.length > 0) {
+    output += `\u{1F4CA} Character HP Synced:
+`;
+    for (const char of syncedChars) {
+      output += `   \u2022 ${char.name}: ${char.hp} HP
+`;
+    }
+  }
+  output += `
+All combatants have been removed from the battlefield.`;
   return {
     content: [
       {
         type: "text",
-        text: `
-\u{1F3C1} COMBAT ENDED
-Encounter ID: ${parsed.encounterId}
-
-All combatants have been removed from the battlefield.`
+        text: output
       }
     ]
   };
@@ -47005,233 +51517,202 @@ STATE_JSON -->`;
     }]
   };
 }
+async function handleRollDeathSave(args, ctx) {
+  const parsed = CombatTools.ROLL_DEATH_SAVE.inputSchema.parse(args);
+  const engine = getCombatManager().get(`${ctx.sessionId}:${parsed.encounterId}`);
+  if (!engine) {
+    throw new Error(`No active encounter with ID ${parsed.encounterId}`);
+  }
+  const state = engine.getState();
+  if (!state) {
+    throw new Error("Encounter has no active state");
+  }
+  const participant = state.participants.find((p) => p.id === parsed.characterId);
+  if (!participant) {
+    throw new Error(`Participant ${parsed.characterId} not found in encounter`);
+  }
+  if (participant.hp > 0) {
+    throw new Error(`${participant.name} is not at 0 HP and cannot make death saving throws`);
+  }
+  if (participant.isDead) {
+    throw new Error(`${participant.name} is already dead`);
+  }
+  if (participant.isStabilized) {
+    return {
+      content: [{
+        type: "text",
+        text: `${participant.name} is already stabilized and does not need to make death saving throws.`
+      }]
+    };
+  }
+  const result = engine.rollDeathSave(parsed.characterId);
+  if (!result) {
+    throw new Error("Failed to roll death save");
+  }
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F480} DEATH SAVING THROW
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += `${participant.name} makes a death saving throw...
+
+`;
+  output += `\u{1F3B2} Roll: d20 = ${result.roll}`;
+  if (result.isNat20) {
+    output += ` \u2B50 NATURAL 20!
+
+`;
+    output += `\u2728 ${participant.name} regains 1 HP and is conscious again!
+`;
+  } else if (result.isNat1) {
+    output += ` \u{1F4A5} NATURAL 1! (Counts as 2 failures)
+
+`;
+  } else if (result.success) {
+    output += ` \u2713 SUCCESS (10+)
+
+`;
+  } else {
+    output += ` \u2717 FAILURE (9 or less)
+
+`;
+  }
+  const successMarkers = "\u25CF".repeat(result.successes) + "\u25CB".repeat(3 - result.successes);
+  const failureMarkers = "\u25CF".repeat(result.failures) + "\u25CB".repeat(3 - result.failures);
+  output += `Successes: [${successMarkers}] ${result.successes}/3
+`;
+  output += `Failures:  [${failureMarkers}] ${result.failures}/3
+
+`;
+  if (result.isStabilized) {
+    output += `\u{1F6E1}\uFE0F ${participant.name} is STABILIZED! (Unconscious but no longer dying)
+`;
+  } else if (result.isDead) {
+    output += `\u2620\uFE0F ${participant.name} has DIED!
+`;
+  }
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  const repo = new EncounterRepository(db);
+  repo.saveState(parsed.encounterId, engine.getState());
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+async function handleExecuteLairAction(args, ctx) {
+  const parsed = CombatTools.EXECUTE_LAIR_ACTION.inputSchema.parse(args);
+  const engine = getCombatManager().get(`${ctx.sessionId}:${parsed.encounterId}`);
+  if (!engine) {
+    throw new Error(`No active encounter with ID ${parsed.encounterId}`);
+  }
+  const state = engine.getState();
+  if (!state) {
+    throw new Error("Encounter has no active state");
+  }
+  if (!engine.isLairActionPending()) {
+    throw new Error("Cannot execute lair action: it is not the lair's turn (initiative 20)");
+  }
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F3F0} LAIR ACTION (Initiative 20)
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += `${parsed.actionDescription}
+
+`;
+  const results = [];
+  if (parsed.targetIds && parsed.targetIds.length > 0 && parsed.damage) {
+    for (const targetId of parsed.targetIds) {
+      const target = state.participants.find((p) => p.id === targetId);
+      if (!target) {
+        output += `\u26A0\uFE0F Target ${targetId} not found in encounter
+`;
+        continue;
+      }
+      let damageTaken = parsed.damage;
+      let saved = false;
+      let saveRoll;
+      let saveTotal;
+      if (parsed.savingThrow) {
+        saveRoll = Math.floor(Math.random() * 20) + 1;
+        const abilityScore = target.abilityScores?.[parsed.savingThrow.ability] ?? 10;
+        const modifier = Math.floor((abilityScore - 10) / 2);
+        saveTotal = saveRoll + modifier;
+        saved = saveTotal >= parsed.savingThrow.dc;
+        if (saved && parsed.halfDamageOnSave) {
+          damageTaken = Math.floor(parsed.damage / 2);
+        } else if (saved) {
+          damageTaken = 0;
+        }
+      }
+      const damageType = parsed.damageType?.toLowerCase() || "untyped";
+      if (target.immunities?.includes(damageType)) {
+        damageTaken = 0;
+      } else if (target.resistances?.includes(damageType)) {
+        damageTaken = Math.floor(damageTaken / 2);
+      } else if (target.vulnerabilities?.includes(damageType)) {
+        damageTaken = damageTaken * 2;
+      }
+      if (damageTaken > 0) {
+        engine.applyDamage(targetId, damageTaken);
+      }
+      results.push({
+        targetId,
+        targetName: target.name,
+        saveRoll,
+        saveTotal,
+        saved,
+        damageTaken
+      });
+      output += `\u{1F3AF} ${target.name}`;
+      if (parsed.savingThrow) {
+        const saveAbility = parsed.savingThrow.ability.charAt(0).toUpperCase() + parsed.savingThrow.ability.slice(1);
+        output += ` - ${saveAbility} Save: ${saveRoll} + ${Math.floor(((target.abilityScores?.[parsed.savingThrow.ability] ?? 10) - 10) / 2)} = ${saveTotal} vs DC ${parsed.savingThrow.dc}`;
+        output += saved ? " \u2713 SAVED" : " \u2717 FAILED";
+      }
+      output += `
+`;
+      output += `   Damage: ${damageTaken}${parsed.damageType ? ` ${parsed.damageType}` : ""}
+`;
+      const updatedTarget = engine.getState().participants.find((p) => p.id === targetId);
+      if (updatedTarget) {
+        output += `   HP: ${updatedTarget.hp}/${updatedTarget.maxHp}`;
+        if (updatedTarget.hp <= 0) {
+          output += " \u{1F480} DEFEATED";
+        }
+        output += "\n";
+      }
+    }
+  } else {
+    output += `(No mechanical effect - narrative only)
+`;
+  }
+  output += `
+\u2192 Call advance_turn to proceed to the next combatant`;
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  const repo = new EncounterRepository(db);
+  repo.saveState(parsed.encounterId, engine.getState());
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
 
 // dist/server/crud-tools.js
 var import_crypto2 = require("crypto");
-
-// dist/schema/party.js
-var PartyStatusSchema = external_exports.enum(["active", "dormant", "archived"]);
-var MemberRoleSchema = external_exports.enum(["leader", "member", "companion", "hireling", "prisoner", "mount"]);
-var CharacterTypeSchema = external_exports.enum(["pc", "npc", "enemy", "neutral"]);
-var PartySchema = external_exports.object({
-  id: external_exports.string(),
-  name: external_exports.string().min(1),
-  description: external_exports.string().optional(),
-  worldId: external_exports.string().optional(),
-  status: PartyStatusSchema.default("active"),
-  currentLocation: external_exports.string().optional(),
-  currentQuestId: external_exports.string().optional(),
-  formation: external_exports.string().default("standard"),
-  // NEW: Position fields for world map location tracking
-  positionX: external_exports.number().int().nonnegative().optional(),
-  positionY: external_exports.number().int().nonnegative().optional(),
-  currentPOI: external_exports.string().optional(),
-  // Structure ID if at a POI
-  createdAt: external_exports.string().datetime(),
-  updatedAt: external_exports.string().datetime(),
-  lastPlayedAt: external_exports.string().datetime().optional()
-});
-var PartyMemberSchema = external_exports.object({
-  id: external_exports.string(),
-  partyId: external_exports.string(),
-  characterId: external_exports.string(),
-  role: MemberRoleSchema.default("member"),
-  isActive: external_exports.boolean().default(false),
-  position: external_exports.number().int().optional(),
-  sharePercentage: external_exports.number().int().min(0).max(100).default(100),
-  joinedAt: external_exports.string().datetime(),
-  notes: external_exports.string().optional()
-});
-var PartyMemberWithCharacterSchema = PartyMemberSchema.extend({
-  character: external_exports.object({
-    id: external_exports.string(),
-    name: external_exports.string(),
-    hp: external_exports.number(),
-    maxHp: external_exports.number(),
-    ac: external_exports.number(),
-    level: external_exports.number(),
-    stats: external_exports.object({
-      str: external_exports.number(),
-      dex: external_exports.number(),
-      con: external_exports.number(),
-      int: external_exports.number(),
-      wis: external_exports.number(),
-      cha: external_exports.number()
-    }),
-    behavior: external_exports.string().optional(),
-    characterType: CharacterTypeSchema.optional()
-  })
-});
-var PartyWithMembersSchema = PartySchema.extend({
-  members: external_exports.array(PartyMemberWithCharacterSchema),
-  leader: PartyMemberWithCharacterSchema.optional(),
-  activeCharacter: PartyMemberWithCharacterSchema.optional(),
-  memberCount: external_exports.number().int()
-});
-var PartyContextSchema = external_exports.object({
-  party: external_exports.object({
-    id: external_exports.string(),
-    name: external_exports.string(),
-    status: PartyStatusSchema,
-    location: external_exports.string().optional(),
-    formation: external_exports.string()
-  }),
-  leader: external_exports.object({
-    id: external_exports.string(),
-    name: external_exports.string(),
-    hp: external_exports.number(),
-    maxHp: external_exports.number(),
-    level: external_exports.number()
-  }).optional(),
-  activeCharacter: external_exports.object({
-    id: external_exports.string(),
-    name: external_exports.string(),
-    hp: external_exports.number(),
-    maxHp: external_exports.number(),
-    level: external_exports.number(),
-    conditions: external_exports.array(external_exports.string()).optional()
-  }).optional(),
-  members: external_exports.array(external_exports.object({
-    name: external_exports.string(),
-    role: MemberRoleSchema,
-    hp: external_exports.string(),
-    // "85/85" format for compactness
-    status: external_exports.string().optional()
-  })),
-  activeQuest: external_exports.object({
-    name: external_exports.string(),
-    currentObjective: external_exports.string().optional(),
-    progress: external_exports.string().optional()
-  }).optional(),
-  recentEvents: external_exports.array(external_exports.string()).optional()
-});
-
-// dist/schema/character.js
-var CharacterSchema = external_exports.object({
-  id: external_exports.string(),
-  name: external_exports.string(),
-  stats: external_exports.object({
-    str: external_exports.number().int().min(0),
-    dex: external_exports.number().int().min(0),
-    con: external_exports.number().int().min(0),
-    int: external_exports.number().int().min(0),
-    wis: external_exports.number().int().min(0),
-    cha: external_exports.number().int().min(0)
-  }),
-  hp: external_exports.number().int().min(0),
-  maxHp: external_exports.number().int().min(0),
-  ac: external_exports.number().int().min(0),
-  level: external_exports.number().int().min(1),
-  characterType: CharacterTypeSchema.optional().default("pc"),
-  createdAt: external_exports.string().datetime(),
-  updatedAt: external_exports.string().datetime()
-});
-var NPCSchema = CharacterSchema.extend({
-  factionId: external_exports.string().optional(),
-  behavior: external_exports.string().optional()
-});
-
-// dist/storage/repos/character.repo.js
-var CharacterRepository = class {
-  db;
-  constructor(db) {
-    this.db = db;
-  }
-  create(character) {
-    const isNPC = "factionId" in character || "behavior" in character;
-    const validChar = isNPC ? NPCSchema.parse(character) : CharacterSchema.parse(character);
-    const stmt = this.db.prepare(`
-      INSERT INTO characters (id, name, stats, hp, max_hp, ac, level, faction_id, behavior, character_type, created_at, updated_at)
-      VALUES (@id, @name, @stats, @hp, @maxHp, @ac, @level, @factionId, @behavior, @characterType, @createdAt, @updatedAt)
-    `);
-    stmt.run({
-      id: validChar.id,
-      name: validChar.name,
-      stats: JSON.stringify(validChar.stats),
-      hp: validChar.hp,
-      maxHp: validChar.maxHp,
-      ac: validChar.ac,
-      level: validChar.level,
-      factionId: validChar.factionId || null,
-      behavior: validChar.behavior || null,
-      characterType: validChar.characterType || "pc",
-      createdAt: validChar.createdAt,
-      updatedAt: validChar.updatedAt
-    });
-  }
-  findById(id) {
-    const stmt = this.db.prepare("SELECT * FROM characters WHERE id = ?");
-    const row = stmt.get(id);
-    if (!row)
-      return null;
-    return this.rowToCharacter(row);
-  }
-  findAll(filters) {
-    let query = "SELECT * FROM characters";
-    const params = [];
-    if (filters?.characterType) {
-      query += " WHERE character_type = ?";
-      params.push(filters.characterType);
-    }
-    const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params);
-    return rows.map((row) => this.rowToCharacter(row));
-  }
-  findByType(characterType) {
-    const stmt = this.db.prepare("SELECT * FROM characters WHERE character_type = ?");
-    const rows = stmt.all(characterType);
-    return rows.map((row) => this.rowToCharacter(row));
-  }
-  update(id, updates) {
-    const existing = this.findById(id);
-    if (!existing)
-      return null;
-    const updated = {
-      ...existing,
-      ...updates,
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    const isNPC = "factionId" in updated || "behavior" in updated;
-    const validChar = isNPC ? NPCSchema.parse(updated) : CharacterSchema.parse(updated);
-    const stmt = this.db.prepare(`
-            UPDATE characters
-            SET name = ?, stats = ?, hp = ?, max_hp = ?, ac = ?, level = ?,
-                faction_id = ?, behavior = ?, character_type = ?, updated_at = ?
-            WHERE id = ?
-        `);
-    stmt.run(validChar.name, JSON.stringify(validChar.stats), validChar.hp, validChar.maxHp, validChar.ac, validChar.level, validChar.factionId || null, validChar.behavior || null, validChar.characterType || "pc", validChar.updatedAt, id);
-    return validChar;
-  }
-  delete(id) {
-    const stmt = this.db.prepare("DELETE FROM characters WHERE id = ?");
-    const result = stmt.run(id);
-    return result.changes > 0;
-  }
-  rowToCharacter(row) {
-    const base = {
-      id: row.id,
-      name: row.name,
-      stats: JSON.parse(row.stats),
-      hp: row.hp,
-      maxHp: row.max_hp,
-      ac: row.ac,
-      level: row.level,
-      characterType: row.character_type || "pc",
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
-    if (row.faction_id || row.behavior) {
-      return NPCSchema.parse({
-        ...base,
-        factionId: row.faction_id || void 0,
-        behavior: row.behavior || void 0
-      });
-    }
-    return CharacterSchema.parse(base);
-  }
-};
-
-// dist/server/crud-tools.js
+init_character_repo();
+init_party();
+init_zod();
 function ensureDb() {
   const dbPath = process.env.NODE_ENV === "test" ? ":memory:" : process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db";
   const db = getDb(dbPath);
@@ -47243,15 +51724,7 @@ var CRUDTools = {
   // World tools
   CREATE_WORLD: {
     name: "create_world",
-    description: `Create a new world in the database.
-
-Example:
-{
-  "name": "My Campaign World",
-  "seed": "campaign-1",
-  "width": 100,
-  "height": 100
-}`,
+    description: "Create a new world in the database with name, seed, and dimensions.",
     inputSchema: WorldSchema.omit({ id: true, createdAt: true, updatedAt: true })
   },
   GET_WORLD: {
@@ -47292,7 +51765,7 @@ Example:
   // Character tools
   CREATE_CHARACTER: {
     name: "create_character",
-    description: `Create a new character.
+    description: `Create a new character. Only name is required - everything else has sensible defaults.
 
 Character types:
 - pc: Player character (default)
@@ -47300,20 +51773,68 @@ Character types:
 - enemy: Hostile creature
 - neutral: Non-hostile, non-ally
 
-Example:
+Class and race can be ANY string - use standard D&D classes/races or create custom ones.
+Stats can be any positive integer (not limited to 3-18).
+
+Example (minimal - just name):
+{
+  "name": "Mysterious Stranger"
+}
+
+Example (full):
 {
   "name": "Valeros",
+  "class": "Fighter",
+  "race": "Human",
   "hp": 20,
   "maxHp": 20,
   "ac": 18,
   "level": 1,
   "stats": { "str": 16, "dex": 14, "con": 14, "int": 10, "wis": 12, "cha": 10 },
   "characterType": "pc"
+}
+
+Example (custom class/race):
+{
+  "name": "Whiskers",
+  "class": "Chronomancer",
+  "race": "Mousefolk",
+  "stats": { "str": 6, "dex": 18, "con": 10, "int": 16, "wis": 14, "cha": 12 }
 }`,
-    // Use NPCSchema as the base since it includes all fields (Character + faction/behavior)
-    // Make NPC fields optional which they already are in NPCSchema
-    inputSchema: NPCSchema.omit({ id: true, createdAt: true, updatedAt: true }).extend({
-      characterType: CharacterTypeSchema.optional().default("pc")
+    // Flexible schema - only name required, everything else has defaults
+    inputSchema: external_exports.object({
+      name: external_exports.string().min(1).describe("Character name (required)"),
+      // Class/race can be ANY string - no enum restriction
+      class: external_exports.string().optional().default("Adventurer").describe("Character class - any string allowed (Fighter, Wizard, Chronomancer, Merchant...)"),
+      race: external_exports.string().optional().default("Human").describe("Character race - any string allowed (Human, Elf, Mousefolk, Illithid...)"),
+      background: external_exports.string().optional().default("Folk Hero"),
+      alignment: external_exports.string().optional(),
+      // Stats with no min/max - allow godlike or cursed entities
+      stats: external_exports.object({
+        str: external_exports.number().int().min(0).default(10),
+        dex: external_exports.number().int().min(0).default(10),
+        con: external_exports.number().int().min(0).default(10),
+        int: external_exports.number().int().min(0).default(10),
+        wis: external_exports.number().int().min(0).default(10),
+        cha: external_exports.number().int().min(0).default(10)
+      }).optional().default({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }),
+      // Combat stats with sensible defaults
+      hp: external_exports.number().int().min(1).optional(),
+      maxHp: external_exports.number().int().min(1).optional(),
+      ac: external_exports.number().int().min(0).optional().default(10),
+      level: external_exports.number().int().min(1).optional().default(1),
+      // Type and NPC fields
+      characterType: CharacterTypeSchema.optional().default("pc"),
+      factionId: external_exports.string().optional(),
+      behavior: external_exports.string().optional(),
+      // Spellcasting
+      characterClass: external_exports.string().optional(),
+      knownSpells: external_exports.array(external_exports.string()).optional().default([]),
+      preparedSpells: external_exports.array(external_exports.string()).optional().default([]),
+      // Damage modifiers
+      resistances: external_exports.array(external_exports.string()).optional().default([]),
+      vulnerabilities: external_exports.array(external_exports.string()).optional().default([]),
+      immunities: external_exports.array(external_exports.string()).optional().default([])
     })
   },
   GET_CHARACTER: {
@@ -47325,15 +51846,7 @@ Example:
   },
   UPDATE_CHARACTER: {
     name: "update_character",
-    description: `Update character properties.
-
-Example:
-{
-  "id": "char-123",
-  "hp": 15,
-  "level": 2,
-  "characterType": "npc"
-}`,
+    description: "Update character properties like HP, level, or type.",
     inputSchema: external_exports.object({
       id: external_exports.string(),
       hp: external_exports.number().int().min(0).optional(),
@@ -47343,9 +51856,7 @@ Example:
   },
   LIST_CHARACTERS: {
     name: "list_characters",
-    description: `List all characters, optionally filtered by type.
-
-Character types: pc, npc, enemy, neutral`,
+    description: "List all characters, optionally filtered by type (pc, npc, enemy, neutral).",
     inputSchema: external_exports.object({
       characterType: CharacterTypeSchema.optional()
     })
@@ -47436,9 +51947,17 @@ async function handleCreateCharacter(args, _ctx) {
   const { charRepo } = ensureDb();
   const parsed = CRUDTools.CREATE_CHARACTER.inputSchema.parse(args);
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const conModifier = Math.floor(((parsed.stats?.con ?? 10) - 10) / 2);
+  const baseHp = Math.max(1, 8 + conModifier);
+  const hp = parsed.hp ?? baseHp;
+  const maxHp = parsed.maxHp ?? hp;
   const character = {
     ...parsed,
     id: (0, import_crypto2.randomUUID)(),
+    hp,
+    maxHp,
+    // Map 'class' to 'characterClass' for DB compatibility
+    characterClass: parsed.characterClass || parsed.class || "Adventurer",
     createdAt: now,
     updatedAt: now
   };
@@ -47515,16 +52034,28 @@ async function handleDeleteCharacter(args, _ctx) {
 }
 
 // dist/server/inventory-tools.js
+init_zod();
 var import_crypto3 = require("crypto");
 
 // dist/schema/inventory.js
+init_zod();
+var INVENTORY_LIMITS = {
+  MAX_ITEM_VALUE: 1e7,
+  // 10 million gold max per item
+  MAX_STACK_SIZE: 9999,
+  // Max items in a single stack
+  MAX_GIVE_QUANTITY: 9999,
+  // Max items that can be given at once
+  DEFAULT_WEIGHT_CAPACITY: 100
+  // Default carry weight (based on STR in future)
+};
 var ItemSchema = external_exports.object({
   id: external_exports.string(),
-  name: external_exports.string(),
+  name: external_exports.string().min(1, "Item name cannot be empty").refine((s) => s.trim().length > 0, "Item name cannot be whitespace only"),
   description: external_exports.string().optional(),
-  type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc"]),
+  type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc", "scroll"]),
   weight: external_exports.number().min(0).default(0),
-  value: external_exports.number().min(0).default(0),
+  value: external_exports.number().min(0).max(INVENTORY_LIMITS.MAX_ITEM_VALUE, `Item value cannot exceed ${INVENTORY_LIMITS.MAX_ITEM_VALUE.toLocaleString()} gold`).default(0),
   properties: external_exports.record(external_exports.any()).optional(),
   createdAt: external_exports.string().datetime(),
   updatedAt: external_exports.string().datetime()
@@ -47689,13 +52220,13 @@ var InventoryRepository = class {
       equipped: Boolean(row.equipped),
       slot: row.slot || void 0
     }));
+    const currency = this.getCurrency(characterId);
     return InventorySchema.parse({
       characterId,
       items,
       capacity: 100,
       // Default
-      currency: { gold: 0, silver: 0, copper: 0 }
-      // Default
+      currency
     });
   }
   addItem(characterId, itemId, quantity = 1) {
@@ -47730,6 +52261,14 @@ var InventoryRepository = class {
   unequipItem(characterId, itemId) {
     const stmt = this.db.prepare("UPDATE inventory_items SET equipped = 0, slot = NULL WHERE character_id = ? AND item_id = ?");
     stmt.run(characterId, itemId);
+  }
+  /**
+   * Find all characters who own a specific item (for world-unique enforcement)
+   */
+  findItemOwners(itemId) {
+    const stmt = this.db.prepare("SELECT character_id FROM inventory_items WHERE item_id = ?");
+    const rows = stmt.all(itemId);
+    return rows.map((r) => r.character_id);
   }
   transferItem(fromCharacterId, toCharacterId, itemId, quantity = 1) {
     const getStmt = this.db.prepare("SELECT quantity, equipped FROM inventory_items WHERE character_id = ? AND item_id = ?");
@@ -47781,13 +52320,120 @@ var InventoryRepository = class {
       slot: row.slot || void 0
     }));
     const totalWeight = items.reduce((sum, i) => sum + i.item.weight * i.quantity, 0);
+    const currency = this.getCurrency(characterId);
     return {
       characterId,
       items,
       totalWeight,
       capacity: 100,
-      currency: { gold: 0, silver: 0, copper: 0 }
+      currency
     };
+  }
+  // ============================================================
+  // CURRENCY OPERATIONS
+  // ============================================================
+  /**
+   * Get currency for a character
+   */
+  getCurrency(characterId) {
+    const stmt = this.db.prepare("SELECT currency FROM characters WHERE id = ?");
+    const row = stmt.get(characterId);
+    if (!row || !row.currency) {
+      return { gold: 0, silver: 0, copper: 0 };
+    }
+    try {
+      const parsed = JSON.parse(row.currency);
+      return {
+        gold: parsed.gold ?? 0,
+        silver: parsed.silver ?? 0,
+        copper: parsed.copper ?? 0
+      };
+    } catch {
+      return { gold: 0, silver: 0, copper: 0 };
+    }
+  }
+  /**
+   * Set currency for a character (replaces existing)
+   */
+  setCurrency(characterId, currency) {
+    const current = this.getCurrency(characterId);
+    const updated = {
+      gold: currency.gold ?? current.gold,
+      silver: currency.silver ?? current.silver,
+      copper: currency.copper ?? current.copper
+    };
+    const stmt = this.db.prepare("UPDATE characters SET currency = ? WHERE id = ?");
+    stmt.run(JSON.stringify(updated), characterId);
+  }
+  /**
+   * Add currency to a character
+   */
+  addCurrency(characterId, currency) {
+    const current = this.getCurrency(characterId);
+    const updated = {
+      gold: current.gold + (currency.gold ?? 0),
+      silver: current.silver + (currency.silver ?? 0),
+      copper: current.copper + (currency.copper ?? 0)
+    };
+    const stmt = this.db.prepare("UPDATE characters SET currency = ? WHERE id = ?");
+    stmt.run(JSON.stringify(updated), characterId);
+    return updated;
+  }
+  /**
+   * Remove currency from a character
+   * @returns true if successful, false if insufficient funds
+   */
+  removeCurrency(characterId, currency) {
+    const current = this.getCurrency(characterId);
+    const currentTotal = current.gold * 100 + current.silver * 10 + current.copper;
+    const removeTotal = (currency.gold ?? 0) * 100 + (currency.silver ?? 0) * 10 + (currency.copper ?? 0);
+    if (removeTotal > currentTotal) {
+      return false;
+    }
+    const updated = {
+      gold: current.gold - (currency.gold ?? 0),
+      silver: current.silver - (currency.silver ?? 0),
+      copper: current.copper - (currency.copper ?? 0)
+    };
+    if (updated.copper < 0) {
+      const needed = Math.ceil(-updated.copper / 10);
+      updated.silver -= needed;
+      updated.copper += needed * 10;
+    }
+    if (updated.silver < 0) {
+      const needed = Math.ceil(-updated.silver / 10);
+      updated.gold -= needed;
+      updated.silver += needed * 10;
+    }
+    if (updated.gold < 0) {
+      return false;
+    }
+    const stmt = this.db.prepare("UPDATE characters SET currency = ? WHERE id = ?");
+    stmt.run(JSON.stringify(updated), characterId);
+    return true;
+  }
+  /**
+   * Transfer currency between characters
+   * @returns true if successful, false if insufficient funds
+   */
+  transferCurrency(fromCharacterId, toCharacterId, currency) {
+    const transfer = this.db.transaction(() => {
+      if (!this.removeCurrency(fromCharacterId, currency)) {
+        return false;
+      }
+      this.addCurrency(toCharacterId, currency);
+      return true;
+    });
+    return transfer();
+  }
+  /**
+   * Check if character has at least this much currency
+   */
+  hasCurrency(characterId, currency) {
+    const current = this.getCurrency(characterId);
+    const currentTotal = current.gold * 100 + current.silver * 10 + current.copper;
+    const requiredTotal = (currency.gold ?? 0) * 100 + (currency.silver ?? 0) * 10 + (currency.copper ?? 0);
+    return currentTotal >= requiredTotal;
   }
 };
 
@@ -47816,7 +52462,7 @@ var InventoryTools = {
     name: "list_items",
     description: "List all item templates in the database.",
     inputSchema: external_exports.object({
-      type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc"]).optional().describe("Filter by item type")
+      type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc", "scroll"]).optional().describe("Filter by item type")
     })
   },
   SEARCH_ITEMS: {
@@ -47824,7 +52470,7 @@ var InventoryTools = {
     description: "Search for items by name, type, or value range.",
     inputSchema: external_exports.object({
       name: external_exports.string().optional().describe("Search by name (partial match)"),
-      type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc"]).optional().describe("Filter by item type"),
+      type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc", "scroll"]).optional().describe("Filter by item type"),
       minValue: external_exports.number().min(0).optional().describe("Minimum item value"),
       maxValue: external_exports.number().min(0).optional().describe("Maximum item value")
     })
@@ -47836,7 +52482,7 @@ var InventoryTools = {
       itemId: external_exports.string().describe("The ID of the item to update"),
       name: external_exports.string().optional(),
       description: external_exports.string().optional(),
-      type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc"]).optional(),
+      type: external_exports.enum(["weapon", "armor", "consumable", "quest", "misc", "scroll"]).optional(),
       weight: external_exports.number().min(0).optional(),
       value: external_exports.number().min(0).optional(),
       properties: external_exports.record(external_exports.any()).optional()
@@ -47937,8 +52583,46 @@ async function handleCreateItemTemplate(args, _ctx) {
   };
 }
 async function handleGiveItem(args, _ctx) {
-  const { inventoryRepo } = ensureDb2();
+  const { inventoryRepo, itemRepo } = ensureDb2();
   const parsed = InventoryTools.GIVE_ITEM.inputSchema.parse(args);
+  if (parsed.quantity > INVENTORY_LIMITS.MAX_GIVE_QUANTITY) {
+    throw new Error(`Cannot give more than ${INVENTORY_LIMITS.MAX_GIVE_QUANTITY} items at once. Requested quantity: ${parsed.quantity}`);
+  }
+  const item = itemRepo.findById(parsed.itemId);
+  if (!item) {
+    throw new Error(`Item not found: ${parsed.itemId}`);
+  }
+  const properties = item.properties || {};
+  const isUnique = properties.unique === true;
+  const isWorldUnique = properties.worldUnique === true;
+  if (isUnique || isWorldUnique) {
+    if (parsed.quantity > 1) {
+      throw new Error(`Cannot give more than 1 of unique item "${item.name}"`);
+    }
+    const inventory = inventoryRepo.getInventory(parsed.characterId);
+    const existingItem2 = inventory.items.find((i) => i.itemId === parsed.itemId);
+    if (existingItem2) {
+      throw new Error(`Character already owns unique item "${item.name}". Unique items cannot stack.`);
+    }
+    if (isWorldUnique) {
+      const allOwners = inventoryRepo.findItemOwners(parsed.itemId);
+      if (allOwners.length > 0) {
+        throw new Error(`World-unique item "${item.name}" is already owned by another character. Only one can exist in the world.`);
+      }
+    }
+  }
+  const currentInventory = inventoryRepo.getInventoryWithDetails(parsed.characterId);
+  const addedWeight = item.weight * parsed.quantity;
+  const newTotalWeight = currentInventory.totalWeight + addedWeight;
+  if (newTotalWeight > currentInventory.capacity) {
+    throw new Error(`Cannot add items: would exceed weight capacity. Current: ${currentInventory.totalWeight.toFixed(1)}/${currentInventory.capacity}, Adding: ${addedWeight.toFixed(1)}, Would be: ${newTotalWeight.toFixed(1)}`);
+  }
+  const existingItem = currentInventory.items.find((i) => i.item.id === parsed.itemId);
+  const existingQuantity = existingItem?.quantity || 0;
+  const newTotal = existingQuantity + parsed.quantity;
+  if (newTotal > INVENTORY_LIMITS.MAX_STACK_SIZE) {
+    throw new Error(`Cannot add items: would exceed max stack size of ${INVENTORY_LIMITS.MAX_STACK_SIZE}. Current: ${existingQuantity}, Adding: ${parsed.quantity}, Would be: ${newTotal}`);
+  }
   inventoryRepo.addItem(parsed.characterId, parsed.itemId, parsed.quantity);
   return {
     content: [{
@@ -48144,9 +52828,11 @@ async function handleGetInventoryDetailed(args, _ctx) {
 }
 
 // dist/server/quest-tools.js
+init_zod();
 var import_crypto4 = require("crypto");
 
 // dist/schema/quest.js
+init_zod();
 var QuestSchema = external_exports.object({
   id: external_exports.string(),
   worldId: external_exports.string(),
@@ -48394,6 +53080,7 @@ var QuestRepository = class {
 };
 
 // dist/server/quest-tools.js
+init_character_repo();
 function ensureDb3() {
   const dbPath = process.env.NODE_ENV === "test" ? ":memory:" : process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db";
   const db = getDb(dbPath);
@@ -48732,6 +53419,9 @@ async function handleGetQuestLog(args, _ctx) {
     }]
   };
 }
+
+// dist/server/math-tools.js
+init_zod();
 
 // dist/math/dice.js
 var import_seedrandom7 = __toESM(require_seedrandom2(), 1);
@@ -49227,6 +53917,7 @@ Steps:
 };
 
 // dist/math/schemas.js
+init_zod();
 var DiceExpressionSchema = external_exports.object({
   count: external_exports.number().int().min(1),
   sides: external_exports.number().int().min(1),
@@ -49501,7 +54192,11 @@ async function handlePhysicsProjectile(args) {
   };
 }
 
+// dist/server/strategy-tools.js
+init_zod();
+
 // dist/schema/nation.js
+init_zod();
 var NationResourcesSchema = external_exports.object({
   food: external_exports.number().min(0).default(0),
   metal: external_exports.number().min(0).default(0),
@@ -49627,6 +54322,7 @@ var NationRepository = class {
 };
 
 // dist/schema/diplomacy.js
+init_zod();
 var DiplomaticRelationSchema = external_exports.object({
   fromNationId: external_exports.string(),
   toNationId: external_exports.string(),
@@ -49771,6 +54467,7 @@ var DiplomacyRepository = class {
 };
 
 // dist/schema/region.js
+init_zod();
 var RegionSchema = external_exports.object({
   id: external_exports.string(),
   worldId: external_exports.string(),
@@ -50378,7 +55075,11 @@ async function handleStrategyTool(name, args, _ctx) {
   }
 }
 
+// dist/server/turn-management-tools.js
+init_zod();
+
 // dist/schema/turn-state.js
+init_zod();
 var TurnStateSchema = external_exports.object({
   worldId: external_exports.string(),
   currentTurn: external_exports.number().int().min(1),
@@ -50699,9 +55400,11 @@ async function handleTurnManagementTool(name, args) {
 }
 
 // dist/server/secret-tools.js
+init_zod();
 var import_crypto6 = require("crypto");
 
 // dist/schema/secret.js
+init_zod();
 var RevealConditionSchema = external_exports.object({
   type: external_exports.enum([
     "skill_check",
@@ -51026,6 +55729,7 @@ var SecretRepository = class {
         return event.itemId === condition.itemId;
       case "combat_end":
         return true;
+      // Just needs the event type to match
       case "dialogue":
         return event.text?.toLowerCase().includes(condition.dialogueTrigger?.toLowerCase() || "") || false;
       case "time_passed":
@@ -51177,15 +55881,7 @@ function ensureDb4() {
 var SecretTools = {
   CREATE_SECRET: {
     name: "create_secret",
-    description: `Create a new secret that the AI DM knows but should not reveal to players.
-        
-Examples:
-- NPC secret: "The innkeeper is actually a vampire"
-- Location secret: "There's a trap at the entrance"
-- Item secret: "The sword is cursed"
-- Plot secret: "The king is the true villain"
-
-The AI will use this secret to inform narration without revealing it directly.`,
+    description: "Create a DM-only secret (NPC, location, item, plot). AI narrates around it without revealing.",
     inputSchema: external_exports.object({
       worldId: external_exports.string().describe("The world this secret belongs to"),
       type: external_exports.enum(["npc", "location", "item", "quest", "plot", "mechanic", "custom"]).describe("Category of entity this secret relates to"),
@@ -51240,19 +55936,7 @@ The AI will use this secret to inform narration without revealing it directly.`,
   },
   REVEAL_SECRET: {
     name: "reveal_secret",
-    description: `Reveal a secret to the player. Call this when reveal conditions are met.
-
-IMPORTANT: When presenting the reveal to the player, you MUST include the 'spoilerMarkdown' field 
-from the response in your message. This creates a clickable spoiler that the player can choose to reveal.
-
-Example response format:
-"The moment of truth arrives..."
-
-:::spoiler[\u{1F52E} Secret Name - Click to Reveal]
-The dramatic revelation text goes here...
-:::
-
-The spoiler syntax (:::spoiler[Title]...:::) renders as a clickable reveal in the chat.`,
+    description: "Reveal a secret to the player. Include the spoilerMarkdown field in your response for clickable reveal.",
     inputSchema: external_exports.object({
       secretId: external_exports.string(),
       triggeredBy: external_exports.string().describe('What triggered the reveal, e.g. "Insight check DC 15"'),
@@ -51269,9 +55953,7 @@ The spoiler syntax (:::spoiler[Title]...:::) renders as a clickable reveal in th
   },
   GET_SECRETS_FOR_CONTEXT: {
     name: "get_secrets_for_context",
-    description: `Get all active (unrevealed) secrets formatted for LLM context injection.
-        
-Returns formatted text with DO NOT REVEAL instructions for the AI DM.`,
+    description: "Get active secrets formatted for LLM context injection with DO NOT REVEAL instructions.",
     inputSchema: external_exports.object({
       worldId: external_exports.string()
     })
@@ -51574,8 +56256,10 @@ function generateRevealNarration(secret) {
 
 // dist/server/party-tools.js
 var import_crypto7 = require("crypto");
+init_zod();
 
 // dist/storage/repos/party.repo.js
+init_party();
 var PartyRepository = class {
   db;
   constructor(db) {
@@ -51919,6 +56603,8 @@ var PartyRepository = class {
 };
 
 // dist/server/party-tools.js
+init_character_repo();
+init_party();
 function ensureDb5() {
   const dbPath = process.env.NODE_ENV === "test" ? ":memory:" : process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db";
   const db = getDb(dbPath);
@@ -51955,13 +56641,7 @@ Example:
   },
   GET_PARTY: {
     name: "get_party",
-    description: `Get a party with all member details embedded.
-
-Returns the full party object including:
-- Party metadata (name, location, formation)
-- All members with their character stats
-- Leader and active character highlighted
-- Member count`,
+    description: "Get a party with all member details, leader, and active character info.",
     inputSchema: external_exports.object({
       partyId: external_exports.string()
     })
@@ -51996,15 +56676,7 @@ Returns the full party object including:
   // Member management
   ADD_PARTY_MEMBER: {
     name: "add_party_member",
-    description: `Add a character to a party.
-
-Roles:
-- leader: Party leader (only one per party)
-- member: Full party member
-- companion: NPC ally traveling with party
-- hireling: Paid NPC service
-- prisoner: Captured enemy/NPC
-- mount: Animal companion`,
+    description: "Add a character to a party with role (leader, member, companion, hireling, prisoner, mount).",
     inputSchema: external_exports.object({
       partyId: external_exports.string(),
       characterId: external_exports.string(),
@@ -52059,12 +56731,7 @@ Roles:
   // Context for LLM
   GET_PARTY_CONTEXT: {
     name: "get_party_context",
-    description: `Get focused party context optimized for LLM system prompts.
-
-Verbosity levels:
-- minimal: ~150 tokens (party name, member names, active character)
-- standard: ~400 tokens (above + HP, roles, location, quest)
-- detailed: ~800 tokens (above + full stats, recent events)`,
+    description: "Get party context for LLM prompts. Verbosity: minimal (~150 tokens), standard (~400), or detailed (~800).",
     inputSchema: external_exports.object({
       partyId: external_exports.string(),
       verbosity: external_exports.enum(["minimal", "standard", "detailed"]).optional().default("standard")
@@ -52081,16 +56748,7 @@ Verbosity levels:
   // Party Position & Movement
   MOVE_PARTY: {
     name: "move_party",
-    description: `Move a party to a new location on the world map. Supports moving to coordinates or to a POI (structure).
-
-Example:
-{
-  "partyId": "party-uuid",
-  "targetX": 60,
-  "targetY": 70,
-  "locationName": "Rivendell",
-  "poiId": "structure-uuid"
-}`,
+    description: "Move a party to world map coordinates or POI. Updates location name and optional POI reference.",
     inputSchema: external_exports.object({
       partyId: external_exports.string(),
       targetX: external_exports.number().int().nonnegative(),
@@ -52579,6 +57237,7610 @@ async function handleGetPartiesInRegion(args, _ctx) {
   }
 }
 
+// dist/server/rest-tools.js
+init_zod();
+init_character_repo();
+var RestTools = {
+  TAKE_LONG_REST: {
+    name: "take_long_rest",
+    description: "Take a long rest (8 hours). Restores HP to maximum. Future: will restore spell slots.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character taking the rest")
+    })
+  },
+  TAKE_SHORT_REST: {
+    name: "take_short_rest",
+    description: "Take a short rest (1 hour). Spend hit dice to recover HP.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character taking the rest"),
+      hitDiceToSpend: external_exports.number().int().min(0).max(20).default(1).describe("Number of hit dice to spend for healing (default: 1)")
+    })
+  }
+};
+function ensureDb6() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return {
+    characterRepo: new CharacterRepository(db)
+  };
+}
+function getAbilityModifier2(score) {
+  return Math.floor((score - 10) / 2);
+}
+function rollDie(sides) {
+  return Math.floor(Math.random() * sides) + 1;
+}
+function getHitDieSize(_characterId) {
+  return 8;
+}
+async function handleTakeLongRest(args, _ctx) {
+  const { characterRepo } = ensureDb6();
+  const parsed = RestTools.TAKE_LONG_REST.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const hpRestored = character.maxHp - character.hp;
+  const newHp = character.maxHp;
+  const charClass = character.characterClass || "fighter";
+  const spellConfig = getSpellcastingConfig(charClass);
+  let spellSlotsRestored = void 0;
+  let updatedChar = { ...character, hp: newHp };
+  if (spellConfig.canCast && character.level >= spellConfig.startLevel) {
+    const restoredChar = restoreAllSpellSlots(character);
+    if (spellConfig.pactMagic) {
+      spellSlotsRestored = {
+        type: "pactMagic",
+        slotsRestored: restoredChar.pactMagicSlots?.max || 0,
+        slotLevel: restoredChar.pactMagicSlots?.slotLevel || 0
+      };
+      updatedChar = { ...updatedChar, pactMagicSlots: restoredChar.pactMagicSlots };
+    } else if (restoredChar.spellSlots) {
+      spellSlotsRestored = {
+        type: "standard",
+        level1: restoredChar.spellSlots.level1.max,
+        level2: restoredChar.spellSlots.level2.max,
+        level3: restoredChar.spellSlots.level3.max,
+        level4: restoredChar.spellSlots.level4.max,
+        level5: restoredChar.spellSlots.level5.max,
+        level6: restoredChar.spellSlots.level6.max,
+        level7: restoredChar.spellSlots.level7.max,
+        level8: restoredChar.spellSlots.level8.max,
+        level9: restoredChar.spellSlots.level9.max
+      };
+      updatedChar = { ...updatedChar, spellSlots: restoredChar.spellSlots };
+    }
+    updatedChar = { ...updatedChar, concentratingOn: null, activeSpells: [] };
+  }
+  characterRepo.update(parsed.characterId, updatedChar);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        message: `${character.name} completes a long rest.`,
+        character: character.name,
+        previousHp: character.hp,
+        newHp,
+        maxHp: character.maxHp,
+        hpRestored,
+        restType: "long",
+        spellSlotsRestored
+      }, null, 2)
+    }]
+  };
+}
+async function handleTakeShortRest(args, _ctx) {
+  const { characterRepo } = ensureDb6();
+  const parsed = RestTools.TAKE_SHORT_REST.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const hitDiceToSpend = parsed.hitDiceToSpend ?? 1;
+  const hitDieSize = getHitDieSize(parsed.characterId);
+  const conModifier = getAbilityModifier2(character.stats.con);
+  let totalHealing = 0;
+  const rolls = [];
+  for (let i = 0; i < hitDiceToSpend; i++) {
+    const roll = rollDie(hitDieSize);
+    rolls.push(roll);
+    totalHealing += Math.max(1, roll + conModifier);
+  }
+  const actualHealing = Math.min(totalHealing, character.maxHp - character.hp);
+  const newHp = character.hp + actualHealing;
+  const charClass = character.characterClass || "fighter";
+  const spellConfig = getSpellcastingConfig(charClass);
+  let pactSlotsRestored = void 0;
+  let updatedChar = { hp: newHp };
+  if (spellConfig.pactMagic && spellConfig.canCast && character.level >= spellConfig.startLevel) {
+    const restoredChar = restorePactSlots(character);
+    pactSlotsRestored = {
+      slotsRestored: restoredChar.pactMagicSlots?.max || 0,
+      slotLevel: restoredChar.pactMagicSlots?.slotLevel || 0
+    };
+    updatedChar = { ...updatedChar, pactMagicSlots: restoredChar.pactMagicSlots };
+  }
+  characterRepo.update(parsed.characterId, updatedChar);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        message: `${character.name} completes a short rest.`,
+        character: character.name,
+        previousHp: character.hp,
+        newHp,
+        maxHp: character.maxHp,
+        hpRestored: actualHealing,
+        hitDiceSpent: hitDiceToSpend,
+        hitDieSize: `d${hitDieSize}`,
+        conModifier,
+        rolls,
+        restType: "short",
+        pactSlotsRestored
+        // Warlock only
+      }, null, 2)
+    }]
+  };
+}
+
+// dist/server/concentration-tools.js
+init_zod();
+init_character_repo();
+var ConcentrationTools = {
+  CHECK_CONCENTRATION_SAVE: {
+    name: "check_concentration_save",
+    description: "Roll a Constitution saving throw to maintain concentration after taking damage. DC = 10 or half damage (whichever is higher). Automatically breaks concentration if save fails.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character maintaining concentration"),
+      damageAmount: external_exports.number().int().min(0).describe("Amount of damage taken that triggered the concentration check")
+    })
+  },
+  BREAK_CONCENTRATION: {
+    name: "break_concentration",
+    description: "Manually break a character's concentration on a spell. Use this for voluntary breaks, incapacitation, death, or when casting a new concentration spell.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character whose concentration is breaking"),
+      reason: external_exports.enum(["damage", "incapacitated", "death", "new_spell", "voluntary", "duration"]).describe("Reason for breaking concentration"),
+      damageAmount: external_exports.number().int().min(0).optional().describe("Amount of damage (only if reason is damage)")
+    })
+  },
+  GET_CONCENTRATION_STATE: {
+    name: "get_concentration_state",
+    description: "Query what spell a character is currently concentrating on, including duration and targets.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character to check")
+    })
+  },
+  CHECK_CONCENTRATION_DURATION: {
+    name: "check_concentration_duration",
+    description: "Check if a character's concentration has exceeded its maximum duration. Automatically breaks concentration if duration expired.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character maintaining concentration"),
+      currentRound: external_exports.number().int().min(1).describe("The current combat round number")
+    })
+  },
+  CHECK_AUTO_BREAK: {
+    name: "check_automatic_concentration_break",
+    description: "Check if concentration should automatically break due to death or incapacitating conditions (unconscious, stunned, paralyzed, petrified).",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character to check")
+    })
+  }
+};
+function ensureDb7() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return {
+    characterRepo: new CharacterRepository(db),
+    concentrationRepo: new ConcentrationRepository(db)
+  };
+}
+async function handleCheckConcentrationSave(args, _ctx) {
+  const { characterRepo, concentrationRepo } = ensureDb7();
+  const parsed = ConcentrationTools.CHECK_CONCENTRATION_SAVE.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const result = checkConcentration(character, parsed.damageAmount, concentrationRepo);
+  if (result.broken) {
+    breakConcentration({ characterId: parsed.characterId, reason: "damage", damageAmount: parsed.damageAmount }, concentrationRepo, characterRepo);
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatConcentrationCheckResult(result)
+      }
+    ]
+  };
+}
+async function handleBreakConcentration(args, _ctx) {
+  const { characterRepo, concentrationRepo } = ensureDb7();
+  const parsed = BreakConcentrationRequestSchema.parse(args);
+  const result = breakConcentration(parsed, concentrationRepo, characterRepo);
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatBreakConcentrationResult(result)
+      }
+    ]
+  };
+}
+async function handleGetConcentrationState(args, _ctx) {
+  const { concentrationRepo } = ensureDb7();
+  const parsed = ConcentrationTools.GET_CONCENTRATION_STATE.inputSchema.parse(args);
+  const concentration = getConcentration(parsed.characterId, concentrationRepo);
+  if (!concentration) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Character ${parsed.characterId} is not currently concentrating on any spell.`
+        }
+      ]
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatConcentrationState(concentration)
+      }
+    ]
+  };
+}
+async function handleCheckConcentrationDuration(args, _ctx) {
+  const { characterRepo, concentrationRepo } = ensureDb7();
+  const parsed = ConcentrationTools.CHECK_CONCENTRATION_DURATION.inputSchema.parse(args);
+  const result = checkConcentrationDuration(parsed.characterId, parsed.currentRound, concentrationRepo, characterRepo);
+  if (!result) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Concentration is still within duration limit."
+        }
+      ]
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: `Concentration on ${result.spell} has exceeded its duration and has ended.`
+      }
+    ]
+  };
+}
+async function handleCheckAutoBreak(args, _ctx) {
+  const { characterRepo, concentrationRepo } = ensureDb7();
+  const parsed = ConcentrationTools.CHECK_AUTO_BREAK.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const result = checkAutomaticConcentrationBreak(character, concentrationRepo, characterRepo);
+  if (!result) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "No automatic concentration break required."
+        }
+      ]
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: `Concentration on ${result.spell} automatically broken due to ${result.reason}.`
+      }
+    ]
+  };
+}
+function formatConcentrationCheckResult(result) {
+  if (result.spell === "none") {
+    return "Character is not concentrating on any spell.";
+  }
+  if (!result.broken) {
+    return `\u2705 Concentration maintained on ${result.spell}!
+
+\u{1F3B2} Save Roll: ${result.saveRoll} + ${result.constitutionModifier} (CON) = ${result.saveTotal}
+\u{1F3AF} DC: ${result.saveDC} (half of ${result.damageAmount} damage)
+
+Concentration continues.`;
+  }
+  return `\u274C Concentration broken on ${result.spell}!
+
+\u{1F3B2} Save Roll: ${result.saveRoll} + ${result.constitutionModifier} (CON) = ${result.saveTotal}
+\u{1F3AF} DC: ${result.saveDC} (half of ${result.damageAmount} damage)
+
+The spell ends immediately.`;
+}
+function formatBreakConcentrationResult(result) {
+  if (result.spell === "none") {
+    return "Character was not concentrating on any spell.";
+  }
+  const reasonMap = {
+    damage: "failed concentration save from damage",
+    incapacitated: "becoming incapacitated",
+    death: "character death",
+    new_spell: "casting a new concentration spell",
+    voluntary: "voluntary choice",
+    duration: "spell duration expiring"
+  };
+  const reasonText = reasonMap[result.reason] || result.reason;
+  return `\u{1F494} Concentration on ${result.spell} has ended (${reasonText}).`;
+}
+function formatConcentrationState(concentration) {
+  const durationText = concentration.maxDuration ? `${concentration.maxDuration} rounds (started round ${concentration.startedAt})` : "unlimited";
+  const targetsText = concentration.targetIds && concentration.targetIds.length > 0 ? concentration.targetIds.join(", ") : "none";
+  return `\u{1F52E} Active Concentration
+
+Spell: ${concentration.activeSpell} (Level ${concentration.spellLevel})
+Duration: ${durationText}
+Targets: ${targetsText}
+
+\u26A0\uFE0F Taking damage requires a Constitution save:
+DC = 10 or half damage (whichever is higher)`;
+}
+
+// dist/server/scroll-tools.js
+init_zod();
+var import_crypto8 = require("crypto");
+init_character_repo();
+
+// dist/schema/scroll.js
+init_zod();
+init_spell();
+var ScrollPropertiesSchema = external_exports.object({
+  spellName: external_exports.string().min(1, "Spell name is required"),
+  spellLevel: external_exports.number().int().min(0).max(9).describe("Spell level (0 for cantrips, 1-9 for leveled spells)"),
+  scrollDC: external_exports.number().int().min(10).optional().describe("Default spell save DC if caster has no spellcasting ability"),
+  scrollAttackBonus: external_exports.number().int().optional().describe("Default spell attack bonus if caster has no spellcasting ability"),
+  requiresCheck: external_exports.boolean().default(false).describe("Whether scroll use requires an Arcana check"),
+  checkDC: external_exports.number().int().min(10).optional().describe("DC for Arcana check to use scroll"),
+  spellClass: SpellcastingClassSchema.optional().describe("Class list the spell is on (for determining if check is required)")
+});
+var ScrollUsageValidationSchema = external_exports.object({
+  characterId: external_exports.string().describe("Character attempting to use the scroll"),
+  itemId: external_exports.string().describe("ID of the scroll item"),
+  spellName: external_exports.string().describe("Name of the spell on the scroll"),
+  spellLevel: external_exports.number().int().min(0).max(9).describe("Level of the spell"),
+  spellClass: SpellcastingClassSchema.optional().describe("Class list the spell is on"),
+  targetId: external_exports.string().optional().describe("Target for the spell"),
+  targetPoint: external_exports.object({
+    x: external_exports.number(),
+    y: external_exports.number()
+  }).optional().describe("Target point for area spells")
+});
+var ScrollUsageResultSchema = external_exports.object({
+  success: external_exports.boolean().describe("Whether the scroll was used successfully"),
+  consumed: external_exports.boolean().describe("Whether the scroll was consumed (even on failure)"),
+  requiresCheck: external_exports.boolean().describe("Whether an Arcana check was required"),
+  checkRoll: external_exports.number().int().optional().describe("The d20 roll for the Arcana check"),
+  checkTotal: external_exports.number().int().optional().describe("Total Arcana check result"),
+  checkDC: external_exports.number().int().optional().describe("DC for the Arcana check"),
+  checkPassed: external_exports.boolean().optional().describe("Whether the check passed"),
+  reason: external_exports.enum([
+    "auto_success",
+    // Spell on class list and can cast that level
+    "check_passed",
+    // Required check and passed
+    "check_failed",
+    // Required check and failed
+    "not_in_inventory",
+    // Character doesn't have the scroll
+    "spell_cast",
+    // Spell successfully cast
+    "invalid_scroll"
+    // Scroll data is invalid
+  ]).describe("Reason for the result"),
+  spellCastResult: external_exports.record(external_exports.any()).optional().describe("Result of the spell cast if successful"),
+  message: external_exports.string().describe("Human-readable message about the result")
+});
+var CreateScrollRequestSchema = external_exports.object({
+  spellName: external_exports.string().min(1, "Spell name is required"),
+  spellLevel: external_exports.number().int().min(0).max(9),
+  scrollDC: external_exports.number().int().min(10).optional().describe("Default DC (usually 13 + spell level for crafted scrolls)"),
+  scrollAttackBonus: external_exports.number().int().optional().describe("Default attack bonus (usually +5 + spell level)"),
+  spellClass: SpellcastingClassSchema.optional().describe("Class list the spell is on"),
+  value: external_exports.number().int().min(0).optional().describe("Gold value of the scroll"),
+  description: external_exports.string().optional().describe("Custom description for the scroll")
+});
+var ScrollRarity;
+(function(ScrollRarity2) {
+  ScrollRarity2["COMMON"] = "common";
+  ScrollRarity2["UNCOMMON"] = "uncommon";
+  ScrollRarity2["RARE"] = "rare";
+  ScrollRarity2["VERY_RARE"] = "very_rare";
+  ScrollRarity2["LEGENDARY"] = "legendary";
+})(ScrollRarity || (ScrollRarity = {}));
+function getScrollRarity(spellLevel) {
+  if (spellLevel === 0)
+    return ScrollRarity.COMMON;
+  if (spellLevel <= 3)
+    return ScrollRarity.UNCOMMON;
+  if (spellLevel <= 5)
+    return ScrollRarity.RARE;
+  if (spellLevel <= 8)
+    return ScrollRarity.VERY_RARE;
+  return ScrollRarity.LEGENDARY;
+}
+function calculateScrollDC(spellLevel) {
+  return 13 + spellLevel;
+}
+function calculateScrollAttackBonus(spellLevel) {
+  return 5 + spellLevel;
+}
+function calculateScrollValue(spellLevel) {
+  const valueLookup = {
+    0: 25,
+    // Cantrip - Common (25-50gp)
+    1: 75,
+    // 1st level - Uncommon (50-100gp)
+    2: 150,
+    // 2nd level - Uncommon (100-200gp)
+    3: 300,
+    // 3rd level - Uncommon (200-400gp)
+    4: 750,
+    // 4th level - Rare (500-1000gp)
+    5: 1500,
+    // 5th level - Rare (1000-2000gp)
+    6: 5e3,
+    // 6th level - Very Rare (2500-7500gp)
+    7: 1e4,
+    // 7th level - Very Rare (5000-15000gp)
+    8: 2e4,
+    // 8th level - Very Rare (10000-30000gp)
+    9: 5e4
+    // 9th level - Legendary (25000-100000gp)
+  };
+  return valueLookup[spellLevel] || 100;
+}
+
+// dist/engine/magic/scroll.js
+function validateScrollUse(character, scrollProperties) {
+  const { spellLevel, spellClass } = scrollProperties;
+  const isSpellcaster = character.maxSpellLevel !== void 0 && character.maxSpellLevel > 0;
+  if (!isSpellcaster) {
+    const checkDC = 10 + spellLevel;
+    return {
+      requiresCheck: true,
+      checkDC,
+      reason: "not_a_spellcaster"
+    };
+  }
+  const characterClass = character.characterClass?.toLowerCase();
+  const spellClassList = spellClass?.toLowerCase();
+  const isOnClassList = characterClass === spellClassList;
+  if (!isOnClassList) {
+    const checkDC = 10 + spellLevel;
+    return {
+      requiresCheck: true,
+      checkDC,
+      reason: "spell_not_on_class_list"
+    };
+  }
+  const maxSpellLevel = character.maxSpellLevel || 0;
+  if (spellLevel > maxSpellLevel) {
+    const checkDC = 10 + spellLevel;
+    return {
+      requiresCheck: true,
+      checkDC,
+      reason: "spell_level_too_high"
+    };
+  }
+  return {
+    requiresCheck: false,
+    checkDC: null,
+    reason: "auto_success"
+  };
+}
+function rollArcanaCheck(character) {
+  const roll = Math.floor(Math.random() * 20) + 1;
+  const intModifier = Math.floor((character.stats.int - 10) / 2);
+  const proficiencyBonus = 0;
+  const modifier = intModifier + proficiencyBonus;
+  const total = roll + modifier;
+  return { roll, total, modifier };
+}
+function useSpellScroll(character, scroll, inventoryRepo) {
+  if (scroll.type !== "scroll") {
+    return {
+      success: false,
+      consumed: false,
+      requiresCheck: false,
+      reason: "invalid_scroll",
+      message: `Item "${scroll.name}" is not a scroll (type: ${scroll.type})`
+    };
+  }
+  const scrollProps = scroll.properties;
+  if (!scrollProps || !scrollProps.spellName || scrollProps.spellLevel === void 0) {
+    return {
+      success: false,
+      consumed: false,
+      requiresCheck: false,
+      reason: "invalid_scroll",
+      message: `Scroll "${scroll.name}" is missing required spell properties`
+    };
+  }
+  const inventory = inventoryRepo.getInventory(character.id);
+  const hasScroll = inventory.items.some((i) => i.itemId === scroll.id && i.quantity > 0);
+  if (!hasScroll) {
+    return {
+      success: false,
+      consumed: false,
+      requiresCheck: false,
+      reason: "not_in_inventory",
+      message: `Character does not have scroll "${scroll.name}" in inventory`
+    };
+  }
+  const validation = validateScrollUse(character, scrollProps);
+  if (!validation.requiresCheck) {
+    inventoryRepo.removeItem(character.id, scroll.id, 1);
+    return {
+      success: true,
+      consumed: true,
+      requiresCheck: false,
+      reason: "auto_success",
+      message: `Successfully used scroll of ${scrollProps.spellName}. Scroll consumed.`
+    };
+  }
+  const checkDC = validation.checkDC;
+  const arcanaCheck = rollArcanaCheck(character);
+  const checkPassed = arcanaCheck.total >= checkDC;
+  inventoryRepo.removeItem(character.id, scroll.id, 1);
+  if (checkPassed) {
+    return {
+      success: true,
+      consumed: true,
+      requiresCheck: true,
+      checkRoll: arcanaCheck.roll,
+      checkTotal: arcanaCheck.total,
+      checkDC,
+      checkPassed: true,
+      reason: "check_passed",
+      message: `Arcana check passed (${arcanaCheck.total} vs DC ${checkDC}). Successfully used scroll of ${scrollProps.spellName}. Scroll consumed.`
+    };
+  } else {
+    return {
+      success: false,
+      consumed: true,
+      requiresCheck: true,
+      checkRoll: arcanaCheck.roll,
+      checkTotal: arcanaCheck.total,
+      checkDC,
+      checkPassed: false,
+      reason: "check_failed",
+      message: `Arcana check failed (${arcanaCheck.total} vs DC ${checkDC}). Scroll of ${scrollProps.spellName} wasted and consumed.`
+    };
+  }
+}
+function createSpellScroll(spellName, spellLevel, spellClass, customDC, customAttackBonus, customValue, customDescription) {
+  const scrollDC = customDC || calculateScrollDC(spellLevel);
+  const scrollAttackBonus = customAttackBonus || calculateScrollAttackBonus(spellLevel);
+  const value = customValue || calculateScrollValue(spellLevel);
+  const rarity = getScrollRarity(spellLevel);
+  const scrollName = `Scroll of ${spellName}`;
+  const description = customDescription || `A spell scroll containing the ${spellLevel === 0 ? "cantrip" : `${spellLevel}${getOrdinalSuffix(spellLevel)}-level spell`} ${spellName}. Rarity: ${rarity}. Spell Save DC: ${scrollDC}, Spell Attack Bonus: +${scrollAttackBonus}.`;
+  const scrollProperties = {
+    spellName,
+    spellLevel,
+    scrollDC,
+    scrollAttackBonus,
+    requiresCheck: false,
+    // Will be determined at use time
+    spellClass
+  };
+  return {
+    name: scrollName,
+    description,
+    type: "scroll",
+    weight: 0.1,
+    // Scrolls are light
+    value,
+    properties: scrollProperties
+  };
+}
+function getScrollDetails(scroll) {
+  if (scroll.type !== "scroll") {
+    return {
+      valid: false,
+      error: "Item is not a scroll"
+    };
+  }
+  const props = scroll.properties;
+  if (!props || !props.spellName || props.spellLevel === void 0) {
+    return {
+      valid: false,
+      error: "Scroll is missing required properties"
+    };
+  }
+  return {
+    valid: true,
+    spellName: props.spellName,
+    spellLevel: props.spellLevel,
+    scrollDC: props.scrollDC,
+    scrollAttackBonus: props.scrollAttackBonus,
+    spellClass: props.spellClass,
+    rarity: getScrollRarity(props.spellLevel)
+  };
+}
+function checkScrollUsability(character, scroll) {
+  if (scroll.type !== "scroll") {
+    return {
+      canUse: false,
+      requiresCheck: false,
+      checkDC: null,
+      reason: "invalid_scroll",
+      message: "Item is not a scroll"
+    };
+  }
+  const props = scroll.properties;
+  if (!props || !props.spellName || props.spellLevel === void 0) {
+    return {
+      canUse: false,
+      requiresCheck: false,
+      checkDC: null,
+      reason: "invalid_scroll",
+      message: "Scroll is missing required properties"
+    };
+  }
+  const validation = validateScrollUse(character, props);
+  if (!validation.requiresCheck) {
+    return {
+      canUse: true,
+      requiresCheck: false,
+      checkDC: null,
+      reason: validation.reason,
+      message: `Can use scroll automatically (spell on class list and can cast ${props.spellLevel}${getOrdinalSuffix(props.spellLevel)}-level spells)`
+    };
+  }
+  return {
+    canUse: true,
+    requiresCheck: true,
+    checkDC: validation.checkDC,
+    reason: validation.reason,
+    message: `Requires DC ${validation.checkDC} Arcana check (${validation.reason.replace(/_/g, " ")})`
+  };
+}
+function getOrdinalSuffix(n2) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n2 % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+// dist/server/scroll-tools.js
+var ScrollTools = {
+  USE_SPELL_SCROLL: {
+    name: "use_spell_scroll",
+    description: "Use a spell scroll from inventory. Scroll is consumed after use (even if the Arcana check fails). If the spell is on your class list and you can cast that level, no check is required.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("Character using the scroll"),
+      scrollItemId: external_exports.string().describe("Item ID of the scroll in inventory"),
+      targetId: external_exports.string().optional().describe("Optional target character ID"),
+      targetPoint: external_exports.object({
+        x: external_exports.number(),
+        y: external_exports.number()
+      }).optional().describe("Optional target point for area spells")
+    })
+  },
+  CREATE_SPELL_SCROLL: {
+    name: "create_spell_scroll",
+    description: "Create a new spell scroll item template (DM tool). The scroll can then be given to characters via give_item.",
+    inputSchema: CreateScrollRequestSchema
+  },
+  IDENTIFY_SCROLL: {
+    name: "identify_scroll",
+    description: "Identify a spell scroll using Arcana check (DC 10 + spell level) or the Identify spell (automatic success).",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("Character attempting to identify the scroll"),
+      scrollItemId: external_exports.string().describe("Item ID of the scroll"),
+      useIdentifySpell: external_exports.boolean().default(false).describe("Whether using the Identify spell (auto-success)")
+    })
+  },
+  GET_SCROLL_USE_DC: {
+    name: "get_scroll_use_dc",
+    description: "Calculate the DC required to use a spell scroll. Returns DC and whether a check is required based on character class/level.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("Character who would use the scroll"),
+      scrollItemId: external_exports.string().describe("Item ID of the scroll")
+    })
+  },
+  GET_SCROLL_DETAILS: {
+    name: "get_scroll_details",
+    description: "Get detailed information about a spell scroll item.",
+    inputSchema: external_exports.object({
+      scrollItemId: external_exports.string().describe("Item ID of the scroll")
+    })
+  },
+  CHECK_SCROLL_USABILITY: {
+    name: "check_scroll_usability",
+    description: "Check if a character can use a specific scroll without consuming it. Returns whether a check is required and the DC.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("Character to check"),
+      scrollItemId: external_exports.string().describe("Item ID of the scroll")
+    })
+  }
+};
+function ensureDb8() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return {
+    characterRepo: new CharacterRepository(db),
+    itemRepo: new ItemRepository(db),
+    inventoryRepo: new InventoryRepository(db)
+  };
+}
+async function handleUseSpellScroll(args, _ctx) {
+  const { characterRepo, itemRepo, inventoryRepo } = ensureDb8();
+  const parsed = ScrollTools.USE_SPELL_SCROLL.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const scroll = itemRepo.findById(parsed.scrollItemId);
+  if (!scroll) {
+    throw new Error(`Scroll item ${parsed.scrollItemId} not found`);
+  }
+  const result = useSpellScroll(character, scroll, inventoryRepo);
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatScrollUseResult(result)
+      }
+    ]
+  };
+}
+async function handleCreateSpellScroll(args, _ctx) {
+  const { itemRepo } = ensureDb8();
+  const parsed = CreateScrollRequestSchema.parse(args);
+  const scrollData = createSpellScroll(parsed.spellName, parsed.spellLevel, parsed.spellClass, parsed.scrollDC, parsed.scrollAttackBonus, parsed.value, parsed.description);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const scroll = {
+    ...scrollData,
+    id: (0, import_crypto8.randomUUID)(),
+    createdAt: now,
+    updatedAt: now
+  };
+  itemRepo.create(scroll);
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatScrollCreation(scroll)
+      }
+    ]
+  };
+}
+async function handleIdentifyScroll(args, _ctx) {
+  const { characterRepo, itemRepo } = ensureDb8();
+  const parsed = ScrollTools.IDENTIFY_SCROLL.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const scroll = itemRepo.findById(parsed.scrollItemId);
+  if (!scroll) {
+    throw new Error(`Scroll item ${parsed.scrollItemId} not found`);
+  }
+  if (scroll.type !== "scroll") {
+    throw new Error(`Item "${scroll.name}" is not a scroll`);
+  }
+  const scrollDetails = getScrollDetails(scroll);
+  if (!scrollDetails.valid) {
+    throw new Error(scrollDetails.error || "Invalid scroll");
+  }
+  if (parsed.useIdentifySpell) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: formatScrollIdentification(scrollDetails, true, null)
+        }
+      ]
+    };
+  }
+  const checkDC = 10 + scrollDetails.spellLevel;
+  const arcanaCheck = rollArcanaCheck(character);
+  const success = arcanaCheck.total >= checkDC;
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatScrollIdentification(scrollDetails, success, {
+          roll: arcanaCheck.roll,
+          total: arcanaCheck.total,
+          dc: checkDC,
+          modifier: arcanaCheck.modifier
+        })
+      }
+    ]
+  };
+}
+async function handleGetScrollUseDC(args, _ctx) {
+  const { characterRepo, itemRepo } = ensureDb8();
+  const parsed = ScrollTools.GET_SCROLL_USE_DC.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const scroll = itemRepo.findById(parsed.scrollItemId);
+  if (!scroll) {
+    throw new Error(`Scroll item ${parsed.scrollItemId} not found`);
+  }
+  const usability = checkScrollUsability(character, scroll);
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatScrollUseDC(usability, scroll.name)
+      }
+    ]
+  };
+}
+async function handleGetScrollDetails(args, _ctx) {
+  const { itemRepo } = ensureDb8();
+  const parsed = ScrollTools.GET_SCROLL_DETAILS.inputSchema.parse(args);
+  const scroll = itemRepo.findById(parsed.scrollItemId);
+  if (!scroll) {
+    throw new Error(`Scroll item ${parsed.scrollItemId} not found`);
+  }
+  const details = getScrollDetails(scroll);
+  if (!details.valid) {
+    throw new Error(details.error || "Invalid scroll");
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatScrollDetails(scroll, details)
+      }
+    ]
+  };
+}
+async function handleCheckScrollUsability(args, _ctx) {
+  const { characterRepo, itemRepo } = ensureDb8();
+  const parsed = ScrollTools.CHECK_SCROLL_USABILITY.inputSchema.parse(args);
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    throw new Error(`Character ${parsed.characterId} not found`);
+  }
+  const scroll = itemRepo.findById(parsed.scrollItemId);
+  if (!scroll) {
+    throw new Error(`Scroll item ${parsed.scrollItemId} not found`);
+  }
+  const usability = checkScrollUsability(character, scroll);
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatScrollUsability(usability, character.name, scroll.name)
+      }
+    ]
+  };
+}
+function formatScrollUseResult(result) {
+  if (!result.success && result.reason === "not_in_inventory") {
+    return `L ${result.message}`;
+  }
+  if (!result.success && result.reason === "invalid_scroll") {
+    return `L ${result.message}`;
+  }
+  if (!result.requiresCheck) {
+    return ` ${result.message}
+
+<\uFFFD Auto-success: Spell is on your class list and you can cast spells of this level.
+=\uFFFD The scroll crumbles to dust after use.`;
+  }
+  if (result.success && result.checkPassed) {
+    return ` ${result.message}
+
+<\uFFFD Arcana Check: ${result.checkRoll} + modifier = ${result.checkTotal}
+<\uFFFD DC: ${result.checkDC}
+( Check passed! The spell activates.
+=\uFFFD The scroll crumbles to dust after use.`;
+  }
+  if (!result.success && !result.checkPassed) {
+    return `L ${result.message}
+
+<\uFFFD Arcana Check: ${result.checkRoll} + modifier = ${result.checkTotal}
+<\uFFFD DC: ${result.checkDC}
+=\uFFFD Check failed! The spell fizzles and the scroll is wasted.
+=\uFFFD The scroll crumbles to dust.`;
+  }
+  return result.message;
+}
+function formatScrollCreation(scroll) {
+  const props = scroll.properties;
+  return `=\uFFFD Spell Scroll Created
+
+**${scroll.name}**
+Spell: ${props.spellName} (Level ${props.spellLevel})
+${props.spellClass ? `Class: ${props.spellClass}` : "Class: Universal"}
+
+Spell Save DC: ${props.scrollDC}
+Spell Attack Bonus: +${props.scrollAttackBonus}
+Value: ${scroll.value} gp
+Weight: ${scroll.weight} lbs
+
+Item ID: ${scroll.id}
+
+Use \`give_item\` to add this scroll to a character's inventory.`;
+}
+function formatScrollIdentification(details, success, check2) {
+  if (success && !check2) {
+    return `( Identify Spell - Automatic Success
+
+=\uFFFD **Scroll Identified**
+Spell: ${details.spellName}
+Level: ${details.spellLevel}
+${details.spellClass ? `Class: ${details.spellClass}` : ""}
+Rarity: ${details.rarity}
+Spell Save DC: ${details.scrollDC}
+Spell Attack Bonus: +${details.scrollAttackBonus}`;
+  }
+  if (success && check2) {
+    return ` Scroll Identified
+
+<\uFFFD Arcana Check: ${check2.roll} + ${check2.modifier} (INT) = ${check2.total}
+<\uFFFD DC: ${check2.dc}
+
+=\uFFFD **Scroll Details**
+Spell: ${details.spellName}
+Level: ${details.spellLevel}
+${details.spellClass ? `Class: ${details.spellClass}` : ""}
+Rarity: ${details.rarity}
+Spell Save DC: ${details.scrollDC}
+Spell Attack Bonus: +${details.scrollAttackBonus}`;
+  }
+  return `L Identification Failed
+
+<\uFFFD Arcana Check: ${check2.roll} + ${check2.modifier} (INT) = ${check2.total}
+<\uFFFD DC: ${check2.dc}
+
+The magical writing remains indecipherable. You'll need to try again or use the Identify spell.`;
+}
+function formatScrollUseDC(usability, scrollName) {
+  if (!usability.canUse) {
+    return `L Cannot use ${scrollName}
+
+Reason: ${usability.message}`;
+  }
+  if (!usability.requiresCheck) {
+    return ` ${scrollName} - Auto-success
+
+No Arcana check required.
+${usability.message}`;
+  }
+  return `=\uFFFD ${scrollName}
+
+\uFFFD Arcana Check Required
+DC: ${usability.checkDC}
+Reason: ${usability.message}
+
+Note: The scroll will be consumed even if the check fails.`;
+}
+function formatScrollDetails(scroll, details) {
+  return `=\uFFFD **${scroll.name}**
+
+${scroll.description || ""}
+
+**Spell Information**
+Name: ${details.spellName}
+Level: ${details.spellLevel}
+${details.spellClass ? `Class: ${details.spellClass}` : "Class: Universal"}
+Rarity: ${details.rarity}
+
+**Scroll Properties**
+Spell Save DC: ${details.scrollDC}
+Spell Attack Bonus: +${details.scrollAttackBonus}
+Value: ${scroll.value} gp
+Weight: ${scroll.weight} lbs
+
+**Usage**
+Use \`use_spell_scroll\` to cast the spell from this scroll.
+Use \`get_scroll_use_dc\` to check if you need an Arcana check.`;
+}
+function formatScrollUsability(usability, characterName, scrollName) {
+  if (!usability.canUse) {
+    return `L ${characterName} cannot use ${scrollName}
+
+${usability.message}`;
+  }
+  if (!usability.requiresCheck) {
+    return ` ${characterName} can use ${scrollName}
+
+( Auto-success: ${usability.message}
+
+No Arcana check required. The scroll can be used immediately.`;
+  }
+  return `\uFFFD ${characterName} can attempt to use ${scrollName}
+
+=\uFFFD Requires Arcana Check
+DC: ${usability.checkDC}
+Reason: ${usability.message}
+
+Note: The scroll will be consumed even if the Arcana check fails.`;
+}
+
+// dist/server/aura-tools.js
+init_zod();
+
+// dist/schema/aura.js
+init_zod();
+var AuraTriggerSchema = external_exports.enum(["enter", "exit", "start_of_turn", "end_of_turn"]);
+var AuraEffectTypeSchema = external_exports.enum(["damage", "buff", "debuff", "healing", "condition", "custom"]);
+var AuraEffectSchema = external_exports.object({
+  trigger: AuraTriggerSchema,
+  type: AuraEffectTypeSchema,
+  dice: external_exports.string().optional(),
+  // e.g., "3d8" for damage/healing
+  damageType: external_exports.string().optional(),
+  // e.g., "radiant", "necrotic"
+  saveType: external_exports.string().optional(),
+  // e.g., "wisdom", "dexterity"
+  saveDC: external_exports.number().int().optional(),
+  conditions: external_exports.array(external_exports.string()).optional(),
+  // e.g., ["frightened", "slowed"]
+  description: external_exports.string().optional(),
+  // Custom effect description
+  bonusAmount: external_exports.number().int().optional(),
+  // For buffs/debuffs
+  bonusType: external_exports.string().optional()
+  // e.g., "ac", "saves", "damage"
+});
+var AuraStateSchema = external_exports.object({
+  id: external_exports.string(),
+  ownerId: external_exports.string(),
+  // Character who created the aura
+  spellName: external_exports.string(),
+  spellLevel: external_exports.number().int().min(0).max(9),
+  radius: external_exports.number().int().min(1),
+  // Radius in feet (5 feet = 1 square)
+  affectsAllies: external_exports.boolean().default(false),
+  affectsEnemies: external_exports.boolean().default(false),
+  affectsSelf: external_exports.boolean().default(false),
+  // Some auras affect the caster
+  effects: external_exports.array(AuraEffectSchema),
+  startedAt: external_exports.number().int().min(1),
+  // Round number
+  maxDuration: external_exports.number().int().optional(),
+  // Maximum rounds (undefined = indefinite)
+  requiresConcentration: external_exports.boolean().default(false)
+  // Some auras need concentration
+});
+var AuraEffectResultSchema = external_exports.object({
+  auraId: external_exports.string(),
+  auraName: external_exports.string(),
+  targetId: external_exports.string(),
+  trigger: AuraTriggerSchema,
+  effectType: AuraEffectTypeSchema,
+  succeeded: external_exports.boolean(),
+  // Whether the effect applied (false if saved)
+  damageDealt: external_exports.number().int().optional(),
+  damageType: external_exports.string().optional(),
+  healingDone: external_exports.number().int().optional(),
+  conditionsApplied: external_exports.array(external_exports.string()).optional(),
+  saveRoll: external_exports.number().int().optional(),
+  saveDC: external_exports.number().int().optional(),
+  saveTotal: external_exports.number().int().optional(),
+  description: external_exports.string().optional()
+});
+var CreateAuraRequestSchema = external_exports.object({
+  ownerId: external_exports.string(),
+  spellName: external_exports.string(),
+  spellLevel: external_exports.number().int().min(0).max(9),
+  radius: external_exports.number().int().min(1),
+  affectsAllies: external_exports.boolean().default(false),
+  affectsEnemies: external_exports.boolean().default(false),
+  affectsSelf: external_exports.boolean().default(false),
+  effects: external_exports.array(AuraEffectSchema),
+  currentRound: external_exports.number().int().min(1),
+  maxDuration: external_exports.number().int().optional(),
+  requiresConcentration: external_exports.boolean().default(false)
+});
+var CheckAuraEffectsRequestSchema = external_exports.object({
+  encounterId: external_exports.string(),
+  x: external_exports.number().int(),
+  y: external_exports.number().int(),
+  trigger: AuraTriggerSchema
+});
+
+// dist/storage/repos/aura.repo.js
+var AuraRepository = class {
+  db;
+  constructor(db) {
+    this.db = db;
+  }
+  /**
+   * Create a new aura
+   */
+  create(aura) {
+    const valid = AuraStateSchema.parse(aura);
+    const stmt = this.db.prepare(`
+            INSERT INTO auras (
+                id, owner_id, spell_name, spell_level, radius,
+                affects_allies, affects_enemies, affects_self,
+                effects, started_at, max_duration, requires_concentration
+            )
+            VALUES (@id, @ownerId, @spellName, @spellLevel, @radius,
+                    @affectsAllies, @affectsEnemies, @affectsSelf,
+                    @effects, @startedAt, @maxDuration, @requiresConcentration)
+        `);
+    stmt.run({
+      id: valid.id,
+      ownerId: valid.ownerId,
+      spellName: valid.spellName,
+      spellLevel: valid.spellLevel,
+      radius: valid.radius,
+      affectsAllies: valid.affectsAllies ? 1 : 0,
+      affectsEnemies: valid.affectsEnemies ? 1 : 0,
+      affectsSelf: valid.affectsSelf ? 1 : 0,
+      effects: JSON.stringify(valid.effects),
+      startedAt: valid.startedAt,
+      maxDuration: valid.maxDuration ?? null,
+      requiresConcentration: valid.requiresConcentration ? 1 : 0
+    });
+  }
+  /**
+   * Find an aura by ID
+   */
+  findById(auraId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM auras WHERE id = ?
+        `);
+    const row = stmt.get(auraId);
+    if (!row)
+      return null;
+    return this.rowToAuraState(row);
+  }
+  /**
+   * Find all auras owned by a specific character
+   */
+  findByOwnerId(ownerId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM auras WHERE owner_id = ?
+        `);
+    const rows = stmt.all(ownerId);
+    return rows.map((row) => this.rowToAuraState(row));
+  }
+  /**
+   * Find all active auras (for an encounter or global check)
+   */
+  findAll() {
+    const stmt = this.db.prepare(`SELECT * FROM auras`);
+    const rows = stmt.all();
+    return rows.map((row) => this.rowToAuraState(row));
+  }
+  /**
+   * Delete an aura by ID
+   */
+  delete(auraId) {
+    const stmt = this.db.prepare(`
+            DELETE FROM auras WHERE id = ?
+        `);
+    const result = stmt.run(auraId);
+    return result.changes > 0;
+  }
+  /**
+   * Delete all auras owned by a character
+   */
+  deleteByOwnerId(ownerId) {
+    const stmt = this.db.prepare(`
+            DELETE FROM auras WHERE owner_id = ?
+        `);
+    const result = stmt.run(ownerId);
+    return result.changes;
+  }
+  /**
+   * Check if a character has any active auras
+   */
+  hasActiveAuras(ownerId) {
+    const stmt = this.db.prepare(`
+            SELECT COUNT(*) as count FROM auras WHERE owner_id = ?
+        `);
+    const row = stmt.get(ownerId);
+    return row.count > 0;
+  }
+  /**
+   * Convert database row to AuraState
+   */
+  rowToAuraState(row) {
+    return AuraStateSchema.parse({
+      id: row.id,
+      ownerId: row.owner_id,
+      spellName: row.spell_name,
+      spellLevel: row.spell_level,
+      radius: row.radius,
+      affectsAllies: row.affects_allies === 1,
+      affectsEnemies: row.affects_enemies === 1,
+      affectsSelf: row.affects_self === 1,
+      effects: JSON.parse(row.effects),
+      startedAt: row.started_at,
+      maxDuration: row.max_duration ?? void 0,
+      requiresConcentration: row.requires_concentration === 1
+    });
+  }
+};
+
+// dist/server/aura-tools.js
+init_character_repo();
+init_aura();
+var AuraTools = {
+  CREATE_AURA: {
+    name: "create_aura",
+    description: "Create a new aura effect centered on a character (e.g., Spirit Guardians, Aura of Protection). Auras move with their owner and affect targets within radius. Optionally requires concentration.",
+    inputSchema: external_exports.object({
+      ownerId: external_exports.string().describe("The ID of the character creating the aura"),
+      spellName: external_exports.string().describe("Name of the spell or ability creating the aura"),
+      spellLevel: external_exports.number().int().min(0).max(9).describe("Spell level (0-9)"),
+      radius: external_exports.number().int().min(1).describe("Radius in feet (e.g., 15 for Spirit Guardians)"),
+      affectsAllies: external_exports.boolean().default(false).describe("Whether the aura affects allied creatures"),
+      affectsEnemies: external_exports.boolean().default(false).describe("Whether the aura affects enemy creatures"),
+      affectsSelf: external_exports.boolean().default(false).describe("Whether the aura affects the caster"),
+      effects: external_exports.array(external_exports.object({
+        trigger: AuraTriggerSchema.describe("When the effect triggers (enter, exit, start_of_turn, end_of_turn)"),
+        type: external_exports.enum(["damage", "buff", "debuff", "healing", "condition", "custom"]).describe("Type of effect"),
+        dice: external_exports.string().optional().describe('Dice notation for damage/healing (e.g., "3d8")'),
+        damageType: external_exports.string().optional().describe('Damage type (e.g., "radiant", "necrotic")'),
+        saveType: external_exports.string().optional().describe('Ability for saving throw (e.g., "wisdom", "dexterity")'),
+        saveDC: external_exports.number().int().optional().describe("DC for saving throw"),
+        conditions: external_exports.array(external_exports.string()).optional().describe('Conditions to apply (e.g., ["frightened"])'),
+        description: external_exports.string().optional().describe("Custom effect description"),
+        bonusAmount: external_exports.number().int().optional().describe("Bonus amount for buffs/debuffs"),
+        bonusType: external_exports.string().optional().describe('What the bonus applies to (e.g., "ac", "saves")')
+      })).describe("Array of effects the aura applies"),
+      currentRound: external_exports.number().int().min(1).describe("Current combat round number"),
+      maxDuration: external_exports.number().int().optional().describe("Maximum duration in rounds (omit for indefinite)"),
+      requiresConcentration: external_exports.boolean().default(false).describe("Whether the aura requires concentration")
+    })
+  },
+  GET_ACTIVE_AURAS: {
+    name: "get_active_auras",
+    description: "List all currently active auras and their properties.",
+    inputSchema: external_exports.object({})
+  },
+  GET_AURAS_AFFECTING_CHARACTER: {
+    name: "get_auras_affecting_character",
+    description: "Check which auras are currently affecting a specific character based on their position.",
+    inputSchema: external_exports.object({
+      encounterId: external_exports.string().describe("The encounter ID to check within"),
+      characterId: external_exports.string().describe("The character ID to check for affecting auras")
+    })
+  },
+  PROCESS_AURA_EFFECTS: {
+    name: "process_aura_effects",
+    description: "Process aura effects for a target at a specific trigger (e.g., start of turn, entering an aura). Returns all effects that were triggered.",
+    inputSchema: external_exports.object({
+      encounterId: external_exports.string().describe("The encounter ID"),
+      targetId: external_exports.string().describe("The target character/creature ID"),
+      trigger: AuraTriggerSchema.describe("When the effects trigger (enter, exit, start_of_turn, end_of_turn)")
+    })
+  },
+  REMOVE_AURA: {
+    name: "remove_aura",
+    description: "Manually end an aura by ID (e.g., when concentration breaks or spell is dismissed).",
+    inputSchema: external_exports.object({
+      auraId: external_exports.string().describe("The ID of the aura to remove")
+    })
+  },
+  REMOVE_CHARACTER_AURAS: {
+    name: "remove_character_auras",
+    description: "Remove all auras owned by a specific character (e.g., when they die or lose concentration).",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("The ID of the character whose auras to remove")
+    })
+  },
+  EXPIRE_AURAS: {
+    name: "expire_auras",
+    description: "Check for and remove any auras that have exceeded their duration.",
+    inputSchema: external_exports.object({
+      currentRound: external_exports.number().int().min(1).describe("Current combat round number")
+    })
+  }
+};
+function ensureDb9() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return {
+    auraRepo: new AuraRepository(db),
+    encounterRepo: new EncounterRepository(db),
+    characterRepo: new CharacterRepository(db),
+    concentrationRepo: new ConcentrationRepository(db)
+  };
+}
+async function handleCreateAura(args, _ctx) {
+  const { auraRepo, characterRepo, concentrationRepo } = ensureDb9();
+  const parsed = CreateAuraRequestSchema.parse(args);
+  const character = characterRepo.findById(parsed.ownerId);
+  if (!character) {
+    throw new Error(`Character ${parsed.ownerId} not found`);
+  }
+  if (parsed.requiresConcentration) {
+    startConcentration(
+      parsed.ownerId,
+      parsed.spellName,
+      parsed.spellLevel,
+      parsed.currentRound,
+      parsed.maxDuration,
+      void 0,
+      // Auras don't track specific target IDs
+      concentrationRepo,
+      characterRepo
+    );
+  }
+  const aura = createAura(parsed, auraRepo);
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatAuraCreated(aura, character.name)
+      }
+    ]
+  };
+}
+async function handleGetActiveAuras(_args, _ctx) {
+  const { auraRepo } = ensureDb9();
+  const auras = getActiveAuras(auraRepo);
+  if (auras.length === 0) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "No active auras."
+        }
+      ]
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatAuraList(auras)
+      }
+    ]
+  };
+}
+async function handleGetAurasAffectingCharacter(args, _ctx) {
+  const { auraRepo, encounterRepo } = ensureDb9();
+  const parsed = AuraTools.GET_AURAS_AFFECTING_CHARACTER.inputSchema.parse(args);
+  const encounter = encounterRepo.findById(parsed.encounterId);
+  if (!encounter) {
+    throw new Error(`Encounter ${parsed.encounterId} not found`);
+  }
+  const tokens = typeof encounter.tokens === "string" ? JSON.parse(encounter.tokens) : encounter.tokens;
+  const target = tokens.find((t) => t.id === parsed.characterId);
+  if (!target) {
+    throw new Error(`Character ${parsed.characterId} not found in encounter`);
+  }
+  if (!target.position) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Character ${parsed.characterId} has no position in the encounter.`
+        }
+      ]
+    };
+  }
+  const { getAurasAtPosition: getAurasAtPosition2 } = await Promise.resolve().then(() => (init_aura(), aura_exports));
+  const affectingAuras = getAurasAtPosition2(tokens, target.position, auraRepo);
+  if (affectingAuras.length === 0) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `No auras are affecting ${target.name || parsed.characterId}.`
+        }
+      ]
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatAffectingAuras(target.name || parsed.characterId, affectingAuras, tokens)
+      }
+    ]
+  };
+}
+async function handleProcessAuraEffects(args, _ctx) {
+  const { auraRepo, encounterRepo } = ensureDb9();
+  const parsed = AuraTools.PROCESS_AURA_EFFECTS.inputSchema.parse(args);
+  const encounter = encounterRepo.findById(parsed.encounterId);
+  if (!encounter) {
+    throw new Error(`Encounter ${parsed.encounterId} not found`);
+  }
+  const tokens = typeof encounter.tokens === "string" ? JSON.parse(encounter.tokens) : encounter.tokens;
+  const results = checkAuraEffectsForTarget(tokens, parsed.targetId, parsed.trigger, auraRepo);
+  if (results.length === 0) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `No aura effects triggered for ${parsed.targetId} on ${parsed.trigger}.`
+        }
+      ]
+    };
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: formatAuraEffectResults(results, tokens)
+      }
+    ]
+  };
+}
+async function handleRemoveAura(args, _ctx) {
+  const { auraRepo, concentrationRepo, characterRepo } = ensureDb9();
+  const parsed = AuraTools.REMOVE_AURA.inputSchema.parse(args);
+  const aura = auraRepo.findById(parsed.auraId);
+  if (!aura) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Aura ${parsed.auraId} not found (may have already expired).`
+        }
+      ]
+    };
+  }
+  const auraName = aura.spellName;
+  const removed = endAura(parsed.auraId, auraRepo);
+  if (aura.requiresConcentration) {
+    const concentration = concentrationRepo.findByCharacterId(aura.ownerId);
+    if (concentration && concentration.activeSpell === aura.spellName) {
+      breakConcentration({ characterId: aura.ownerId, reason: "voluntary" }, concentrationRepo, characterRepo);
+    }
+  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: removed ? `Aura "${auraName}" has been removed.` : `Failed to remove aura ${parsed.auraId}.`
+      }
+    ]
+  };
+}
+async function handleRemoveCharacterAuras(args, _ctx) {
+  const { auraRepo } = ensureDb9();
+  const parsed = AuraTools.REMOVE_CHARACTER_AURAS.inputSchema.parse(args);
+  const count = endAurasByOwner(parsed.characterId, auraRepo);
+  return {
+    content: [
+      {
+        type: "text",
+        text: count > 0 ? `Removed ${count} aura(s) from character ${parsed.characterId}.` : `Character ${parsed.characterId} had no active auras.`
+      }
+    ]
+  };
+}
+async function handleExpireAuras(args, _ctx) {
+  const { auraRepo } = ensureDb9();
+  const parsed = AuraTools.EXPIRE_AURAS.inputSchema.parse(args);
+  const expiredIds = expireOldAuras(parsed.currentRound, auraRepo);
+  return {
+    content: [
+      {
+        type: "text",
+        text: expiredIds.length > 0 ? `Expired ${expiredIds.length} aura(s): ${expiredIds.join(", ")}` : "No auras expired this round."
+      }
+    ]
+  };
+}
+function formatAuraCreated(aura, ownerName) {
+  const concentrationText = aura.requiresConcentration ? " (Requires Concentration)" : "";
+  const durationText = aura.maxDuration ? ` for ${aura.maxDuration} rounds` : " (indefinite duration)";
+  const targetTypes = [];
+  if (aura.affectsSelf)
+    targetTypes.push("self");
+  if (aura.affectsAllies)
+    targetTypes.push("allies");
+  if (aura.affectsEnemies)
+    targetTypes.push("enemies");
+  return `\u2728 Aura Created: ${aura.spellName}${concentrationText}
+
+Owner: ${ownerName}
+Radius: ${aura.radius} feet
+Affects: ${targetTypes.join(", ")}
+Duration: Started round ${aura.startedAt}${durationText}
+Effects: ${aura.effects.length} effect(s)
+
+${aura.effects.map((e, i) => `  ${i + 1}. ${e.type} on ${e.trigger}${e.dice ? ` (${e.dice}${e.damageType ? " " + e.damageType : ""})` : ""}`).join("\n")}`;
+}
+function formatAuraList(auras) {
+  return `Active Auras (${auras.length}):
+
+${auras.map((aura, i) => `${i + 1}. ${aura.spellName} (ID: ${aura.id})
+   Owner: ${aura.ownerId}
+   Radius: ${aura.radius}ft | Started: Round ${aura.startedAt}${aura.maxDuration ? ` | Duration: ${aura.maxDuration} rounds` : ""}
+   Targets: ${[aura.affectsSelf && "self", aura.affectsAllies && "allies", aura.affectsEnemies && "enemies"].filter(Boolean).join(", ")}
+   Effects: ${aura.effects.length}`).join("\n\n")}`;
+}
+function formatAffectingAuras(targetName, auras, tokens) {
+  return `Auras Affecting ${targetName}:
+
+${auras.map((aura, i) => {
+    const owner = tokens.find((t) => t.id === aura.ownerId);
+    return `${i + 1}. ${aura.spellName} (Owner: ${owner?.name || aura.ownerId})
+   Radius: ${aura.radius}ft
+   Effects: ${aura.effects.map((e) => `${e.type} on ${e.trigger}`).join(", ")}`;
+  }).join("\n\n")}`;
+}
+function formatAuraEffectResults(results, tokens) {
+  if (results.length === 0) {
+    return "No aura effects were triggered.";
+  }
+  const target = tokens.find((t) => t.id === results[0].targetId);
+  const targetName = target?.name || results[0].targetId;
+  return `Aura Effects on ${targetName}:
+
+${results.map((result, i) => {
+    let text = `${i + 1}. ${result.auraName} (${result.trigger})`;
+    if (result.saveRoll !== void 0 && result.saveDC !== void 0) {
+      text += `
+   Save: ${result.saveRoll} + mod = ${result.saveTotal} vs DC ${result.saveDC} - ${result.succeeded ? "SUCCESS" : "FAILURE"}`;
+    }
+    if (result.damageDealt !== void 0) {
+      text += `
+   Damage: ${result.damageDealt} ${result.damageType || ""}`;
+    }
+    if (result.healingDone !== void 0) {
+      text += `
+   Healing: ${result.healingDone}`;
+    }
+    if (result.conditionsApplied && result.conditionsApplied.length > 0) {
+      text += `
+   Conditions: ${result.conditionsApplied.join(", ")}`;
+    }
+    if (result.description) {
+      text += `
+   ${result.description}`;
+    }
+    return text;
+  }).join("\n\n")}`;
+}
+
+// dist/server/npc-memory-tools.js
+init_zod();
+
+// dist/storage/repos/npc-memory.repo.js
+var NpcMemoryRepository = class {
+  db;
+  constructor(db) {
+    this.db = db;
+  }
+  // ============================================================
+  // RELATIONSHIP METHODS
+  // ============================================================
+  /**
+   * Get relationship between PC and NPC
+   * Returns null if no relationship exists (they're strangers)
+   */
+  getRelationship(characterId, npcId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM npc_relationships
+            WHERE character_id = ? AND npc_id = ?
+        `);
+    const row = stmt.get(characterId, npcId);
+    if (!row)
+      return null;
+    return this.rowToRelationship(row);
+  }
+  /**
+   * Create or update relationship between PC and NPC
+   */
+  upsertRelationship(relationship) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const existing = this.getRelationship(relationship.characterId, relationship.npcId);
+    if (existing) {
+      const stmt = this.db.prepare(`
+                UPDATE npc_relationships
+                SET familiarity = ?,
+                    disposition = ?,
+                    notes = ?,
+                    last_interaction_at = ?,
+                    interaction_count = interaction_count + 1
+                WHERE character_id = ? AND npc_id = ?
+            `);
+      stmt.run(relationship.familiarity, relationship.disposition, relationship.notes ?? existing.notes, now, relationship.characterId, relationship.npcId);
+    } else {
+      const stmt = this.db.prepare(`
+                INSERT INTO npc_relationships (character_id, npc_id, familiarity, disposition, notes, first_met_at, last_interaction_at, interaction_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            `);
+      stmt.run(relationship.characterId, relationship.npcId, relationship.familiarity, relationship.disposition, relationship.notes ?? null, now, now);
+    }
+    return this.getRelationship(relationship.characterId, relationship.npcId);
+  }
+  /**
+   * Get all NPCs a character has interacted with
+   */
+  getCharacterRelationships(characterId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM npc_relationships
+            WHERE character_id = ?
+            ORDER BY last_interaction_at DESC
+        `);
+    const rows = stmt.all(characterId);
+    return rows.map((row) => this.rowToRelationship(row));
+  }
+  /**
+   * Get all characters who have interacted with an NPC
+   */
+  getNpcRelationships(npcId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM npc_relationships
+            WHERE npc_id = ?
+            ORDER BY last_interaction_at DESC
+        `);
+    const rows = stmt.all(npcId);
+    return rows.map((row) => this.rowToRelationship(row));
+  }
+  // ============================================================
+  // CONVERSATION MEMORY METHODS
+  // ============================================================
+  /**
+   * Record a conversation memory
+   */
+  recordMemory(memory) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            INSERT INTO conversation_memories (character_id, npc_id, summary, importance, topics, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+    const result = stmt.run(memory.characterId, memory.npcId, memory.summary, memory.importance, JSON.stringify(memory.topics), now);
+    return {
+      ...memory,
+      id: result.lastInsertRowid,
+      createdAt: now
+    };
+  }
+  /**
+   * Get conversation history between PC and NPC
+   */
+  getConversationHistory(characterId, npcId, options) {
+    let query = `
+            SELECT * FROM conversation_memories
+            WHERE character_id = ? AND npc_id = ?
+        `;
+    const params = [characterId, npcId];
+    if (options?.minImportance) {
+      const importanceOrder = {
+        "low": 1,
+        "medium": 2,
+        "high": 3,
+        "critical": 4
+      };
+      const minLevel = importanceOrder[options.minImportance];
+      query += ` AND CASE importance
+                WHEN 'low' THEN 1
+                WHEN 'medium' THEN 2
+                WHEN 'high' THEN 3
+                WHEN 'critical' THEN 4
+            END >= ?`;
+      params.push(minLevel);
+    }
+    query += ` ORDER BY id DESC`;
+    if (options?.limit) {
+      query += ` LIMIT ?`;
+      params.push(options.limit);
+    }
+    const stmt = this.db.prepare(query);
+    const rows = stmt.all(...params);
+    return rows.map((row) => this.rowToMemory(row));
+  }
+  /**
+   * Get recent interactions across all NPCs for a character
+   */
+  getRecentInteractions(characterId, limit = 10) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM conversation_memories
+            WHERE character_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+        `);
+    const rows = stmt.all(characterId, limit);
+    return rows.map((row) => this.rowToMemory(row));
+  }
+  /**
+   * Search memories by topic
+   */
+  searchByTopic(characterId, topic) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM conversation_memories
+            WHERE character_id = ?
+            AND topics LIKE ?
+            ORDER BY id DESC
+        `);
+    const rows = stmt.all(characterId, `%"${topic}"%`);
+    return rows.map((row) => this.rowToMemory(row));
+  }
+  // ============================================================
+  // HELPER METHODS
+  // ============================================================
+  rowToRelationship(row) {
+    return {
+      characterId: row.character_id,
+      npcId: row.npc_id,
+      familiarity: row.familiarity,
+      disposition: row.disposition,
+      notes: row.notes,
+      firstMetAt: row.first_met_at,
+      lastInteractionAt: row.last_interaction_at,
+      interactionCount: row.interaction_count
+    };
+  }
+  rowToMemory(row) {
+    return {
+      id: row.id,
+      characterId: row.character_id,
+      npcId: row.npc_id,
+      summary: row.summary,
+      importance: row.importance,
+      topics: JSON.parse(row.topics),
+      createdAt: row.created_at
+    };
+  }
+};
+
+// dist/server/npc-memory-tools.js
+init_character_repo();
+
+// dist/schema/spatial.js
+init_zod();
+var TravelTerrainSchema = external_exports.enum([
+  "paved",
+  // Roads, city streets - fast travel
+  "dirt",
+  // Dirt roads, well-worn paths - normal travel
+  "wilderness",
+  // Overgrown trails, rough terrain - slow travel
+  "indoor"
+  // Inside buildings - instant/minimal travel
+]);
+var ExitSchema = external_exports.object({
+  direction: external_exports.enum([
+    "north",
+    "south",
+    "east",
+    "west",
+    "up",
+    "down",
+    "northeast",
+    "northwest",
+    "southeast",
+    "southwest"
+  ]),
+  targetNodeId: external_exports.string().uuid(),
+  type: external_exports.enum(["OPEN", "LOCKED", "HIDDEN"]),
+  dc: external_exports.number().int().min(5).max(30).optional().describe("DC for Perception to detect HIDDEN exits or Lockpicking for LOCKED"),
+  description: external_exports.string().optional().describe('Narrative description of the exit (e.g., "A heavy oak door leads north")'),
+  // Travel metadata
+  travelTime: external_exports.number().int().min(0).optional().describe("Time to traverse in minutes (0 for instant, e.g., doorways)"),
+  terrain: TravelTerrainSchema.optional().describe("Type of terrain affecting travel speed and difficulty"),
+  difficulty: external_exports.number().int().min(5).max(30).optional().describe("DC for Navigation or Survival checks if terrain is challenging")
+});
+var BiomeTypeSchema = external_exports.enum([
+  "forest",
+  "mountain",
+  "urban",
+  "dungeon",
+  "coastal",
+  "cavern",
+  "divine",
+  "arcane"
+]);
+var AtmosphericSchema = external_exports.enum([
+  "DARKNESS",
+  "FOG",
+  "ANTIMAGIC",
+  "SILENCE",
+  "BRIGHT",
+  "MAGICAL"
+]);
+var RoomNodeSchema = external_exports.object({
+  id: external_exports.string().uuid(),
+  // Narrative identity
+  name: external_exports.string().min(1, "Room name cannot be empty").max(100, "Room name too long").refine((s) => s.trim().length > 0, "Room name cannot be whitespace only"),
+  baseDescription: external_exports.string().min(10, "Description must be detailed").max(2e3, "Description too long").refine((s) => s.trim().length >= 10, "Description must have at least 10 non-whitespace characters"),
+  // World context
+  biomeContext: BiomeTypeSchema.describe("Linked to src/engine/worldgen biome definitions"),
+  // Atmospheric effects
+  atmospherics: external_exports.array(AtmosphericSchema).default([]).describe("Environmental effects that modify perception and abilities"),
+  // Network membership and local coordinates
+  networkId: external_exports.string().uuid().optional().describe("ID of node network this room belongs to (town, road, dungeon)"),
+  localX: external_exports.number().int().min(0).optional().describe("X coordinate within node network (relative to network origin)"),
+  localY: external_exports.number().int().min(0).optional().describe("Y coordinate within node network (relative to network origin)"),
+  // Connections
+  exits: external_exports.array(ExitSchema).default([]),
+  // Entities present
+  entityIds: external_exports.array(external_exports.string().uuid()).default([]).describe("Foreign keys to characters/NPCs/items in this room"),
+  // Metadata
+  createdAt: external_exports.string().datetime(),
+  updatedAt: external_exports.string().datetime(),
+  visitedCount: external_exports.number().int().min(0).default(0),
+  lastVisitedAt: external_exports.string().datetime().optional()
+});
+var NodeNetworkSchema = external_exports.object({
+  id: external_exports.string().uuid(),
+  name: external_exports.string().min(1, "Network name cannot be empty").max(100, "Network name too long"),
+  type: external_exports.enum(["cluster", "linear"]).describe("cluster = town/dungeon, linear = road/path"),
+  worldId: external_exports.string().describe("ID of the world this network belongs to"),
+  // Primary location on world map
+  centerX: external_exports.number().int().min(0).describe("Center X coordinate on world map"),
+  centerY: external_exports.number().int().min(0).describe("Center Y coordinate on world map"),
+  // Optional bounding box for large networks
+  boundingBox: external_exports.object({
+    minX: external_exports.number().int().min(0),
+    maxX: external_exports.number().int().min(0),
+    minY: external_exports.number().int().min(0),
+    maxY: external_exports.number().int().min(0)
+  }).optional().describe("Bounding box for networks spanning multiple tiles"),
+  // Metadata
+  createdAt: external_exports.string().datetime(),
+  updatedAt: external_exports.string().datetime()
+});
+
+// dist/storage/repos/spatial.repo.js
+var SpatialRepository = class {
+  db;
+  constructor(db) {
+    this.db = db;
+  }
+  create(room) {
+    const validRoom = RoomNodeSchema.parse(room);
+    const stmt = this.db.prepare(`
+            INSERT INTO room_nodes (
+                id, name, base_description, biome_context, atmospherics,
+                exits, entity_ids, created_at, updated_at, visited_count, last_visited_at,
+                network_id, local_x, local_y
+            )
+            VALUES (
+                @id, @name, @baseDescription, @biomeContext, @atmospherics,
+                @exits, @entityIds, @createdAt, @updatedAt, @visitedCount, @lastVisitedAt,
+                @networkId, @localX, @localY
+            )
+        `);
+    stmt.run({
+      id: validRoom.id,
+      name: validRoom.name,
+      baseDescription: validRoom.baseDescription,
+      biomeContext: validRoom.biomeContext,
+      atmospherics: JSON.stringify(validRoom.atmospherics),
+      exits: JSON.stringify(validRoom.exits),
+      entityIds: JSON.stringify(validRoom.entityIds),
+      createdAt: validRoom.createdAt,
+      updatedAt: validRoom.updatedAt,
+      visitedCount: validRoom.visitedCount,
+      lastVisitedAt: validRoom.lastVisitedAt || null,
+      networkId: validRoom.networkId || null,
+      localX: validRoom.localX !== void 0 ? validRoom.localX : null,
+      localY: validRoom.localY !== void 0 ? validRoom.localY : null
+    });
+  }
+  findById(id) {
+    const stmt = this.db.prepare("SELECT * FROM room_nodes WHERE id = ?");
+    const row = stmt.get(id);
+    if (!row)
+      return null;
+    return this.rowToRoomNode(row);
+  }
+  findAll() {
+    const stmt = this.db.prepare("SELECT * FROM room_nodes ORDER BY name");
+    const rows = stmt.all();
+    return rows.map((row) => this.rowToRoomNode(row));
+  }
+  findByBiome(biome) {
+    const stmt = this.db.prepare("SELECT * FROM room_nodes WHERE biome_context = ? ORDER BY name");
+    const rows = stmt.all(biome);
+    return rows.map((row) => this.rowToRoomNode(row));
+  }
+  update(id, updates) {
+    const existing = this.findById(id);
+    if (!existing)
+      return null;
+    const updated = {
+      ...existing,
+      ...updates,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const validRoom = RoomNodeSchema.parse(updated);
+    const stmt = this.db.prepare(`
+            UPDATE room_nodes
+            SET name = ?, base_description = ?, biome_context = ?,
+                atmospherics = ?, exits = ?, entity_ids = ?,
+                visited_count = ?, last_visited_at = ?, updated_at = ?,
+                network_id = ?, local_x = ?, local_y = ?
+            WHERE id = ?
+        `);
+    stmt.run(validRoom.name, validRoom.baseDescription, validRoom.biomeContext, JSON.stringify(validRoom.atmospherics), JSON.stringify(validRoom.exits), JSON.stringify(validRoom.entityIds), validRoom.visitedCount, validRoom.lastVisitedAt || null, validRoom.updatedAt, validRoom.networkId || null, validRoom.localX !== void 0 ? validRoom.localX : null, validRoom.localY !== void 0 ? validRoom.localY : null, id);
+    return validRoom;
+  }
+  delete(id) {
+    const stmt = this.db.prepare("DELETE FROM room_nodes WHERE id = ?");
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+  // Helper methods for entity management
+  addEntityToRoom(roomId, entityId) {
+    const room = this.findById(roomId);
+    if (!room)
+      throw new Error(`Room ${roomId} not found`);
+    if (!room.entityIds.includes(entityId)) {
+      room.entityIds.push(entityId);
+      this.update(roomId, { entityIds: room.entityIds });
+    }
+  }
+  removeEntityFromRoom(roomId, entityId) {
+    const room = this.findById(roomId);
+    if (!room)
+      throw new Error(`Room ${roomId} not found`);
+    room.entityIds = room.entityIds.filter((id) => id !== entityId);
+    this.update(roomId, { entityIds: room.entityIds });
+  }
+  getEntitiesInRoom(roomId) {
+    const room = this.findById(roomId);
+    if (!room)
+      return [];
+    return room.entityIds;
+  }
+  // Helper methods for exit management
+  addExit(roomId, exit) {
+    const room = this.findById(roomId);
+    if (!room)
+      throw new Error(`Room ${roomId} not found`);
+    room.exits.push(exit);
+    this.update(roomId, { exits: room.exits });
+  }
+  findConnectedRooms(roomId) {
+    const room = this.findById(roomId);
+    if (!room)
+      return [];
+    const connectedRooms = [];
+    for (const exit of room.exits) {
+      const targetRoom = this.findById(exit.targetNodeId);
+      if (targetRoom) {
+        connectedRooms.push(targetRoom);
+      }
+    }
+    return connectedRooms;
+  }
+  incrementVisitCount(roomId) {
+    const room = this.findById(roomId);
+    if (!room)
+      throw new Error(`Room ${roomId} not found`);
+    this.update(roomId, {
+      visitedCount: room.visitedCount + 1,
+      lastVisitedAt: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+  // ============================================================
+  // LOCAL COORDINATE QUERIES (within networks)
+  // ============================================================
+  findRoomsByLocalCoordinates(networkId, x, y) {
+    const stmt = this.db.prepare("SELECT * FROM room_nodes WHERE network_id = ? AND local_x = ? AND local_y = ? ORDER BY name");
+    const rows = stmt.all(networkId, x, y);
+    return rows.map((row) => this.rowToRoomNode(row));
+  }
+  // ============================================================
+  // NETWORK COORDINATE QUERIES (world map coordinates)
+  // ============================================================
+  findNetworksInBoundingBox(minX, maxX, minY, maxY) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM node_networks
+            WHERE center_x >= ? AND center_x <= ?
+              AND center_y >= ? AND center_y <= ?
+            ORDER BY center_x, center_y, name
+        `);
+    const rows = stmt.all(minX, maxX, minY, maxY);
+    return rows.map((row) => this.rowToNodeNetwork(row));
+  }
+  findNearestNetwork(x, y) {
+    const stmt = this.db.prepare(`
+            SELECT *,
+                   ((center_x - ?) * (center_x - ?) + (center_y - ?) * (center_y - ?)) as distance_squared
+            FROM node_networks
+            ORDER BY distance_squared
+            LIMIT 1
+        `);
+    const row = stmt.get(x, x, y, y);
+    if (!row)
+      return null;
+    return this.rowToNodeNetwork(row);
+  }
+  // ============================================================
+  // NODE NETWORK METHODS
+  // ============================================================
+  createNetwork(network) {
+    const validNetwork = NodeNetworkSchema.parse(network);
+    const stmt = this.db.prepare(`
+            INSERT INTO node_networks (
+                id, name, type, world_id, center_x, center_y,
+                bounding_box, created_at, updated_at
+            )
+            VALUES (
+                @id, @name, @type, @worldId, @centerX, @centerY,
+                @boundingBox, @createdAt, @updatedAt
+            )
+        `);
+    stmt.run({
+      id: validNetwork.id,
+      name: validNetwork.name,
+      type: validNetwork.type,
+      worldId: validNetwork.worldId,
+      centerX: validNetwork.centerX,
+      centerY: validNetwork.centerY,
+      boundingBox: validNetwork.boundingBox ? JSON.stringify(validNetwork.boundingBox) : null,
+      createdAt: validNetwork.createdAt,
+      updatedAt: validNetwork.updatedAt
+    });
+  }
+  findNetworkById(id) {
+    const stmt = this.db.prepare("SELECT * FROM node_networks WHERE id = ?");
+    const row = stmt.get(id);
+    if (!row)
+      return null;
+    return this.rowToNodeNetwork(row);
+  }
+  findRoomsByNetwork(networkId) {
+    const stmt = this.db.prepare("SELECT * FROM room_nodes WHERE network_id = ? ORDER BY name");
+    const rows = stmt.all(networkId);
+    return rows.map((row) => this.rowToRoomNode(row));
+  }
+  findNetworksAtCoordinates(x, y) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM node_networks
+            WHERE center_x = ? AND center_y = ?
+        `);
+    const rows = stmt.all(x, y);
+    const boundedNetworks = this.db.prepare(`
+            SELECT * FROM node_networks
+            WHERE bounding_box IS NOT NULL
+        `).all();
+    const allNetworks = [...rows];
+    for (const row of boundedNetworks) {
+      if (row.bounding_box) {
+        const bbox = JSON.parse(row.bounding_box);
+        if (x >= bbox.minX && x <= bbox.maxX && y >= bbox.minY && y <= bbox.maxY) {
+          if (!allNetworks.find((n2) => n2.id === row.id)) {
+            allNetworks.push(row);
+          }
+        }
+      }
+    }
+    return allNetworks.map((row) => this.rowToNodeNetwork(row));
+  }
+  rowToRoomNode(row) {
+    return RoomNodeSchema.parse({
+      id: row.id,
+      name: row.name,
+      baseDescription: row.base_description,
+      biomeContext: row.biome_context,
+      atmospherics: JSON.parse(row.atmospherics),
+      exits: JSON.parse(row.exits),
+      entityIds: JSON.parse(row.entity_ids),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      visitedCount: row.visited_count,
+      lastVisitedAt: row.last_visited_at || void 0,
+      networkId: row.network_id || void 0,
+      localX: row.local_x !== null ? row.local_x : void 0,
+      localY: row.local_y !== null ? row.local_y : void 0
+    });
+  }
+  rowToNodeNetwork(row) {
+    return NodeNetworkSchema.parse({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      worldId: row.world_id,
+      centerX: row.center_x,
+      centerY: row.center_y,
+      boundingBox: row.bounding_box ? JSON.parse(row.bounding_box) : void 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    });
+  }
+};
+
+// dist/engine/social/hearing.js
+var BASE_HEARING_RANGES = {
+  // Noisy environments
+  urban: {
+    WHISPER: 5,
+    // Crowded tavern, market chatter
+    TALK: 15,
+    // Need to speak up
+    SHOUT: 40
+    // Cuts through noise
+  },
+  // Quiet natural environments
+  forest: {
+    WHISPER: 10,
+    // Birds, wind, but mostly quiet
+    TALK: 60,
+    // Sound carries well
+    SHOUT: 300
+    // Echo through trees
+  },
+  mountain: {
+    WHISPER: 15,
+    // Thin air, less interference
+    TALK: 100,
+    // Wide open spaces
+    SHOUT: 500
+    // Mountain echo
+  },
+  coastal: {
+    WHISPER: 5,
+    // Crashing waves drown it out
+    TALK: 30,
+    // Have to compete with ocean
+    SHOUT: 150
+    // Carries over water
+  },
+  // Underground/enclosed
+  dungeon: {
+    WHISPER: 10,
+    // Stone echoes whispers
+    TALK: 40,
+    // Moderate echo
+    SHOUT: 120
+    // Loud echo down corridors
+  },
+  cavern: {
+    WHISPER: 15,
+    // Huge echo chamber
+    TALK: 80,
+    // Sound bounces everywhere
+    SHOUT: 400
+    // Massive echo
+  },
+  // Magical environments
+  divine: {
+    WHISPER: 10,
+    // Sacred silence
+    TALK: 50,
+    // Reverent acoustics
+    SHOUT: 200
+    // Booming temple voice
+  },
+  arcane: {
+    WHISPER: 8,
+    // Magic dampens sound slightly
+    TALK: 40,
+    // Unpredictable acoustics
+    SHOUT: 180
+    // Magical amplification
+  }
+};
+function calculateHearingRadius(config2) {
+  let range = BASE_HEARING_RANGES[config2.biomeContext][config2.volume];
+  if (config2.atmospherics.includes("SILENCE")) {
+    range = Math.floor(range * 0.5);
+  }
+  return range;
+}
+
+// dist/engine/social/stealth-perception.js
+function getModifier(abilityScore) {
+  return Math.floor((abilityScore - 10) / 2);
+}
+function rollD20() {
+  return Math.floor(Math.random() * 20) + 1;
+}
+function rollStealthVsPerception(speaker, listener, environmentModifier = 0) {
+  const speakerRoll = rollD20();
+  const dexModifier = getModifier(speaker.stats.dex);
+  const speakerStealthBonus = speaker.stealthBonus || 0;
+  const speakerModifier = dexModifier + speakerStealthBonus;
+  const speakerTotal = speakerRoll + speakerModifier;
+  const listenerRoll = rollD20();
+  const wisModifier = getModifier(listener.stats.wis);
+  const listenerPerceptionBonus = listener.perceptionBonus || 0;
+  const listenerModifier = wisModifier + listenerPerceptionBonus + environmentModifier;
+  const listenerTotal = listenerRoll + listenerModifier;
+  const success = listenerTotal >= speakerTotal;
+  const margin = listenerTotal - speakerTotal;
+  return {
+    speakerRoll,
+    speakerModifier,
+    speakerTotal,
+    listenerRoll,
+    listenerModifier,
+    listenerTotal,
+    success,
+    margin
+  };
+}
+function getEnvironmentModifier(atmospherics) {
+  let modifier = 0;
+  if (atmospherics.includes("SILENCE")) {
+    modifier += 5;
+  }
+  return modifier;
+}
+function isDeafened(character) {
+  return character.conditions?.includes("DEAFENED") || false;
+}
+
+// dist/server/npc-memory-tools.js
+var NpcMemoryTools = {
+  GET_NPC_RELATIONSHIP: {
+    name: "get_npc_relationship",
+    description: "Get relationship status (familiarity, disposition) between a PC and NPC.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("ID of the player character"),
+      npcId: external_exports.string().describe("ID of the NPC")
+    })
+  },
+  UPDATE_NPC_RELATIONSHIP: {
+    name: "update_npc_relationship",
+    description: "Update or create a PC-NPC relationship. Familiarity: stranger\u2192acquaintance\u2192friend\u2192close_friend/rival/enemy.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("ID of the player character"),
+      npcId: external_exports.string().describe("ID of the NPC"),
+      familiarity: external_exports.enum(["stranger", "acquaintance", "friend", "close_friend", "rival", "enemy"]).describe("Level of familiarity"),
+      disposition: external_exports.enum(["hostile", "unfriendly", "neutral", "friendly", "helpful"]).describe("NPC's attitude toward the character"),
+      notes: external_exports.string().optional().describe("Additional notes about the relationship")
+    })
+  },
+  RECORD_CONVERSATION_MEMORY: {
+    name: "record_conversation_memory",
+    description: "Record a significant conversation/interaction. Importance: low (chat), medium, high (plot), critical.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("ID of the player character"),
+      npcId: external_exports.string().describe("ID of the NPC"),
+      summary: external_exports.string().describe("Summary of the conversation/interaction"),
+      importance: external_exports.enum(["low", "medium", "high", "critical"]).default("medium").describe("How important this memory is"),
+      topics: external_exports.array(external_exports.string()).default([]).describe('Keywords/topics for searching (e.g., ["quest", "dragon", "treasure"])')
+    })
+  },
+  GET_CONVERSATION_HISTORY: {
+    name: "get_conversation_history",
+    description: "Get conversation history between PC and NPC. Filter by minimum importance level.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("ID of the player character"),
+      npcId: external_exports.string().describe("ID of the NPC"),
+      minImportance: external_exports.enum(["low", "medium", "high", "critical"]).optional().describe("Minimum importance to include"),
+      limit: external_exports.number().int().positive().optional().describe("Maximum number of memories to return")
+    })
+  },
+  GET_RECENT_INTERACTIONS: {
+    name: "get_recent_interactions",
+    description: "Get recent conversation memories across all NPCs for context building.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("ID of the player character"),
+      limit: external_exports.number().int().positive().default(10).describe("Maximum number of memories to return")
+    })
+  },
+  GET_NPC_CONTEXT: {
+    name: "get_npc_context",
+    description: "Get relationship + conversation history for LLM NPC dialogue prompts.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("ID of the player character"),
+      npcId: external_exports.string().describe("ID of the NPC"),
+      memoryLimit: external_exports.number().int().positive().default(5).describe("Maximum number of memories to include")
+    })
+  },
+  // PHASE-2: Social Hearing Mechanics
+  INTERACT_SOCIALLY: {
+    name: "interact_socially",
+    description: "Social interaction with spatial awareness. Handles hearing range, stealth vs perception, and memory recording.",
+    inputSchema: external_exports.object({
+      speakerId: external_exports.string().describe("ID of the character speaking"),
+      targetId: external_exports.string().optional().describe("ID of the intended recipient (optional for broadcasts)"),
+      content: external_exports.string().min(1).describe("What is being said"),
+      volume: external_exports.enum(["WHISPER", "TALK", "SHOUT"]).describe("Volume level of speech"),
+      intent: external_exports.string().optional().describe("Social intent: gossip, interrogate, negotiate, threaten, etc.")
+    })
+  }
+};
+function getRepo2() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return new NpcMemoryRepository(db);
+}
+async function handleGetNpcRelationship(args, _ctx) {
+  const parsed = NpcMemoryTools.GET_NPC_RELATIONSHIP.inputSchema.parse(args);
+  const repo = getRepo2();
+  const relationship = repo.getRelationship(parsed.characterId, parsed.npcId);
+  if (!relationship) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          characterId: parsed.characterId,
+          npcId: parsed.npcId,
+          familiarity: "stranger",
+          disposition: "neutral",
+          notes: null,
+          firstMetAt: null,
+          lastInteractionAt: null,
+          interactionCount: 0,
+          isNew: true
+        }, null, 2)
+      }]
+    };
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        ...relationship,
+        isNew: false
+      }, null, 2)
+    }]
+  };
+}
+async function handleUpdateNpcRelationship(args, _ctx) {
+  const parsed = NpcMemoryTools.UPDATE_NPC_RELATIONSHIP.inputSchema.parse(args);
+  const repo = getRepo2();
+  const relationship = repo.upsertRelationship({
+    characterId: parsed.characterId,
+    npcId: parsed.npcId,
+    familiarity: parsed.familiarity,
+    disposition: parsed.disposition,
+    notes: parsed.notes ?? null
+  });
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        relationship
+      }, null, 2)
+    }]
+  };
+}
+async function handleRecordConversationMemory(args, _ctx) {
+  const parsed = NpcMemoryTools.RECORD_CONVERSATION_MEMORY.inputSchema.parse(args);
+  const repo = getRepo2();
+  const memory = repo.recordMemory({
+    characterId: parsed.characterId,
+    npcId: parsed.npcId,
+    summary: parsed.summary,
+    importance: parsed.importance,
+    topics: parsed.topics
+  });
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        memory
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetConversationHistory(args, _ctx) {
+  const parsed = NpcMemoryTools.GET_CONVERSATION_HISTORY.inputSchema.parse(args);
+  const repo = getRepo2();
+  const memories = repo.getConversationHistory(parsed.characterId, parsed.npcId, {
+    minImportance: parsed.minImportance,
+    limit: parsed.limit
+  });
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        characterId: parsed.characterId,
+        npcId: parsed.npcId,
+        count: memories.length,
+        memories
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetRecentInteractions(args, _ctx) {
+  const parsed = NpcMemoryTools.GET_RECENT_INTERACTIONS.inputSchema.parse(args);
+  const repo = getRepo2();
+  const memories = repo.getRecentInteractions(parsed.characterId, parsed.limit);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        characterId: parsed.characterId,
+        count: memories.length,
+        memories
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetNpcContext(args, _ctx) {
+  const parsed = NpcMemoryTools.GET_NPC_CONTEXT.inputSchema.parse(args);
+  const repo = getRepo2();
+  const relationship = repo.getRelationship(parsed.characterId, parsed.npcId);
+  const memories = repo.getConversationHistory(parsed.characterId, parsed.npcId, { limit: parsed.memoryLimit });
+  const context = {
+    relationship: relationship ?? {
+      characterId: parsed.characterId,
+      npcId: parsed.npcId,
+      familiarity: "stranger",
+      disposition: "neutral",
+      notes: null,
+      firstMetAt: null,
+      lastInteractionAt: null,
+      interactionCount: 0
+    },
+    recentMemories: memories,
+    // Generate LLM-ready summary
+    contextSummary: buildContextSummary(relationship, memories)
+  };
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify(context, null, 2)
+    }]
+  };
+}
+async function handleInteractSocially(args, _ctx) {
+  const parsed = NpcMemoryTools.INTERACT_SOCIALLY.inputSchema.parse(args);
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  const charRepo = new CharacterRepository(db);
+  const spatialRepo = new SpatialRepository(db);
+  const memoryRepo = new NpcMemoryRepository(db);
+  const speaker = charRepo.findById(parsed.speakerId);
+  if (!speaker) {
+    throw new Error(`Speaker with ID ${parsed.speakerId} not found`);
+  }
+  if (!speaker.currentRoomId) {
+    throw new Error(`Speaker ${speaker.name} is not in any room`);
+  }
+  const room = spatialRepo.findById(speaker.currentRoomId);
+  if (!room) {
+    throw new Error(`Room ${speaker.currentRoomId} not found`);
+  }
+  let target = null;
+  if (parsed.targetId) {
+    target = charRepo.findById(parsed.targetId);
+    if (!target) {
+      throw new Error(`Target with ID ${parsed.targetId} not found`);
+    }
+  }
+  const hearingRadius = calculateHearingRadius({
+    volume: parsed.volume,
+    biomeContext: room.biomeContext,
+    atmospherics: room.atmospherics
+  });
+  const envModifier = getEnvironmentModifier(room.atmospherics);
+  const potentialListeners = room.entityIds.filter((id) => id !== parsed.speakerId).map((id) => charRepo.findById(id)).filter((char) => char !== null);
+  const hearingResults = [];
+  if (target && target.currentRoomId === room.id) {
+    hearingResults.push({
+      listenerId: target.id,
+      listenerName: target.name,
+      heardFully: true
+    });
+    memoryRepo.recordMemory({
+      characterId: target.id,
+      npcId: speaker.id,
+      summary: `${speaker.name} said (${parsed.volume.toLowerCase()}): "${parsed.content}"${parsed.intent ? ` [Intent: ${parsed.intent}]` : ""}`,
+      importance: parsed.volume === "SHOUT" ? "high" : "medium",
+      topics: parsed.intent ? [parsed.intent] : []
+    });
+  }
+  const eavesdroppers = potentialListeners.filter((listener) => listener.id !== parsed.targetId && !isDeafened(listener));
+  for (const listener of eavesdroppers) {
+    const roll = rollStealthVsPerception(speaker, listener, envModifier);
+    if (roll.success) {
+      hearingResults.push({
+        listenerId: listener.id,
+        listenerName: listener.name,
+        heardFully: false,
+        opposedRoll: {
+          speakerRoll: roll.speakerRoll,
+          speakerTotal: roll.speakerTotal,
+          listenerRoll: roll.listenerRoll,
+          listenerTotal: roll.listenerTotal,
+          success: roll.success,
+          margin: roll.margin
+        }
+      });
+      memoryRepo.recordMemory({
+        characterId: listener.id,
+        npcId: speaker.id,
+        summary: `Overheard ${speaker.name} ${parsed.volume === "WHISPER" ? "whispering" : parsed.volume === "SHOUT" ? "shouting" : "talking"}${target ? ` to ${target.name}` : ""} about something${parsed.intent ? ` (${parsed.intent})` : ""}`,
+        importance: parsed.volume === "SHOUT" ? "medium" : "low",
+        topics: parsed.intent ? [parsed.intent, "eavesdropped"] : ["eavesdropped"]
+      });
+    } else {
+      hearingResults.push({
+        listenerId: listener.id,
+        listenerName: listener.name,
+        heardFully: false,
+        opposedRoll: {
+          speakerRoll: roll.speakerRoll,
+          speakerTotal: roll.speakerTotal,
+          listenerRoll: roll.listenerRoll,
+          listenerTotal: roll.listenerTotal,
+          success: roll.success,
+          margin: roll.margin
+        }
+      });
+    }
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        speaker: {
+          id: speaker.id,
+          name: speaker.name
+        },
+        target: target ? {
+          id: target.id,
+          name: target.name,
+          heard: true
+        } : null,
+        volume: parsed.volume,
+        hearingRadius,
+        room: {
+          id: room.id,
+          name: room.name,
+          biome: room.biomeContext,
+          atmospherics: room.atmospherics
+        },
+        listeners: hearingResults,
+        totalListeners: hearingResults.length,
+        whoHeard: hearingResults.filter((r) => r.heardFully || r.opposedRoll?.success).length,
+        whoMissed: hearingResults.filter((r) => !r.heardFully && !r.opposedRoll?.success).length
+      }, null, 2)
+    }]
+  };
+}
+function buildContextSummary(relationship, memories) {
+  const lines = [];
+  if (relationship) {
+    lines.push(`RELATIONSHIP: ${relationship.familiarity} (${relationship.disposition})`);
+    lines.push(`Previous interactions: ${relationship.interactionCount}`);
+    if (relationship.notes) {
+      lines.push(`Notes: ${relationship.notes}`);
+    }
+  } else {
+    lines.push(`RELATIONSHIP: First meeting (stranger, neutral)`);
+  }
+  if (memories.length > 0) {
+    lines.push("");
+    lines.push("PREVIOUS CONVERSATIONS:");
+    for (const memory of memories) {
+      const importance = memory.importance === "critical" ? "!!!" : memory.importance === "high" ? "!!" : memory.importance === "medium" ? "!" : "";
+      lines.push(`${importance} ${memory.summary}`);
+      if (memory.topics.length > 0) {
+        lines.push(`  Topics: ${memory.topics.join(", ")}`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+
+// dist/server/theft-tools.js
+init_zod();
+
+// dist/schema/theft.js
+init_zod();
+var HeatLevelSchema = external_exports.enum(["burning", "hot", "warm", "cool", "cold"]);
+var StolenItemRecordSchema = external_exports.object({
+  id: external_exports.string(),
+  itemId: external_exports.string(),
+  stolenFrom: external_exports.string().describe("Original owner character ID"),
+  stolenBy: external_exports.string().describe("Thief character ID"),
+  stolenAt: external_exports.string().datetime(),
+  stolenLocation: external_exports.string().nullable().describe("Region/structure ID where theft occurred"),
+  // Heat system
+  heatLevel: HeatLevelSchema.default("burning"),
+  heatUpdatedAt: external_exports.string().datetime(),
+  // Detection
+  reportedToGuards: external_exports.boolean().default(false),
+  bounty: external_exports.number().int().min(0).default(0),
+  witnesses: external_exports.array(external_exports.string()).default([]).describe("NPC IDs who witnessed the theft"),
+  // Resolution
+  recovered: external_exports.boolean().default(false),
+  recoveredAt: external_exports.string().datetime().nullable(),
+  fenced: external_exports.boolean().default(false),
+  fencedAt: external_exports.string().datetime().nullable(),
+  fencedTo: external_exports.string().nullable().describe("Fence NPC ID"),
+  createdAt: external_exports.string().datetime(),
+  updatedAt: external_exports.string().datetime()
+});
+var FenceNpcSchema = external_exports.object({
+  npcId: external_exports.string(),
+  factionId: external_exports.string().nullable().describe("e.g., 'thieves-guild'"),
+  buyRate: external_exports.number().min(0.1).max(1).default(0.4).describe("Fraction of item value they pay"),
+  maxHeatLevel: HeatLevelSchema.default("hot").describe("Maximum heat they will accept"),
+  dailyHeatCapacity: external_exports.number().int().min(0).default(100).describe("Total heat points they can absorb per day"),
+  currentDailyHeat: external_exports.number().int().min(0).default(0),
+  lastResetAt: external_exports.string().datetime(),
+  specializations: external_exports.array(external_exports.string()).default([]).describe("Item types they prefer"),
+  cooldownDays: external_exports.number().int().min(0).default(7).describe("Days to remove stolen flag"),
+  reputation: external_exports.number().int().min(0).max(100).default(50).describe("Fence reliability")
+});
+var HEAT_VALUES = {
+  burning: 100,
+  hot: 50,
+  warm: 25,
+  cool: 10,
+  cold: 5
+};
+var HEAT_DECAY_RULES = {
+  burning_to_hot: 1,
+  // 1 day
+  hot_to_warm: 3,
+  // 3 days
+  warm_to_cool: 7,
+  // 1 week
+  cool_to_cold: 14,
+  // 2 weeks
+  cold_fully: 30
+  // Never fully clears for unique items
+};
+var HEAT_LEVEL_ORDER = ["cold", "cool", "warm", "hot", "burning"];
+function compareHeatLevels(a, b) {
+  return HEAT_LEVEL_ORDER.indexOf(a) - HEAT_LEVEL_ORDER.indexOf(b);
+}
+
+// dist/storage/repos/theft.repo.js
+var TheftRepository = class {
+  db;
+  inventoryRepo;
+  constructor(db) {
+    this.db = db;
+    this.inventoryRepo = new InventoryRepository(db);
+  }
+  // ============================================================
+  // STOLEN ITEM OPERATIONS
+  // ============================================================
+  /**
+   * Record a theft event
+   * @param transferItem - If true, physically moves item from victim to thief inventory
+   */
+  recordTheft(record2) {
+    if (record2.stolenFrom === record2.stolenBy) {
+      throw new Error("A character cannot steal from themselves");
+    }
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const id = v4_default();
+    const stmt = this.db.prepare(`
+            INSERT INTO stolen_items (
+                id, item_id, stolen_from, stolen_by, stolen_at, stolen_location,
+                heat_level, heat_updated_at, witnesses, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'burning', ?, ?, ?, ?)
+        `);
+    stmt.run(id, record2.itemId, record2.stolenFrom, record2.stolenBy, now, record2.stolenLocation ?? null, now, JSON.stringify(record2.witnesses ?? []), now, now);
+    let transferred = false;
+    if (record2.transferItem) {
+      const qty = record2.quantity ?? 1;
+      const removed = this.inventoryRepo.removeItem(record2.stolenFrom, record2.itemId, qty);
+      if (removed) {
+        this.inventoryRepo.addItem(record2.stolenBy, record2.itemId, qty);
+        transferred = true;
+      }
+    }
+    return { ...this.getTheftRecord(record2.itemId), transferred };
+  }
+  /**
+   * Check if an item is currently stolen (not recovered or cleared)
+   */
+  isStolen(itemId) {
+    const stmt = this.db.prepare(`
+            SELECT id FROM stolen_items
+            WHERE item_id = ? AND recovered = 0
+        `);
+    const row = stmt.get(itemId);
+    return !!row;
+  }
+  /**
+   * Get theft record for an item
+   */
+  getTheftRecord(itemId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM stolen_items
+            WHERE item_id = ? AND recovered = 0
+            ORDER BY created_at DESC LIMIT 1
+        `);
+    const row = stmt.get(itemId);
+    if (!row)
+      return null;
+    return this.rowToStolenItem(row);
+  }
+  /**
+   * Get all stolen items currently held by a character
+   */
+  getStolenItemsHeldBy(characterId) {
+    const stmt = this.db.prepare(`
+            SELECT si.* FROM stolen_items si
+            JOIN inventory_items ii ON si.item_id = ii.item_id
+            WHERE ii.character_id = ? AND si.recovered = 0
+        `);
+    const rows = stmt.all(characterId);
+    return rows.map((r) => this.rowToStolenItem(r));
+  }
+  /**
+   * Get all items stolen FROM a character
+   */
+  getItemsStolenFrom(characterId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM stolen_items
+            WHERE stolen_from = ? AND recovered = 0
+        `);
+    const rows = stmt.all(characterId);
+    return rows.map((r) => this.rowToStolenItem(r));
+  }
+  /**
+   * Get all active theft records (not recovered)
+   */
+  getAllActiveThefts() {
+    const stmt = this.db.prepare(`
+            SELECT * FROM stolen_items WHERE recovered = 0
+        `);
+    const rows = stmt.all();
+    return rows.map((r) => this.rowToStolenItem(r));
+  }
+  /**
+   * Update heat level
+   */
+  updateHeatLevel(itemId, newHeat) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE stolen_items
+            SET heat_level = ?, heat_updated_at = ?, updated_at = ?
+            WHERE item_id = ? AND recovered = 0
+        `);
+    stmt.run(newHeat, now, now, itemId);
+  }
+  /**
+   * Report theft to guards
+   */
+  reportToGuards(itemId, bounty = 0) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE stolen_items
+            SET reported_to_guards = 1, bounty = ?, updated_at = ?
+            WHERE item_id = ? AND recovered = 0
+        `);
+    stmt.run(bounty, now, itemId);
+  }
+  /**
+   * Mark item as recovered
+   */
+  markRecovered(itemId) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE stolen_items
+            SET recovered = 1, recovered_at = ?, updated_at = ?
+            WHERE item_id = ? AND recovered = 0
+        `);
+    stmt.run(now, now, itemId);
+  }
+  /**
+   * Mark item as fenced
+   */
+  markFenced(itemId, fenceId) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE stolen_items
+            SET fenced = 1, fenced_at = ?, fenced_to = ?, updated_at = ?
+            WHERE item_id = ? AND recovered = 0
+        `);
+    stmt.run(now, fenceId, now, itemId);
+  }
+  /**
+   * Clear stolen flag completely (after cooldown)
+   */
+  clearStolenFlag(itemId) {
+    const stmt = this.db.prepare(`
+            DELETE FROM stolen_items WHERE item_id = ?
+        `);
+    stmt.run(itemId);
+  }
+  /**
+   * Process heat decay for all stolen items
+   */
+  processHeatDecay(daysAdvanced) {
+    const changes = [];
+    const items = this.getAllActiveThefts();
+    const now = /* @__PURE__ */ new Date();
+    for (const item of items) {
+      const heatUpdated = new Date(item.heatUpdatedAt);
+      const daysSinceUpdate = Math.floor((now.getTime() - heatUpdated.getTime()) / (1e3 * 60 * 60 * 24)) + daysAdvanced;
+      let currentHeat = item.heatLevel;
+      let newHeat = currentHeat;
+      if (currentHeat === "burning" && daysSinceUpdate >= HEAT_DECAY_RULES.burning_to_hot) {
+        newHeat = "hot";
+      } else if (currentHeat === "hot" && daysSinceUpdate >= HEAT_DECAY_RULES.hot_to_warm) {
+        newHeat = "warm";
+      } else if (currentHeat === "warm" && daysSinceUpdate >= HEAT_DECAY_RULES.warm_to_cool) {
+        newHeat = "cool";
+      } else if (currentHeat === "cool" && daysSinceUpdate >= HEAT_DECAY_RULES.cool_to_cold) {
+        newHeat = "cold";
+      }
+      if (newHeat !== currentHeat) {
+        this.updateHeatLevel(item.itemId, newHeat);
+        changes.push({ itemId: item.itemId, oldHeat: currentHeat, newHeat });
+      }
+    }
+    return changes;
+  }
+  // ============================================================
+  // FENCE OPERATIONS
+  // ============================================================
+  /**
+   * Register an NPC as a fence
+   * EDGE-006: Throws error if NPC has been a theft victim
+   */
+  registerFence(fence) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const victimCheck = this.db.prepare("SELECT COUNT(*) as count FROM stolen_items WHERE stolen_from = ?").get(fence.npcId);
+    if (victimCheck.count > 0) {
+      throw new Error("Cannot register a theft victim as a fence");
+    }
+    const stmt = this.db.prepare(`
+            INSERT INTO fence_npcs (
+                npc_id, faction_id, buy_rate, max_heat_level, daily_heat_capacity,
+                current_daily_heat, last_reset_at, specializations, cooldown_days, reputation
+            ) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
+        `);
+    stmt.run(fence.npcId, fence.factionId ?? null, fence.buyRate ?? 0.4, fence.maxHeatLevel ?? "hot", fence.dailyHeatCapacity ?? 100, now, JSON.stringify(fence.specializations ?? []), fence.cooldownDays ?? 7, fence.reputation ?? 50);
+    return this.getFence(fence.npcId);
+  }
+  /**
+   * Get fence data for an NPC
+   */
+  getFence(npcId) {
+    const stmt = this.db.prepare(`SELECT * FROM fence_npcs WHERE npc_id = ?`);
+    const row = stmt.get(npcId);
+    if (!row)
+      return null;
+    return this.rowToFence(row);
+  }
+  /**
+   * List all fences
+   */
+  listFences(factionId) {
+    let stmt;
+    if (factionId) {
+      stmt = this.db.prepare(`SELECT * FROM fence_npcs WHERE faction_id = ?`);
+      const rows = stmt.all(factionId);
+      return rows.map((r) => this.rowToFence(r));
+    } else {
+      stmt = this.db.prepare(`SELECT * FROM fence_npcs`);
+      const rows = stmt.all();
+      return rows.map((r) => this.rowToFence(r));
+    }
+  }
+  /**
+   * Check if fence will accept an item
+   */
+  canFenceAccept(fenceId, stolenRecord, itemValue) {
+    const fence = this.getFence(fenceId);
+    if (!fence) {
+      return { accepted: false, reason: "Not a registered fence" };
+    }
+    if (compareHeatLevels(stolenRecord.heatLevel, fence.maxHeatLevel) > 0) {
+      return { accepted: false, reason: `Item too hot (${stolenRecord.heatLevel}), fence only accepts ${fence.maxHeatLevel} or cooler` };
+    }
+    const heatValue = HEAT_VALUES[stolenRecord.heatLevel];
+    if (fence.currentDailyHeat + heatValue > fence.dailyHeatCapacity) {
+      return { accepted: false, reason: "Fence at daily capacity" };
+    }
+    const price = Math.floor(itemValue * fence.buyRate);
+    return { accepted: true, price };
+  }
+  /**
+   * Record a fence transaction
+   * @param paySeller - If true, transfers gold from fence to seller
+   * @param sellerId - Required if paySeller is true
+   * @param price - Required if paySeller is true (amount to pay)
+   */
+  recordFenceTransaction(fenceId, itemId, itemHeatLevel, options) {
+    const fence = this.getFence(fenceId);
+    if (!fence)
+      return { fenced: false, paid: false };
+    const heatValue = HEAT_VALUES[itemHeatLevel];
+    const stmt = this.db.prepare(`
+            UPDATE fence_npcs
+            SET current_daily_heat = current_daily_heat + ?
+            WHERE npc_id = ?
+        `);
+    stmt.run(heatValue, fenceId);
+    this.markFenced(itemId, fenceId);
+    let paid = false;
+    if (options?.paySeller && options?.sellerId && options?.price) {
+      this.inventoryRepo.addCurrency(options.sellerId, { gold: options.price });
+      paid = true;
+    }
+    return { fenced: true, paid, amountPaid: paid ? options?.price : void 0 };
+  }
+  /**
+   * Reset daily heat capacity for all fences
+   */
+  resetFenceDailyCapacity() {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE fence_npcs
+            SET current_daily_heat = 0, last_reset_at = ?
+        `);
+    stmt.run(now);
+  }
+  // ============================================================
+  // HELPER METHODS
+  // ============================================================
+  rowToStolenItem(row) {
+    return {
+      id: row.id,
+      itemId: row.item_id,
+      stolenFrom: row.stolen_from,
+      stolenBy: row.stolen_by,
+      stolenAt: row.stolen_at,
+      stolenLocation: row.stolen_location,
+      heatLevel: row.heat_level,
+      heatUpdatedAt: row.heat_updated_at,
+      reportedToGuards: row.reported_to_guards === 1,
+      bounty: row.bounty,
+      witnesses: JSON.parse(row.witnesses),
+      recovered: row.recovered === 1,
+      recoveredAt: row.recovered_at,
+      fenced: row.fenced === 1,
+      fencedAt: row.fenced_at,
+      fencedTo: row.fenced_to,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+  rowToFence(row) {
+    return {
+      npcId: row.npc_id,
+      factionId: row.faction_id,
+      buyRate: row.buy_rate,
+      maxHeatLevel: row.max_heat_level,
+      dailyHeatCapacity: row.daily_heat_capacity,
+      currentDailyHeat: row.current_daily_heat,
+      lastResetAt: row.last_reset_at,
+      specializations: JSON.parse(row.specializations),
+      cooldownDays: row.cooldown_days,
+      reputation: row.reputation
+    };
+  }
+};
+
+// dist/server/theft-tools.js
+var TheftTools = {
+  STEAL_ITEM: {
+    name: "steal_item",
+    description: `Record a theft event. Marks an item as stolen from one character and creates a "hot" theft record.
+
+The theft creates a provenance record that:
+- Can be detected by the original owner
+- May trigger guard searches
+- Affects NPC disposition if detected
+- Heat decays over time (burning \u2192 hot \u2192 warm \u2192 cool \u2192 cold)
+
+Example:
+{
+  "thiefId": "rogue-1",
+  "victimId": "merchant-1",
+  "itemId": "ruby-necklace",
+  "witnesses": ["guard-1"],
+  "locationId": "marketplace"
+}`,
+    inputSchema: external_exports.object({
+      thiefId: external_exports.string().describe("Character performing the theft"),
+      victimId: external_exports.string().describe("Character being stolen from"),
+      itemId: external_exports.string().describe("Item being stolen"),
+      witnesses: external_exports.array(external_exports.string()).optional().describe("NPCs who witnessed the theft"),
+      locationId: external_exports.string().optional().describe("Where the theft occurred")
+    })
+  },
+  CHECK_ITEM_STOLEN: {
+    name: "check_item_stolen",
+    description: "Check if an item is stolen and get its provenance details.",
+    inputSchema: external_exports.object({
+      itemId: external_exports.string()
+    })
+  },
+  CHECK_STOLEN_ITEMS_ON_CHARACTER: {
+    name: "check_stolen_items_on_character",
+    description: "Check if a character carries stolen items. Useful for guard searches.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string(),
+      checkerId: external_exports.string().optional().describe("The NPC/guard doing the checking")
+    })
+  },
+  CHECK_ITEM_RECOGNITION: {
+    name: "check_item_recognition",
+    description: "Check if NPC recognizes stolen item. Owner always recognizes; guards check vs heat/bounty.",
+    inputSchema: external_exports.object({
+      npcId: external_exports.string().describe("NPC who might recognize the item"),
+      characterId: external_exports.string().describe("Character carrying the item"),
+      itemId: external_exports.string().describe("Item to check")
+    })
+  },
+  SELL_TO_FENCE: {
+    name: "sell_to_fence",
+    description: "Sell stolen item to a fence NPC for reduced price. Clears stolen flag after cooldown.",
+    inputSchema: external_exports.object({
+      sellerId: external_exports.string(),
+      fenceId: external_exports.string(),
+      itemId: external_exports.string(),
+      itemValue: external_exports.number().int().min(0).describe("Base value of the item in gold")
+    })
+  },
+  REGISTER_FENCE: {
+    name: "register_fence",
+    description: "Register an NPC as a fence (buys stolen goods).",
+    inputSchema: external_exports.object({
+      npcId: external_exports.string(),
+      factionId: external_exports.string().optional(),
+      buyRate: external_exports.number().min(0.1).max(1).optional().default(0.4),
+      maxHeatLevel: HeatLevelSchema.optional().default("hot"),
+      dailyHeatCapacity: external_exports.number().int().min(0).optional().default(100),
+      specializations: external_exports.array(external_exports.string()).optional(),
+      cooldownDays: external_exports.number().int().min(0).optional().default(7)
+    })
+  },
+  REPORT_THEFT: {
+    name: "report_theft",
+    description: "Report a theft to guards, setting bounty and increasing detection chance.",
+    inputSchema: external_exports.object({
+      reporterId: external_exports.string(),
+      itemId: external_exports.string(),
+      bountyOffered: external_exports.number().int().min(0).optional().default(0)
+    })
+  },
+  ADVANCE_HEAT_DECAY: {
+    name: "advance_heat_decay",
+    description: "Process heat decay for all stolen items when game time advances.",
+    inputSchema: external_exports.object({
+      daysAdvanced: external_exports.number().int().min(1)
+    })
+  },
+  GET_FENCE: {
+    name: "get_fence",
+    description: "Get information about a fence NPC.",
+    inputSchema: external_exports.object({
+      npcId: external_exports.string()
+    })
+  },
+  LIST_FENCES: {
+    name: "list_fences",
+    description: "List all registered fences, optionally filtered by faction.",
+    inputSchema: external_exports.object({
+      factionId: external_exports.string().optional()
+    })
+  }
+};
+function getRepo3() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return new TheftRepository(db);
+}
+async function handleStealItem(args, _ctx) {
+  const parsed = TheftTools.STEAL_ITEM.inputSchema.parse(args);
+  const repo = getRepo3();
+  if (parsed.thiefId === parsed.victimId) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "A character cannot steal from themselves"
+        }, null, 2)
+      }]
+    };
+  }
+  const record2 = repo.recordTheft({
+    itemId: parsed.itemId,
+    stolenFrom: parsed.victimId,
+    stolenBy: parsed.thiefId,
+    stolenLocation: parsed.locationId ?? null,
+    witnesses: parsed.witnesses ?? []
+  });
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        record: record2,
+        message: `Item ${parsed.itemId} marked as stolen from ${parsed.victimId} by ${parsed.thiefId}`,
+        heatLevel: record2.heatLevel,
+        witnesses: record2.witnesses.length
+      }, null, 2)
+    }]
+  };
+}
+async function handleCheckItemStolen(args, _ctx) {
+  const parsed = TheftTools.CHECK_ITEM_STOLEN.inputSchema.parse(args);
+  const repo = getRepo3();
+  const record2 = repo.getTheftRecord(parsed.itemId);
+  const isStolen = record2 !== null;
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        itemId: parsed.itemId,
+        isStolen,
+        record: record2 ?? void 0,
+        heatLevel: record2?.heatLevel ?? null,
+        originalOwner: record2?.stolenFrom ?? null,
+        thief: record2?.stolenBy ?? null,
+        reportedToGuards: record2?.reportedToGuards ?? false,
+        bounty: record2?.bounty ?? 0
+      }, null, 2)
+    }]
+  };
+}
+async function handleCheckStolenItemsOnCharacter(args, _ctx) {
+  const parsed = TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.inputSchema.parse(args);
+  const repo = getRepo3();
+  const stolenItems = repo.getStolenItemsHeldBy(parsed.characterId);
+  let detectionRisk = "none";
+  let hottest = "cold";
+  for (const item of stolenItems) {
+    if (compareHeatLevels(item.heatLevel, hottest) > 0) {
+      hottest = item.heatLevel;
+    }
+  }
+  if (hottest === "burning")
+    detectionRisk = "very high";
+  else if (hottest === "hot")
+    detectionRisk = "high";
+  else if (hottest === "warm")
+    detectionRisk = "moderate";
+  else if (hottest === "cool")
+    detectionRisk = "low";
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        characterId: parsed.characterId,
+        stolenItemCount: stolenItems.length,
+        detectionRisk,
+        hottestItem: hottest,
+        items: stolenItems.map((i) => ({
+          itemId: i.itemId,
+          heatLevel: i.heatLevel,
+          stolenFrom: i.stolenFrom,
+          reportedToGuards: i.reportedToGuards,
+          bounty: i.bounty
+        }))
+      }, null, 2)
+    }]
+  };
+}
+async function handleCheckItemRecognition(args, _ctx) {
+  const parsed = TheftTools.CHECK_ITEM_RECOGNITION.inputSchema.parse(args);
+  const repo = getRepo3();
+  const record2 = repo.getTheftRecord(parsed.itemId);
+  if (!record2) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          itemId: parsed.itemId,
+          recognized: false,
+          isStolen: false,
+          reason: "Item is not stolen"
+        }, null, 2)
+      }]
+    };
+  }
+  if (parsed.npcId === record2.stolenFrom) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          itemId: parsed.itemId,
+          recognized: true,
+          isStolen: true,
+          recognizedBy: "original_owner",
+          message: "That belongs to me! THIEF!",
+          reaction: "hostile",
+          stolenFrom: record2.stolenFrom,
+          stolenAt: record2.stolenAt
+        }, null, 2)
+      }]
+    };
+  }
+  if (record2.witnesses.includes(parsed.npcId)) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          itemId: parsed.itemId,
+          recognized: true,
+          isStolen: true,
+          recognizedBy: "witness",
+          message: "I saw you steal that!",
+          reaction: "suspicious"
+        }, null, 2)
+      }]
+    };
+  }
+  const heatValue = HEAT_VALUES[record2.heatLevel];
+  const recognitionChance = Math.min(100, heatValue + record2.bounty / 10);
+  const roll = Math.random() * 100;
+  if (roll < recognitionChance) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          itemId: parsed.itemId,
+          recognized: true,
+          isStolen: true,
+          recognizedBy: "suspicion",
+          roll: Math.floor(roll),
+          threshold: Math.floor(recognitionChance),
+          message: "That looks suspicious...",
+          reaction: "suspicious"
+        }, null, 2)
+      }]
+    };
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        itemId: parsed.itemId,
+        recognized: false,
+        isStolen: true,
+        roll: Math.floor(roll),
+        threshold: Math.floor(recognitionChance),
+        reason: "NPC did not recognize the item"
+      }, null, 2)
+    }]
+  };
+}
+async function handleSellToFence(args, _ctx) {
+  const parsed = TheftTools.SELL_TO_FENCE.inputSchema.parse(args);
+  const repo = getRepo3();
+  const record2 = repo.getTheftRecord(parsed.itemId);
+  if (!record2) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          reason: "Item is not stolen - no need for a fence"
+        }, null, 2)
+      }]
+    };
+  }
+  const check2 = repo.canFenceAccept(parsed.fenceId, record2, parsed.itemValue);
+  if (!check2.accepted) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          reason: check2.reason
+        }, null, 2)
+      }]
+    };
+  }
+  repo.recordFenceTransaction(parsed.fenceId, parsed.itemId, record2.heatLevel);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        itemId: parsed.itemId,
+        fenceId: parsed.fenceId,
+        price: check2.price,
+        baseValue: parsed.itemValue,
+        heatLevel: record2.heatLevel,
+        message: `Sold for ${check2.price} gold (${Math.floor(check2.price / parsed.itemValue * 100)}% of value)`
+      }, null, 2)
+    }]
+  };
+}
+async function handleRegisterFence(args, _ctx) {
+  const parsed = TheftTools.REGISTER_FENCE.inputSchema.parse(args);
+  const repo = getRepo3();
+  const stolenFromVictim = repo.getItemsStolenFrom(parsed.npcId);
+  if (stolenFromVictim.length > 0) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "Cannot register a theft victim as a fence",
+          reason: `${parsed.npcId} has had ${stolenFromVictim.length} item(s) stolen from them`,
+          suggestion: "Theft victims cannot act as fences for narrative consistency"
+        }, null, 2)
+      }]
+    };
+  }
+  const fence = repo.registerFence({
+    npcId: parsed.npcId,
+    factionId: parsed.factionId ?? null,
+    buyRate: parsed.buyRate,
+    maxHeatLevel: parsed.maxHeatLevel,
+    dailyHeatCapacity: parsed.dailyHeatCapacity,
+    specializations: parsed.specializations ?? [],
+    cooldownDays: parsed.cooldownDays
+  });
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        fence,
+        message: `${parsed.npcId} registered as a fence`
+      }, null, 2)
+    }]
+  };
+}
+async function handleReportTheft(args, _ctx) {
+  const parsed = TheftTools.REPORT_THEFT.inputSchema.parse(args);
+  const repo = getRepo3();
+  const record2 = repo.getTheftRecord(parsed.itemId);
+  if (!record2) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          reason: "No theft record found for this item"
+        }, null, 2)
+      }]
+    };
+  }
+  repo.reportToGuards(parsed.itemId, parsed.bountyOffered ?? 0);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        itemId: parsed.itemId,
+        reportedBy: parsed.reporterId,
+        bounty: parsed.bountyOffered ?? 0,
+        message: "Theft reported to guards"
+      }, null, 2)
+    }]
+  };
+}
+async function handleAdvanceHeatDecay(args, _ctx) {
+  const parsed = TheftTools.ADVANCE_HEAT_DECAY.inputSchema.parse(args);
+  const repo = getRepo3();
+  const changes = repo.processHeatDecay(parsed.daysAdvanced);
+  repo.resetFenceDailyCapacity();
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        daysAdvanced: parsed.daysAdvanced,
+        itemsDecayed: changes.length,
+        changes: changes.map((c) => ({
+          itemId: c.itemId,
+          from: c.oldHeat,
+          to: c.newHeat
+        }))
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetFence(args, _ctx) {
+  const parsed = TheftTools.GET_FENCE.inputSchema.parse(args);
+  const repo = getRepo3();
+  const fence = repo.getFence(parsed.npcId);
+  if (!fence) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          found: false,
+          npcId: parsed.npcId,
+          message: "NPC is not a registered fence"
+        }, null, 2)
+      }]
+    };
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        found: true,
+        fence
+      }, null, 2)
+    }]
+  };
+}
+async function handleListFences(args, _ctx) {
+  const parsed = TheftTools.LIST_FENCES.inputSchema.parse(args);
+  const repo = getRepo3();
+  const fences = repo.listFences(parsed.factionId);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        count: fences.length,
+        factionFilter: parsed.factionId ?? "all",
+        fences
+      }, null, 2)
+    }]
+  };
+}
+
+// dist/server/corpse-tools.js
+init_zod();
+
+// dist/schema/corpse.js
+init_zod();
+var CorpseStateSchema = external_exports.enum(["fresh", "decaying", "skeletal", "gone"]);
+var CorpseSchema = external_exports.object({
+  id: external_exports.string(),
+  characterId: external_exports.string().describe("Original character/creature ID"),
+  characterName: external_exports.string(),
+  characterType: external_exports.enum(["pc", "npc", "enemy", "neutral"]),
+  creatureType: external_exports.string().optional().describe('Creature type for loot table lookup (e.g., "goblin", "dragon")'),
+  cr: external_exports.number().optional().describe("Challenge rating for loot scaling"),
+  // Location
+  worldId: external_exports.string().nullable(),
+  regionId: external_exports.string().nullable(),
+  position: external_exports.object({
+    x: external_exports.number(),
+    y: external_exports.number()
+  }).nullable(),
+  encounterId: external_exports.string().nullable().describe("Encounter where death occurred"),
+  // State
+  state: CorpseStateSchema.default("fresh"),
+  stateUpdatedAt: external_exports.string().datetime(),
+  // Loot
+  lootGenerated: external_exports.boolean().default(false),
+  looted: external_exports.boolean().default(false),
+  lootedBy: external_exports.string().nullable(),
+  lootedAt: external_exports.string().datetime().nullable(),
+  // Currency (from loot generation)
+  currency: external_exports.object({
+    gold: external_exports.number().int().min(0).default(0),
+    silver: external_exports.number().int().min(0).default(0),
+    copper: external_exports.number().int().min(0).default(0)
+  }).default({ gold: 0, silver: 0, copper: 0 }),
+  currencyLooted: external_exports.boolean().default(false),
+  // Harvesting
+  harvestable: external_exports.boolean().default(false),
+  harvestableResources: external_exports.array(external_exports.object({
+    resourceType: external_exports.string(),
+    quantity: external_exports.number().int(),
+    harvested: external_exports.boolean().default(false)
+  })).default([]),
+  createdAt: external_exports.string().datetime(),
+  updatedAt: external_exports.string().datetime()
+});
+var LootTableEntrySchema = external_exports.object({
+  itemId: external_exports.string().nullable().describe("Specific item ID, or null for template-based"),
+  itemTemplateId: external_exports.string().nullable().describe("Item template to instantiate"),
+  itemName: external_exports.string().optional().describe("Name for dynamic item creation"),
+  quantity: external_exports.object({
+    min: external_exports.number().int().min(0),
+    max: external_exports.number().int().min(0)
+  }),
+  weight: external_exports.number().min(0).max(1).describe("Drop probability 0-1"),
+  conditions: external_exports.array(external_exports.string()).optional().describe("Conditions for this drop")
+});
+var LootTableSchema = external_exports.object({
+  id: external_exports.string(),
+  name: external_exports.string(),
+  creatureTypes: external_exports.array(external_exports.string()).describe('Creature types this applies to (e.g., "goblin", "dragon")'),
+  crRange: external_exports.object({
+    min: external_exports.number().min(0),
+    max: external_exports.number().min(0)
+  }).optional(),
+  guaranteedDrops: external_exports.array(LootTableEntrySchema).default([]),
+  randomDrops: external_exports.array(LootTableEntrySchema).default([]),
+  currencyRange: external_exports.object({
+    gold: external_exports.object({ min: external_exports.number(), max: external_exports.number() }),
+    silver: external_exports.object({ min: external_exports.number(), max: external_exports.number() }).optional(),
+    copper: external_exports.object({ min: external_exports.number(), max: external_exports.number() }).optional()
+  }).optional(),
+  harvestableResources: external_exports.array(external_exports.object({
+    resourceType: external_exports.string(),
+    quantity: external_exports.object({ min: external_exports.number(), max: external_exports.number() }),
+    dcRequired: external_exports.number().int().optional()
+  })).optional(),
+  createdAt: external_exports.string().datetime(),
+  updatedAt: external_exports.string().datetime()
+});
+var CORPSE_DECAY_RULES = {
+  fresh_to_decaying: 24,
+  // 1 day
+  decaying_to_skeletal: 168,
+  // 1 week
+  skeletal_to_gone: 720
+  // 30 days
+};
+var DEFAULT_LOOT_TABLES = [
+  {
+    name: "Goblin Loot",
+    creatureTypes: ["goblin", "hobgoblin"],
+    crRange: { min: 0, max: 2 },
+    guaranteedDrops: [],
+    randomDrops: [
+      { itemId: null, itemTemplateId: null, itemName: "Rusty Scimitar", quantity: { min: 0, max: 1 }, weight: 0.3 },
+      { itemId: null, itemTemplateId: null, itemName: "Shortbow", quantity: { min: 0, max: 1 }, weight: 0.2 },
+      { itemId: null, itemTemplateId: null, itemName: "Crude Arrow", quantity: { min: 1, max: 10 }, weight: 0.5 }
+    ],
+    currencyRange: {
+      gold: { min: 0, max: 2 },
+      silver: { min: 1, max: 10 },
+      copper: { min: 5, max: 30 }
+    },
+    harvestableResources: [
+      { resourceType: "goblin ear", quantity: { min: 1, max: 2 }, dcRequired: 10 }
+    ]
+  },
+  {
+    name: "Orc Loot",
+    creatureTypes: ["orc", "orog"],
+    crRange: { min: 0.5, max: 3 },
+    guaranteedDrops: [],
+    randomDrops: [
+      { itemId: null, itemTemplateId: null, itemName: "Greataxe", quantity: { min: 0, max: 1 }, weight: 0.4 },
+      { itemId: null, itemTemplateId: null, itemName: "Javelin", quantity: { min: 1, max: 4 }, weight: 0.5 }
+    ],
+    currencyRange: {
+      gold: { min: 1, max: 5 },
+      silver: { min: 5, max: 20 }
+    },
+    harvestableResources: [
+      { resourceType: "orc tusk", quantity: { min: 1, max: 2 }, dcRequired: 12 }
+    ]
+  },
+  {
+    name: "Dragon Loot",
+    creatureTypes: ["dragon", "drake", "wyvern"],
+    crRange: { min: 5, max: 30 },
+    guaranteedDrops: [
+      { itemId: null, itemTemplateId: null, itemName: "Dragon Scale", quantity: { min: 3, max: 10 }, weight: 1 }
+    ],
+    randomDrops: [
+      { itemId: null, itemTemplateId: null, itemName: "Dragon Tooth", quantity: { min: 1, max: 4 }, weight: 0.6 },
+      { itemId: null, itemTemplateId: null, itemName: "Dragon Blood Vial", quantity: { min: 0, max: 2 }, weight: 0.3 }
+    ],
+    currencyRange: {
+      gold: { min: 500, max: 5e3 }
+    },
+    harvestableResources: [
+      { resourceType: "dragon hide", quantity: { min: 5, max: 20 }, dcRequired: 15 },
+      { resourceType: "dragon heart", quantity: { min: 1, max: 1 }, dcRequired: 20 }
+    ]
+  },
+  {
+    name: "Undead Loot",
+    creatureTypes: ["skeleton", "zombie", "ghoul"],
+    crRange: { min: 0, max: 5 },
+    guaranteedDrops: [],
+    randomDrops: [
+      { itemId: null, itemTemplateId: null, itemName: "Bone Fragment", quantity: { min: 1, max: 5 }, weight: 0.7 },
+      { itemId: null, itemTemplateId: null, itemName: "Tattered Cloth", quantity: { min: 0, max: 1 }, weight: 0.3 }
+    ],
+    currencyRange: {
+      gold: { min: 0, max: 3 },
+      silver: { min: 0, max: 10 }
+    },
+    harvestableResources: [
+      { resourceType: "ectoplasm", quantity: { min: 0, max: 1 }, dcRequired: 14 }
+    ]
+  },
+  {
+    name: "Wolf Loot",
+    creatureTypes: ["wolf", "dire wolf", "worg"],
+    crRange: { min: 0.25, max: 3 },
+    guaranteedDrops: [],
+    randomDrops: [],
+    currencyRange: void 0,
+    harvestableResources: [
+      { resourceType: "wolf pelt", quantity: { min: 1, max: 1 }, dcRequired: 10 },
+      { resourceType: "wolf fang", quantity: { min: 2, max: 4 }, dcRequired: 8 }
+    ]
+  }
+];
+
+// dist/storage/repos/corpse.repo.js
+var CorpseRepository = class {
+  db;
+  inventoryRepo;
+  constructor(db) {
+    this.db = db;
+    this.inventoryRepo = new InventoryRepository(db);
+  }
+  /**
+   * Create a corpse when a character dies
+   */
+  createFromDeath(characterId, characterName, characterType, options = {}) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const id = v4_default();
+    const stmt = this.db.prepare(`
+            INSERT INTO corpses (
+                id, character_id, character_name, character_type, creature_type, cr,
+                world_id, region_id, position_x, position_y, encounter_id,
+                state, state_updated_at, harvestable, harvestable_resources,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'fresh', ?, 0, '[]', ?, ?)
+        `);
+    stmt.run(id, characterId, characterName, characterType, options.creatureType ?? null, options.cr ?? null, options.worldId ?? null, options.regionId ?? null, options.position?.x ?? null, options.position?.y ?? null, options.encounterId ?? null, now, now, now);
+    return this.findById(id);
+  }
+  /**
+   * Get corpse by ID
+   */
+  findById(id) {
+    const stmt = this.db.prepare(`SELECT * FROM corpses WHERE id = ?`);
+    const row = stmt.get(id);
+    if (!row)
+      return null;
+    return this.rowToCorpse(row);
+  }
+  /**
+   * Get corpse for a specific character
+   */
+  findByCharacterId(characterId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM corpses
+            WHERE character_id = ? AND state != 'gone'
+            ORDER BY created_at DESC LIMIT 1
+        `);
+    const row = stmt.get(characterId);
+    if (!row)
+      return null;
+    return this.rowToCorpse(row);
+  }
+  /**
+   * Get all corpses in an encounter
+   */
+  findByEncounterId(encounterId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM corpses
+            WHERE encounter_id = ? AND state != 'gone'
+        `);
+    const rows = stmt.all(encounterId);
+    return rows.map((r) => this.rowToCorpse(r));
+  }
+  /**
+   * Get corpses in a region
+   */
+  findByRegion(worldId, regionId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM corpses
+            WHERE world_id = ? AND region_id = ? AND state != 'gone'
+        `);
+    const rows = stmt.all(worldId, regionId);
+    return rows.map((r) => this.rowToCorpse(r));
+  }
+  /**
+   * Get corpses at or near a specific position
+   */
+  findNearPosition(worldId, x, y, radius = 3) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM corpses
+            WHERE world_id = ?
+              AND state != 'gone'
+              AND position_x IS NOT NULL
+              AND position_y IS NOT NULL
+              AND ABS(position_x - ?) <= ?
+              AND ABS(position_y - ?) <= ?
+        `);
+    const rows = stmt.all(worldId, x, radius, y, radius);
+    return rows.map((r) => this.rowToCorpse(r));
+  }
+  /**
+   * Add item to corpse inventory
+   */
+  addToCorpseInventory(corpseId, itemId, quantity = 1) {
+    const stmt = this.db.prepare(`
+            INSERT INTO corpse_inventory (corpse_id, item_id, quantity, looted)
+            VALUES (?, ?, ?, 0)
+            ON CONFLICT(corpse_id, item_id) DO UPDATE SET quantity = quantity + ?
+        `);
+    stmt.run(corpseId, itemId, quantity, quantity);
+  }
+  /**
+   * Get items in corpse inventory
+   */
+  getCorpseInventory(corpseId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM corpse_inventory
+            WHERE corpse_id = ?
+        `);
+    const rows = stmt.all(corpseId);
+    return rows.map((r) => ({
+      itemId: r.item_id,
+      quantity: r.quantity,
+      looted: r.looted === 1
+    }));
+  }
+  /**
+   * Get unlootable items from corpse
+   */
+  getAvailableLoot(corpseId) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM corpse_inventory
+            WHERE corpse_id = ? AND looted = 0
+        `);
+    const rows = stmt.all(corpseId);
+    return rows.map((r) => ({
+      itemId: r.item_id,
+      quantity: r.quantity
+    }));
+  }
+  /**
+   * Loot an item from a corpse
+   * @param transferToLooter - If true, adds item to looter's inventory
+   */
+  lootItem(corpseId, itemId, looterId, quantity, transferToLooter) {
+    const corpse = this.findById(corpseId);
+    if (!corpse) {
+      return { success: false, itemId, quantity: 0, transferred: false, reason: "Corpse not found" };
+    }
+    if (corpse.state === "gone") {
+      return { success: false, itemId, quantity: 0, transferred: false, reason: "Corpse has decayed completely" };
+    }
+    const inventory = this.getAvailableLoot(corpseId);
+    const item = inventory.find((i) => i.itemId === itemId);
+    if (!item) {
+      return { success: false, itemId, quantity: 0, transferred: false, reason: "Item not on corpse or already looted" };
+    }
+    const toLoot = quantity ?? item.quantity;
+    if (toLoot > item.quantity) {
+      return { success: false, itemId, quantity: 0, transferred: false, reason: `Only ${item.quantity} available` };
+    }
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    if (toLoot === item.quantity) {
+      const stmt = this.db.prepare(`
+                UPDATE corpse_inventory SET looted = 1 WHERE corpse_id = ? AND item_id = ?
+            `);
+      stmt.run(corpseId, itemId);
+    } else {
+      const stmt = this.db.prepare(`
+                UPDATE corpse_inventory SET quantity = quantity - ? WHERE corpse_id = ? AND item_id = ?
+            `);
+      stmt.run(toLoot, corpseId, itemId);
+    }
+    const updateStmt = this.db.prepare(`
+            UPDATE corpses SET looted_by = ?, looted_at = ?, updated_at = ? WHERE id = ?
+        `);
+    updateStmt.run(looterId, now, now, corpseId);
+    const remaining = this.getAvailableLoot(corpseId);
+    if (remaining.length === 0) {
+      const lootedStmt = this.db.prepare(`
+                UPDATE corpses SET looted = 1, updated_at = ? WHERE id = ?
+            `);
+      lootedStmt.run(now, corpseId);
+    }
+    let transferred = false;
+    if (transferToLooter) {
+      this.inventoryRepo.addItem(looterId, itemId, toLoot);
+      transferred = true;
+    }
+    return { success: true, itemId, quantity: toLoot, transferred };
+  }
+  /**
+   * Loot all items from a corpse
+   * @param transferToLooter - If true, adds all items to looter's inventory
+   */
+  lootAll(corpseId, looterId, transferToLooter) {
+    const available = this.getAvailableLoot(corpseId);
+    const looted = [];
+    for (const item of available) {
+      const result = this.lootItem(corpseId, item.itemId, looterId, item.quantity, transferToLooter);
+      if (result.success) {
+        looted.push({ itemId: result.itemId, quantity: result.quantity, transferred: result.transferred });
+      }
+    }
+    return looted;
+  }
+  /**
+   * Loot currency from a corpse
+   * @param transferToLooter - If true, adds currency to looter's inventory
+   */
+  lootCurrency(corpseId, looterId, transferToLooter) {
+    const corpse = this.findById(corpseId);
+    if (!corpse) {
+      return { success: false, currency: { gold: 0, silver: 0, copper: 0 }, transferred: false, reason: "Corpse not found" };
+    }
+    if (corpse.currencyLooted) {
+      return { success: false, currency: { gold: 0, silver: 0, copper: 0 }, transferred: false, reason: "Currency already looted" };
+    }
+    const currency = corpse.currency;
+    if (currency.gold === 0 && currency.silver === 0 && currency.copper === 0) {
+      return { success: false, currency: { gold: 0, silver: 0, copper: 0 }, transferred: false, reason: "No currency on corpse" };
+    }
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE corpses SET currency_looted = 1, updated_at = ? WHERE id = ?
+        `);
+    stmt.run(now, corpseId);
+    let transferred = false;
+    if (transferToLooter) {
+      this.inventoryRepo.addCurrency(looterId, currency);
+      transferred = true;
+    }
+    return { success: true, currency, transferred };
+  }
+  /**
+   * Generate loot for a corpse based on creature type
+   */
+  generateLoot(corpseId, creatureType, cr) {
+    const corpse = this.findById(corpseId);
+    if (!corpse || corpse.lootGenerated) {
+      return { itemsAdded: [], currency: { gold: 0, silver: 0, copper: 0 }, harvestable: [] };
+    }
+    const lootTable = this.findLootTableByCreatureType(creatureType, cr);
+    if (!lootTable) {
+      this.markLootGenerated(corpseId);
+      return { itemsAdded: [], currency: { gold: 0, silver: 0, copper: 0 }, harvestable: [] };
+    }
+    const itemsAdded = [];
+    const harvestable = [];
+    for (const drop of lootTable.guaranteedDrops) {
+      const qty = this.rollQuantity(drop.quantity.min, drop.quantity.max);
+      if (qty > 0 && drop.itemName) {
+        itemsAdded.push({ name: drop.itemName, quantity: qty });
+      }
+    }
+    for (const drop of lootTable.randomDrops) {
+      if (Math.random() <= drop.weight) {
+        const qty = this.rollQuantity(drop.quantity.min, drop.quantity.max);
+        if (qty > 0 && drop.itemName) {
+          itemsAdded.push({ name: drop.itemName, quantity: qty });
+        }
+      }
+    }
+    let gold = 0, silver = 0, copper = 0;
+    if (lootTable.currencyRange) {
+      gold = this.rollQuantity(lootTable.currencyRange.gold.min, lootTable.currencyRange.gold.max);
+      if (lootTable.currencyRange.silver) {
+        silver = this.rollQuantity(lootTable.currencyRange.silver.min, lootTable.currencyRange.silver.max);
+      }
+      if (lootTable.currencyRange.copper) {
+        copper = this.rollQuantity(lootTable.currencyRange.copper.min, lootTable.currencyRange.copper.max);
+      }
+    }
+    if (lootTable.harvestableResources) {
+      for (const resource of lootTable.harvestableResources) {
+        const qty = this.rollQuantity(resource.quantity.min, resource.quantity.max);
+        if (qty > 0) {
+          harvestable.push({ resourceType: resource.resourceType, quantity: qty });
+        }
+      }
+    }
+    if (harvestable.length > 0) {
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      const stmt = this.db.prepare(`
+                UPDATE corpses
+                SET harvestable = 1, harvestable_resources = ?, updated_at = ?
+                WHERE id = ?
+            `);
+      stmt.run(JSON.stringify(harvestable.map((h) => ({ ...h, harvested: false }))), now, corpseId);
+    }
+    this.markLootGenerated(corpseId, { gold, silver, copper });
+    return { itemsAdded, currency: { gold, silver, copper }, harvestable };
+  }
+  /**
+   * Harvest a resource from a corpse
+   * @param createItem - If true, creates an item in the items table and adds to harvester inventory
+   */
+  harvestResource(corpseId, resourceType, harvesterId, options) {
+    const corpse = this.findById(corpseId);
+    if (!corpse) {
+      return { success: false, quantity: 0, resourceType, transferred: false, reason: "Corpse not found" };
+    }
+    if (!corpse.harvestable) {
+      return { success: false, quantity: 0, resourceType, transferred: false, reason: "Corpse has no harvestable resources" };
+    }
+    if (corpse.state === "skeletal" || corpse.state === "gone") {
+      return { success: false, quantity: 0, resourceType, transferred: false, reason: "Corpse too decayed to harvest" };
+    }
+    const resources = corpse.harvestableResources;
+    const resource = resources.find((r) => r.resourceType === resourceType && !r.harvested);
+    if (!resource) {
+      return { success: false, quantity: 0, resourceType, transferred: false, reason: "Resource not available or already harvested" };
+    }
+    if (options?.skillCheck) {
+      if (options.skillCheck.roll < options.skillCheck.dc) {
+        return { success: false, quantity: 0, resourceType, transferred: false, reason: `Failed skill check (${options.skillCheck.roll} vs DC ${options.skillCheck.dc})` };
+      }
+    }
+    resource.harvested = true;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE corpses
+            SET harvestable_resources = ?, updated_at = ?
+            WHERE id = ?
+        `);
+    stmt.run(JSON.stringify(resources), now, corpseId);
+    let itemId;
+    let transferred = false;
+    if (options?.createItem) {
+      itemId = v4_default();
+      const createStmt = this.db.prepare(`
+                INSERT INTO items (id, name, description, type, weight, value, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+      createStmt.run(
+        itemId,
+        resourceType,
+        // Use resource type as item name (e.g., "wolf pelt")
+        `Harvested ${resourceType} from a corpse`,
+        "misc",
+        1,
+        10,
+        // Default value, could be parameterized
+        now,
+        now
+      );
+      this.inventoryRepo.addItem(harvesterId, itemId, resource.quantity);
+      transferred = true;
+    }
+    return { success: true, quantity: resource.quantity, resourceType, itemId, transferred };
+  }
+  /**
+   * Process corpse decay based on time passed
+   */
+  processDecay(hoursAdvanced) {
+    const changes = [];
+    const stmt = this.db.prepare(`SELECT * FROM corpses WHERE state != 'gone'`);
+    const corpses = stmt.all();
+    const now = /* @__PURE__ */ new Date();
+    for (const row of corpses) {
+      const stateUpdated = new Date(row.state_updated_at);
+      const hoursSinceUpdate = Math.floor((now.getTime() - stateUpdated.getTime()) / (1e3 * 60 * 60)) + hoursAdvanced;
+      let currentState = row.state;
+      let newState = currentState;
+      if (currentState === "fresh" && hoursSinceUpdate >= CORPSE_DECAY_RULES.fresh_to_decaying) {
+        newState = "decaying";
+      } else if (currentState === "decaying" && hoursSinceUpdate >= CORPSE_DECAY_RULES.decaying_to_skeletal) {
+        newState = "skeletal";
+      } else if (currentState === "skeletal" && hoursSinceUpdate >= CORPSE_DECAY_RULES.skeletal_to_gone) {
+        newState = "gone";
+      }
+      if (newState !== currentState) {
+        this.updateState(row.id, newState);
+        changes.push({ corpseId: row.id, oldState: currentState, newState });
+      }
+    }
+    return changes;
+  }
+  /**
+   * Update corpse state
+   */
+  updateState(corpseId, newState) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE corpses SET state = ?, state_updated_at = ?, updated_at = ? WHERE id = ?
+        `);
+    stmt.run(newState, now, now, corpseId);
+  }
+  /**
+   * Clean up gone corpses
+   */
+  cleanupGoneCorpses() {
+    const deleteInventory = this.db.prepare(`
+            DELETE FROM corpse_inventory WHERE corpse_id IN (SELECT id FROM corpses WHERE state = 'gone')
+        `);
+    deleteInventory.run();
+    const deleteCorpses = this.db.prepare(`DELETE FROM corpses WHERE state = 'gone'`);
+    const result = deleteCorpses.run();
+    return result.changes;
+  }
+  /**
+   * Mark corpse as loot generated
+   */
+  markLootGenerated(corpseId, currency) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    if (currency && (currency.gold > 0 || currency.silver > 0 || currency.copper > 0)) {
+      const stmt = this.db.prepare(`
+                UPDATE corpses SET loot_generated = 1, currency = ?, updated_at = ? WHERE id = ?
+            `);
+      stmt.run(JSON.stringify(currency), now, corpseId);
+    } else {
+      const stmt = this.db.prepare(`
+                UPDATE corpses SET loot_generated = 1, updated_at = ? WHERE id = ?
+            `);
+      stmt.run(now, corpseId);
+    }
+  }
+  // ============================================================
+  // LOOT TABLE OPERATIONS
+  // ============================================================
+  /**
+   * Create a loot table
+   */
+  createLootTable(table) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const id = v4_default();
+    const stmt = this.db.prepare(`
+            INSERT INTO loot_tables (
+                id, name, creature_types, cr_min, cr_max,
+                guaranteed_drops, random_drops, currency_range, harvestable_resources,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+    stmt.run(id, table.name, JSON.stringify(table.creatureTypes), table.crRange?.min ?? null, table.crRange?.max ?? null, JSON.stringify(table.guaranteedDrops), JSON.stringify(table.randomDrops), table.currencyRange ? JSON.stringify(table.currencyRange) : null, table.harvestableResources ? JSON.stringify(table.harvestableResources) : null, now, now);
+    return this.findLootTableById(id);
+  }
+  /**
+   * Find loot table by ID
+   */
+  findLootTableById(id) {
+    const stmt = this.db.prepare(`SELECT * FROM loot_tables WHERE id = ?`);
+    const row = stmt.get(id);
+    if (!row)
+      return null;
+    return this.rowToLootTable(row);
+  }
+  /**
+   * Find loot table by creature type
+   */
+  findLootTableByCreatureType(creatureType, cr) {
+    const stmt = this.db.prepare(`SELECT * FROM loot_tables`);
+    const rows = stmt.all();
+    for (const row of rows) {
+      const table = this.rowToLootTable(row);
+      if (table.creatureTypes.includes(creatureType.toLowerCase())) {
+        if (cr !== void 0 && table.crRange) {
+          if (cr >= table.crRange.min && cr <= table.crRange.max) {
+            return table;
+          }
+        } else {
+          return table;
+        }
+      }
+    }
+    for (const defaultTable of DEFAULT_LOOT_TABLES) {
+      if (defaultTable.creatureTypes.includes(creatureType.toLowerCase())) {
+        if (cr !== void 0 && defaultTable.crRange) {
+          if (cr >= defaultTable.crRange.min && cr <= defaultTable.crRange.max) {
+            return {
+              id: `default-${defaultTable.name.toLowerCase().replace(/\s+/g, "-")}`,
+              ...defaultTable,
+              createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+              updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+            };
+          }
+        } else {
+          return {
+            id: `default-${defaultTable.name.toLowerCase().replace(/\s+/g, "-")}`,
+            ...defaultTable,
+            createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+            updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          };
+        }
+      }
+    }
+    return null;
+  }
+  /**
+   * List all loot tables
+   */
+  listLootTables() {
+    const stmt = this.db.prepare(`SELECT * FROM loot_tables`);
+    const rows = stmt.all();
+    return rows.map((r) => this.rowToLootTable(r));
+  }
+  // ============================================================
+  // HELPER METHODS
+  // ============================================================
+  rollQuantity(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  rowToCorpse(row) {
+    let currency = { gold: 0, silver: 0, copper: 0 };
+    if (row.currency) {
+      try {
+        const parsed = JSON.parse(row.currency);
+        currency = {
+          gold: parsed.gold ?? 0,
+          silver: parsed.silver ?? 0,
+          copper: parsed.copper ?? 0
+        };
+      } catch {
+      }
+    }
+    return {
+      id: row.id,
+      characterId: row.character_id,
+      characterName: row.character_name,
+      characterType: row.character_type,
+      creatureType: row.creature_type ?? void 0,
+      cr: row.cr ?? void 0,
+      worldId: row.world_id,
+      regionId: row.region_id,
+      position: row.position_x !== null && row.position_y !== null ? { x: row.position_x, y: row.position_y } : null,
+      encounterId: row.encounter_id,
+      state: row.state,
+      stateUpdatedAt: row.state_updated_at,
+      lootGenerated: row.loot_generated === 1,
+      looted: row.looted === 1,
+      lootedBy: row.looted_by,
+      lootedAt: row.looted_at,
+      currency,
+      currencyLooted: row.currency_looted === 1,
+      harvestable: row.harvestable === 1,
+      harvestableResources: JSON.parse(row.harvestable_resources),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+  rowToLootTable(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      creatureTypes: JSON.parse(row.creature_types),
+      crRange: row.cr_min !== null && row.cr_max !== null ? { min: row.cr_min, max: row.cr_max } : void 0,
+      guaranteedDrops: JSON.parse(row.guaranteed_drops),
+      randomDrops: JSON.parse(row.random_drops),
+      currencyRange: row.currency_range ? JSON.parse(row.currency_range) : void 0,
+      harvestableResources: row.harvestable_resources ? JSON.parse(row.harvestable_resources) : void 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+};
+
+// dist/server/corpse-tools.js
+var CorpseTools = {
+  GET_CORPSE: {
+    name: "get_corpse",
+    description: "Get details about a corpse, including loot and harvestable resources.",
+    inputSchema: external_exports.object({
+      corpseId: external_exports.string()
+    })
+  },
+  GET_CORPSE_BY_CHARACTER: {
+    name: "get_corpse_by_character",
+    description: "Get the corpse of a specific character (if they are dead).",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string()
+    })
+  },
+  LIST_CORPSES_IN_ENCOUNTER: {
+    name: "list_corpses_in_encounter",
+    description: "List all corpses from a combat encounter.",
+    inputSchema: external_exports.object({
+      encounterId: external_exports.string()
+    })
+  },
+  LIST_CORPSES_NEARBY: {
+    name: "list_corpses_nearby",
+    description: "List corpses near a position in the world.",
+    inputSchema: external_exports.object({
+      worldId: external_exports.string(),
+      x: external_exports.number().int(),
+      y: external_exports.number().int(),
+      radius: external_exports.number().int().min(1).max(20).default(3)
+    })
+  },
+  LOOT_CORPSE: {
+    name: "loot_corpse",
+    description: "Loot items from a corpse. Specify itemId for specific item, or use lootAll for everything.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().describe("Character doing the looting"),
+      corpseId: external_exports.string(),
+      itemId: external_exports.string().optional().describe("Specific item to loot"),
+      quantity: external_exports.number().int().min(1).optional(),
+      lootAll: external_exports.boolean().optional().describe("Loot everything from the corpse")
+    })
+  },
+  HARVEST_CORPSE: {
+    name: "harvest_corpse",
+    description: "Harvest resources from a corpse (scales, pelts). May require skill check.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string(),
+      corpseId: external_exports.string(),
+      resourceType: external_exports.string(),
+      skillRoll: external_exports.number().int().optional().describe("Result of skill check if required"),
+      skillDC: external_exports.number().int().optional().describe("DC of the skill check")
+    })
+  },
+  CREATE_CORPSE: {
+    name: "create_corpse",
+    description: "Manually create a corpse for a dead character.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string(),
+      characterName: external_exports.string(),
+      characterType: external_exports.enum(["pc", "npc", "enemy", "neutral"]),
+      creatureType: external_exports.string().optional().describe("Creature type for loot table lookup"),
+      cr: external_exports.number().optional().describe("Challenge rating for loot scaling"),
+      worldId: external_exports.string().optional(),
+      regionId: external_exports.string().optional(),
+      encounterId: external_exports.string().optional(),
+      position: external_exports.object({ x: external_exports.number(), y: external_exports.number() }).optional()
+    })
+  },
+  GENERATE_LOOT: {
+    name: "generate_loot",
+    description: "Generate loot for a corpse based on creature type and CR.",
+    inputSchema: external_exports.object({
+      corpseId: external_exports.string(),
+      creatureType: external_exports.string(),
+      cr: external_exports.number().optional()
+    })
+  },
+  GET_CORPSE_INVENTORY: {
+    name: "get_corpse_inventory",
+    description: "Get the inventory of a corpse (items available to loot).",
+    inputSchema: external_exports.object({
+      corpseId: external_exports.string()
+    })
+  },
+  CREATE_LOOT_TABLE: {
+    name: "create_loot_table",
+    description: "Create a loot table for a creature type.",
+    inputSchema: LootTableSchema.omit({ id: true, createdAt: true, updatedAt: true })
+  },
+  GET_LOOT_TABLE: {
+    name: "get_loot_table",
+    description: "Get a loot table by ID or creature type.",
+    inputSchema: external_exports.object({
+      id: external_exports.string().optional(),
+      creatureType: external_exports.string().optional(),
+      cr: external_exports.number().optional()
+    })
+  },
+  LIST_LOOT_TABLES: {
+    name: "list_loot_tables",
+    description: "List all registered loot tables.",
+    inputSchema: external_exports.object({})
+  },
+  ADVANCE_CORPSE_DECAY: {
+    name: "advance_corpse_decay",
+    description: "Process corpse decay when game time advances.",
+    inputSchema: external_exports.object({
+      hoursAdvanced: external_exports.number().int().min(1)
+    })
+  },
+  CLEANUP_CORPSES: {
+    name: "cleanup_corpses",
+    description: "Remove corpses that have fully decayed (state = gone).",
+    inputSchema: external_exports.object({})
+  }
+};
+function getRepo4() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return new CorpseRepository(db);
+}
+async function handleGetCorpse(args, _ctx) {
+  const parsed = CorpseTools.GET_CORPSE.inputSchema.parse(args);
+  const repo = getRepo4();
+  const corpse = repo.findById(parsed.corpseId);
+  if (!corpse) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          found: false,
+          corpseId: parsed.corpseId,
+          message: "Corpse not found"
+        }, null, 2)
+      }]
+    };
+  }
+  const inventory = repo.getAvailableLoot(parsed.corpseId);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        found: true,
+        corpse,
+        availableLoot: inventory,
+        canLoot: corpse.state !== "gone" && inventory.length > 0,
+        canHarvest: corpse.harvestable && corpse.state !== "skeletal" && corpse.state !== "gone"
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetCorpseByCharacter(args, _ctx) {
+  const parsed = CorpseTools.GET_CORPSE_BY_CHARACTER.inputSchema.parse(args);
+  const repo = getRepo4();
+  const corpse = repo.findByCharacterId(parsed.characterId);
+  if (!corpse) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          found: false,
+          characterId: parsed.characterId,
+          message: "No corpse found for this character"
+        }, null, 2)
+      }]
+    };
+  }
+  const inventory = repo.getAvailableLoot(corpse.id);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        found: true,
+        corpse,
+        availableLoot: inventory
+      }, null, 2)
+    }]
+  };
+}
+async function handleListCorpsesInEncounter(args, _ctx) {
+  const parsed = CorpseTools.LIST_CORPSES_IN_ENCOUNTER.inputSchema.parse(args);
+  const repo = getRepo4();
+  const corpses = repo.findByEncounterId(parsed.encounterId);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        encounterId: parsed.encounterId,
+        count: corpses.length,
+        corpses: corpses.map((c) => ({
+          id: c.id,
+          characterName: c.characterName,
+          characterType: c.characterType,
+          state: c.state,
+          looted: c.looted,
+          position: c.position
+        }))
+      }, null, 2)
+    }]
+  };
+}
+async function handleListCorpsesNearby(args, _ctx) {
+  const parsed = CorpseTools.LIST_CORPSES_NEARBY.inputSchema.parse(args);
+  const repo = getRepo4();
+  const corpses = repo.findNearPosition(parsed.worldId, parsed.x, parsed.y, parsed.radius);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        worldId: parsed.worldId,
+        center: { x: parsed.x, y: parsed.y },
+        radius: parsed.radius,
+        count: corpses.length,
+        corpses: corpses.map((c) => ({
+          id: c.id,
+          characterName: c.characterName,
+          state: c.state,
+          looted: c.looted,
+          position: c.position,
+          distance: c.position ? Math.sqrt(Math.pow(c.position.x - parsed.x, 2) + Math.pow(c.position.y - parsed.y, 2)) : null
+        }))
+      }, null, 2)
+    }]
+  };
+}
+async function handleLootCorpse(args, _ctx) {
+  const parsed = CorpseTools.LOOT_CORPSE.inputSchema.parse(args);
+  const repo = getRepo4();
+  if (parsed.lootAll) {
+    const looted = repo.lootAll(parsed.corpseId, parsed.characterId);
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          lootedBy: parsed.characterId,
+          corpseId: parsed.corpseId,
+          itemsLooted: looted,
+          totalItems: looted.length
+        }, null, 2)
+      }]
+    };
+  }
+  if (!parsed.itemId) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          reason: "Must specify itemId or set lootAll: true"
+        }, null, 2)
+      }]
+    };
+  }
+  const result = repo.lootItem(parsed.corpseId, parsed.itemId, parsed.characterId, parsed.quantity);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: result.success,
+        lootedBy: parsed.characterId,
+        corpseId: parsed.corpseId,
+        itemId: result.itemId,
+        quantity: result.quantity,
+        reason: result.reason
+      }, null, 2)
+    }]
+  };
+}
+async function handleHarvestCorpse(args, _ctx) {
+  const parsed = CorpseTools.HARVEST_CORPSE.inputSchema.parse(args);
+  const repo = getRepo4();
+  const skillCheck = parsed.skillRoll !== void 0 && parsed.skillDC !== void 0 ? { roll: parsed.skillRoll, dc: parsed.skillDC } : void 0;
+  const result = repo.harvestResource(parsed.corpseId, parsed.resourceType, parsed.characterId, { skillCheck });
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: result.success,
+        harvestedBy: parsed.characterId,
+        corpseId: parsed.corpseId,
+        resourceType: result.resourceType,
+        quantity: result.quantity,
+        skillCheck: skillCheck ? {
+          roll: skillCheck.roll,
+          dc: skillCheck.dc,
+          passed: skillCheck.roll >= skillCheck.dc
+        } : "not required",
+        reason: result.reason
+      }, null, 2)
+    }]
+  };
+}
+async function handleCreateCorpse(args, _ctx) {
+  const parsed = CorpseTools.CREATE_CORPSE.inputSchema.parse(args);
+  const repo = getRepo4();
+  const corpse = repo.createFromDeath(parsed.characterId, parsed.characterName, parsed.characterType, {
+    creatureType: parsed.creatureType,
+    cr: parsed.cr,
+    worldId: parsed.worldId,
+    regionId: parsed.regionId,
+    encounterId: parsed.encounterId,
+    position: parsed.position
+  });
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        corpse,
+        message: `Corpse created for ${parsed.characterName}`
+      }, null, 2)
+    }]
+  };
+}
+async function handleGenerateLoot(args, _ctx) {
+  const parsed = CorpseTools.GENERATE_LOOT.inputSchema.parse(args);
+  const repo = getRepo4();
+  const result = repo.generateLoot(parsed.corpseId, parsed.creatureType, parsed.cr);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        corpseId: parsed.corpseId,
+        creatureType: parsed.creatureType,
+        cr: parsed.cr,
+        loot: {
+          items: result.itemsAdded,
+          currency: result.currency,
+          harvestable: result.harvestable
+        }
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetCorpseInventory(args, _ctx) {
+  const parsed = CorpseTools.GET_CORPSE_INVENTORY.inputSchema.parse(args);
+  const repo = getRepo4();
+  const inventory = repo.getCorpseInventory(parsed.corpseId);
+  const available = repo.getAvailableLoot(parsed.corpseId);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        corpseId: parsed.corpseId,
+        totalItems: inventory.length,
+        availableToLoot: available.length,
+        inventory,
+        available
+      }, null, 2)
+    }]
+  };
+}
+async function handleCreateLootTable(args, _ctx) {
+  const parsed = CorpseTools.CREATE_LOOT_TABLE.inputSchema.parse(args);
+  const repo = getRepo4();
+  const table = repo.createLootTable(parsed);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        lootTable: table,
+        message: `Loot table "${table.name}" created for creature types: ${table.creatureTypes.join(", ")}`
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetLootTable(args, _ctx) {
+  const parsed = CorpseTools.GET_LOOT_TABLE.inputSchema.parse(args);
+  const repo = getRepo4();
+  let table = null;
+  if (parsed.id) {
+    table = repo.findLootTableById(parsed.id);
+  } else if (parsed.creatureType) {
+    table = repo.findLootTableByCreatureType(parsed.creatureType, parsed.cr);
+  }
+  if (!table) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          found: false,
+          message: "No matching loot table found"
+        }, null, 2)
+      }]
+    };
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        found: true,
+        lootTable: table
+      }, null, 2)
+    }]
+  };
+}
+async function handleListLootTables(args, _ctx) {
+  CorpseTools.LIST_LOOT_TABLES.inputSchema.parse(args);
+  const repo = getRepo4();
+  const tables = repo.listLootTables();
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        count: tables.length,
+        tables: tables.map((t) => ({
+          id: t.id,
+          name: t.name,
+          creatureTypes: t.creatureTypes,
+          crRange: t.crRange
+        }))
+      }, null, 2)
+    }]
+  };
+}
+async function handleAdvanceCorpseDecay(args, _ctx) {
+  const parsed = CorpseTools.ADVANCE_CORPSE_DECAY.inputSchema.parse(args);
+  const repo = getRepo4();
+  const changes = repo.processDecay(parsed.hoursAdvanced);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        hoursAdvanced: parsed.hoursAdvanced,
+        corpsesDecayed: changes.length,
+        changes: changes.map((c) => ({
+          corpseId: c.corpseId,
+          from: c.oldState,
+          to: c.newState
+        }))
+      }, null, 2)
+    }]
+  };
+}
+async function handleCleanupCorpses(args, _ctx) {
+  CorpseTools.CLEANUP_CORPSES.inputSchema.parse(args);
+  const repo = getRepo4();
+  const count = repo.cleanupGoneCorpses();
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        corpsesRemoved: count
+      }, null, 2)
+    }]
+  };
+}
+
+// dist/server/improvisation-tools.js
+init_zod();
+var import_seedrandom9 = __toESM(require_seedrandom2(), 1);
+
+// dist/schema/improvisation.js
+init_zod();
+var SkillNameSchema = external_exports.enum([
+  "athletics",
+  "acrobatics",
+  "sleight_of_hand",
+  "stealth",
+  "arcana",
+  "history",
+  "investigation",
+  "nature",
+  "religion",
+  "animal_handling",
+  "insight",
+  "medicine",
+  "perception",
+  "survival",
+  "deception",
+  "intimidation",
+  "performance",
+  "persuasion"
+]);
+var AbilityNameSchema = external_exports.enum([
+  "strength",
+  "dexterity",
+  "constitution",
+  "intelligence",
+  "wisdom",
+  "charisma"
+]);
+var DamageTypeSchema2 = external_exports.enum([
+  "slashing",
+  "piercing",
+  "bludgeoning",
+  "fire",
+  "cold",
+  "lightning",
+  "thunder",
+  "acid",
+  "poison",
+  "necrotic",
+  "radiant",
+  "force",
+  "psychic"
+]);
+var ConditionTypeSchema = external_exports.enum([
+  "blinded",
+  "charmed",
+  "deafened",
+  "frightened",
+  "grappled",
+  "incapacitated",
+  "invisible",
+  "paralyzed",
+  "petrified",
+  "poisoned",
+  "prone",
+  "restrained",
+  "stunned",
+  "unconscious",
+  "exhaustion"
+]);
+var SpellSchoolSchema2 = external_exports.enum([
+  "abjuration",
+  "conjuration",
+  "divination",
+  "enchantment",
+  "evocation",
+  "illusion",
+  "necromancy",
+  "transmutation"
+]);
+var ActorTypeSchema = external_exports.enum(["character", "npc"]);
+var SkillCheckSchema = external_exports.object({
+  skill: SkillNameSchema,
+  dc: external_exports.number().int().min(5).max(30),
+  advantage: external_exports.boolean().optional(),
+  disadvantage: external_exports.boolean().optional()
+});
+var SavingThrowSchema = external_exports.object({
+  ability: AbilityNameSchema,
+  dc: external_exports.number().int().min(1).max(30),
+  half_damage_on_save: external_exports.boolean().optional()
+});
+var AreaOfEffectSchema = external_exports.object({
+  shape: external_exports.enum(["line", "cone", "sphere", "cube"]),
+  size: external_exports.number().int().min(5).describe("Size in feet")
+});
+var StuntConsequencesSchema = external_exports.object({
+  success_damage: external_exports.string().optional().describe('Dice notation: "2d6"'),
+  failure_damage: external_exports.string().optional().describe("Self-damage on critical fail"),
+  damage_type: DamageTypeSchema2.optional(),
+  apply_condition: ConditionTypeSchema.optional(),
+  condition_duration: external_exports.number().int().min(1).optional().describe("Duration in rounds"),
+  saving_throw: SavingThrowSchema.optional(),
+  area_of_effect: AreaOfEffectSchema.optional()
+});
+var ResolveImprovisedStuntArgsSchema = external_exports.object({
+  encounter_id: external_exports.number().int(),
+  actor_id: external_exports.number().int(),
+  actor_type: ActorTypeSchema,
+  target_ids: external_exports.array(external_exports.number().int()).optional(),
+  target_types: external_exports.array(ActorTypeSchema).optional(),
+  narrative_intent: external_exports.string().describe("What the player wants to do"),
+  skill_check: SkillCheckSchema,
+  action_cost: external_exports.enum(["action", "bonus_action", "reaction", "free"]),
+  consequences: StuntConsequencesSchema,
+  environmental_destruction: external_exports.boolean().optional(),
+  narrative_on_success: external_exports.string().optional(),
+  narrative_on_failure: external_exports.string().optional()
+});
+var StuntResultSchema = external_exports.object({
+  success: external_exports.boolean(),
+  roll: external_exports.number().int(),
+  modifier: external_exports.number().int(),
+  total: external_exports.number().int(),
+  dc: external_exports.number().int(),
+  critical_success: external_exports.boolean(),
+  critical_failure: external_exports.boolean(),
+  damage_dealt: external_exports.number().int().optional(),
+  targets_affected: external_exports.array(external_exports.object({
+    id: external_exports.number().int(),
+    name: external_exports.string(),
+    damage_taken: external_exports.number().int(),
+    saved: external_exports.boolean().optional(),
+    condition_applied: external_exports.string().optional()
+  })).optional(),
+  self_damage: external_exports.number().int().optional(),
+  narrative: external_exports.string(),
+  audit_log: external_exports.any()
+});
+var SourceTypeSchema = external_exports.enum(["divine", "arcane", "natural", "cursed", "psionic", "unknown"]);
+var EffectCategorySchema = external_exports.enum(["boon", "curse", "neutral", "transformative"]);
+var PowerLevelSchema = external_exports.number().int().min(1).max(5);
+var MechanicTypeSchema = external_exports.enum([
+  "attack_bonus",
+  "damage_bonus",
+  "ac_bonus",
+  "saving_throw_bonus",
+  "skill_bonus",
+  "advantage_on",
+  "disadvantage_on",
+  "damage_resistance",
+  "damage_vulnerability",
+  "damage_immunity",
+  "damage_over_time",
+  "healing_over_time",
+  "extra_action",
+  "prevent_action",
+  "movement_modifier",
+  "sense_granted",
+  "sense_removed",
+  "speak_language",
+  "cannot_speak",
+  "custom_trigger"
+]);
+var EffectMechanicSchema = external_exports.object({
+  type: MechanicTypeSchema,
+  value: external_exports.union([external_exports.number(), external_exports.string()]),
+  condition: external_exports.string().optional().describe('e.g., "against undead"')
+});
+var DurationTypeSchema = external_exports.enum(["rounds", "minutes", "hours", "days", "permanent", "until_removed"]);
+var TriggerEventSchema = external_exports.enum([
+  "always_active",
+  "start_of_turn",
+  "end_of_turn",
+  "on_attack",
+  "on_hit",
+  "on_miss",
+  "on_damage_taken",
+  "on_heal",
+  "on_rest",
+  "on_spell_cast",
+  "on_death"
+]);
+var EffectTriggerSchema = external_exports.object({
+  event: TriggerEventSchema,
+  condition: external_exports.string().optional()
+});
+var RemovalConditionTypeSchema = external_exports.enum([
+  "duration_expires",
+  "dispelled",
+  "specific_action",
+  "quest_complete",
+  "death",
+  "rest"
+]);
+var RemovalConditionSchema = external_exports.object({
+  type: RemovalConditionTypeSchema,
+  description: external_exports.string().optional(),
+  difficulty_class: external_exports.number().int().optional()
+});
+var CustomEffectSourceSchema = external_exports.object({
+  type: SourceTypeSchema,
+  entity_id: external_exports.string().optional(),
+  entity_name: external_exports.string().optional()
+});
+var CustomEffectDurationSchema = external_exports.object({
+  type: DurationTypeSchema,
+  value: external_exports.number().int().optional()
+});
+var ApplyCustomEffectArgsSchema = external_exports.object({
+  target_id: external_exports.string(),
+  target_type: ActorTypeSchema,
+  name: external_exports.string(),
+  description: external_exports.string(),
+  source: CustomEffectSourceSchema,
+  category: EffectCategorySchema,
+  power_level: PowerLevelSchema,
+  mechanics: external_exports.array(EffectMechanicSchema),
+  duration: CustomEffectDurationSchema,
+  triggers: external_exports.array(EffectTriggerSchema),
+  removal_conditions: external_exports.array(RemovalConditionSchema),
+  stackable: external_exports.boolean().optional().default(false),
+  max_stacks: external_exports.number().int().min(1).optional().default(1)
+});
+var CustomEffectSchema = external_exports.object({
+  id: external_exports.number().int(),
+  target_id: external_exports.string(),
+  target_type: ActorTypeSchema,
+  name: external_exports.string(),
+  description: external_exports.string().nullable(),
+  source_type: SourceTypeSchema,
+  source_entity_id: external_exports.string().nullable(),
+  source_entity_name: external_exports.string().nullable(),
+  category: EffectCategorySchema,
+  power_level: PowerLevelSchema,
+  mechanics: external_exports.array(EffectMechanicSchema),
+  duration_type: DurationTypeSchema,
+  duration_value: external_exports.number().int().nullable(),
+  rounds_remaining: external_exports.number().int().nullable(),
+  triggers: external_exports.array(EffectTriggerSchema),
+  removal_conditions: external_exports.array(RemovalConditionSchema),
+  stackable: external_exports.boolean(),
+  max_stacks: external_exports.number().int(),
+  current_stacks: external_exports.number().int(),
+  is_active: external_exports.boolean(),
+  created_at: external_exports.string(),
+  expires_at: external_exports.string().nullable()
+});
+var SpellEffectTypeSchema = external_exports.enum(["damage", "healing", "status", "utility", "summon", "hybrid"]);
+var TargetingTypeSchema = external_exports.enum(["self", "single", "multiple", "area", "line", "cone"]);
+var SynthesisEffectSchema = external_exports.object({
+  type: SpellEffectTypeSchema,
+  dice: external_exports.string().optional().describe('Dice notation: "3d8"'),
+  damage_type: DamageTypeSchema2.optional(),
+  condition: external_exports.string().optional(),
+  condition_duration: external_exports.string().optional()
+});
+var SynthesisTargetingSchema = external_exports.object({
+  type: TargetingTypeSchema,
+  range: external_exports.number().int().min(0).describe("Range in feet"),
+  area_size: external_exports.number().int().optional().describe("AoE size in feet"),
+  max_targets: external_exports.number().int().optional()
+});
+var SynthesisSavingThrowSchema = external_exports.object({
+  ability: AbilityNameSchema,
+  effect_on_save: external_exports.enum(["none", "half", "negates"])
+});
+var SynthesisMaterialComponentSchema = external_exports.object({
+  description: external_exports.string(),
+  consumed: external_exports.boolean(),
+  value: external_exports.number().int().optional().describe("Value in gold pieces")
+});
+var SynthesisComponentsSchema = external_exports.object({
+  verbal: external_exports.boolean(),
+  somatic: external_exports.boolean(),
+  material: SynthesisMaterialComponentSchema.optional()
+});
+var AttemptArcaneSynthesisArgsSchema = external_exports.object({
+  encounter_id: external_exports.number().int().optional().describe("+2 DC if in combat"),
+  caster_id: external_exports.string(),
+  caster_type: ActorTypeSchema,
+  narrative_intent: external_exports.string().describe("What spell effect the player wants"),
+  proposed_name: external_exports.string().optional(),
+  estimated_level: external_exports.number().int().min(1).max(9),
+  school: SpellSchoolSchema2,
+  effect_specification: SynthesisEffectSchema,
+  targeting: SynthesisTargetingSchema,
+  saving_throw: SynthesisSavingThrowSchema.optional(),
+  components: SynthesisComponentsSchema,
+  concentration: external_exports.boolean(),
+  duration: external_exports.string(),
+  circumstance_modifiers: external_exports.array(external_exports.string()).optional().describe('e.g., "near ley line", "blood moon"'),
+  target_ids: external_exports.array(external_exports.string()).optional(),
+  target_types: external_exports.array(ActorTypeSchema).optional()
+});
+var SynthesisOutcomeSchema = external_exports.enum(["mastery", "success", "fizzle", "backfire", "catastrophic"]);
+var WildSurgeEffectSchema = external_exports.object({
+  roll: external_exports.number().int().min(1).max(20),
+  name: external_exports.string(),
+  effect: external_exports.string()
+});
+var ArcaneSynthesisResultSchema = external_exports.object({
+  outcome: SynthesisOutcomeSchema,
+  roll: external_exports.number().int(),
+  modifier: external_exports.number().int(),
+  total: external_exports.number().int(),
+  dc: external_exports.number().int(),
+  dc_breakdown: external_exports.object({
+    base: external_exports.number().int(),
+    spell_level: external_exports.number().int(),
+    in_combat: external_exports.number().int().optional(),
+    novel_effect: external_exports.number().int().optional(),
+    material_reduction: external_exports.number().int().optional(),
+    related_spell: external_exports.number().int().optional(),
+    school_specialization: external_exports.number().int().optional(),
+    ley_line: external_exports.number().int().optional(),
+    celestial_event: external_exports.number().int().optional(),
+    desperation: external_exports.number().int().optional()
+  }),
+  spell_worked: external_exports.boolean(),
+  spell_mastered: external_exports.boolean(),
+  damage_dealt: external_exports.number().int().optional(),
+  healing_done: external_exports.number().int().optional(),
+  targets_affected: external_exports.array(external_exports.object({
+    id: external_exports.string(),
+    name: external_exports.string(),
+    effect: external_exports.string()
+  })).optional(),
+  backfire_damage: external_exports.number().int().optional(),
+  wild_surge: WildSurgeEffectSchema.optional(),
+  spell_slot_consumed: external_exports.boolean(),
+  narrative: external_exports.string(),
+  audit_log: external_exports.any()
+});
+var SynthesizedSpellSchema = external_exports.object({
+  id: external_exports.number().int(),
+  character_id: external_exports.string(),
+  name: external_exports.string(),
+  level: external_exports.number().int().min(1).max(9),
+  school: SpellSchoolSchema2,
+  effect_type: SpellEffectTypeSchema,
+  effect_dice: external_exports.string().nullable(),
+  damage_type: DamageTypeSchema2.nullable(),
+  targeting_type: TargetingTypeSchema,
+  targeting_range: external_exports.number().int(),
+  targeting_area_size: external_exports.number().int().nullable(),
+  targeting_max_targets: external_exports.number().int().nullable(),
+  saving_throw_ability: AbilityNameSchema.nullable(),
+  saving_throw_effect: external_exports.string().nullable(),
+  components_verbal: external_exports.boolean(),
+  components_somatic: external_exports.boolean(),
+  components_material: SynthesisMaterialComponentSchema.nullable(),
+  concentration: external_exports.boolean(),
+  duration: external_exports.string(),
+  synthesis_dc: external_exports.number().int(),
+  created_at: external_exports.string(),
+  mastered_at: external_exports.string(),
+  times_cast: external_exports.number().int()
+});
+var WILD_SURGE_TABLE = [
+  { roll: 1, name: "Inverted Intent", effect: "Damage heals, healing damages. All effects are reversed for 1 minute." },
+  { roll: 2, name: "Arcane Feedback", effect: "1d6 force damage per spell level to caster." },
+  { roll: 3, name: "Spell Vampirism", effect: "ALL spell slots of that level are drained." },
+  { roll: 4, name: "Temporal Stutter", effect: "Caster skips next turn, frozen in time." },
+  { roll: 5, name: "Dimensional Hiccup", effect: "Teleport 3d6\xD75 feet in a random direction." },
+  { roll: 6, name: "Polymorphic Instability", effect: "Transform into a small beast for 1 minute." },
+  { roll: 7, name: "Magical Beacon", effect: "60ft bright light emanates from caster. Attacks have advantage vs caster for 1 minute." },
+  { roll: 8, name: "Elemental Attunement", effect: "Vulnerability to a random damage type for 1 hour." },
+  { roll: 9, name: "Sympathetic Link", effect: "Caster takes half of any damage they deal for 1 minute." },
+  { roll: 10, name: "Wild Growth", effect: "30ft radius becomes difficult terrain (vines/plants) for 10 minutes." },
+  { roll: 11, name: "Silence of the Void", effect: "20ft radius silence centered on caster for 1 minute." },
+  { roll: 12, name: "Magical Exhaustion", effect: "Caster gains 2 levels of exhaustion." },
+  { roll: 13, name: "Summoned Attention", effect: "A hostile minor elemental (CR 1/4) appears within 30ft." },
+  { roll: 14, name: "Memory Leak", effect: "Forget one random prepared spell until next long rest." },
+  { roll: 15, name: "Arcane Allergy", effect: "Cannot cast spells from this school for 24 hours." },
+  { roll: 16, name: "Magical Magnetism", effect: "All metal objects within 30ft fly toward caster, dealing 2d6 bludgeoning damage." },
+  { roll: 17, name: "Prismatic Flash", effect: "Color Spray effect hits everyone within 15ft (including caster)." },
+  { roll: 18, name: "Gravity Reversal", effect: "Fall upward 30ft, then fall back down. Take appropriate fall damage." },
+  { roll: 19, name: "Soul Echo", effect: "A ghostly duplicate mirrors caster actions for 1 minute (no extra effect, just visual)." },
+  { roll: 20, name: "Complete Magical Inversion", effect: "Dispel all magic within 60ft. Magic items suppressed for 1 hour." }
+];
+var SKILL_TO_ABILITY = {
+  athletics: "strength",
+  acrobatics: "dexterity",
+  sleight_of_hand: "dexterity",
+  stealth: "dexterity",
+  arcana: "intelligence",
+  history: "intelligence",
+  investigation: "intelligence",
+  nature: "intelligence",
+  religion: "intelligence",
+  animal_handling: "wisdom",
+  insight: "wisdom",
+  medicine: "wisdom",
+  perception: "wisdom",
+  survival: "wisdom",
+  deception: "charisma",
+  intimidation: "charisma",
+  performance: "charisma",
+  persuasion: "charisma"
+};
+
+// dist/storage/repos/custom-effects.repo.js
+var CustomEffectsRepository = class {
+  db;
+  constructor(db) {
+    this.db = db;
+  }
+  /**
+   * Apply a new custom effect to a target
+   */
+  apply(args) {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    let expiresAt = null;
+    if (args.duration.type !== "permanent" && args.duration.type !== "until_removed" && args.duration.value) {
+      const expireDate = /* @__PURE__ */ new Date();
+      switch (args.duration.type) {
+        case "minutes":
+          expireDate.setMinutes(expireDate.getMinutes() + args.duration.value);
+          break;
+        case "hours":
+          expireDate.setHours(expireDate.getHours() + args.duration.value);
+          break;
+        case "days":
+          expireDate.setDate(expireDate.getDate() + args.duration.value);
+          break;
+      }
+      if (args.duration.type !== "rounds") {
+        expiresAt = expireDate.toISOString();
+      }
+    }
+    const existing = this.findByTargetAndName(args.target_id, args.target_type, args.name);
+    if (existing && !args.stackable) {
+      return this.refreshDuration(existing.id, args.duration.value || null);
+    }
+    if (existing && args.stackable && existing.current_stacks < (args.max_stacks ?? 1)) {
+      return this.incrementStacks(existing.id);
+    }
+    const stmt = this.db.prepare(`
+            INSERT INTO custom_effects (
+                target_id, target_type, name, description,
+                source_type, source_entity_id, source_entity_name,
+                category, power_level, mechanics,
+                duration_type, duration_value, rounds_remaining,
+                triggers, removal_conditions,
+                stackable, max_stacks, current_stacks,
+                is_active, created_at, expires_at
+            ) VALUES (
+                @targetId, @targetType, @name, @description,
+                @sourceType, @sourceEntityId, @sourceEntityName,
+                @category, @powerLevel, @mechanics,
+                @durationType, @durationValue, @roundsRemaining,
+                @triggers, @removalConditions,
+                @stackable, @maxStacks, @currentStacks,
+                @isActive, @createdAt, @expiresAt
+            )
+        `);
+    const result = stmt.run({
+      targetId: args.target_id,
+      targetType: args.target_type,
+      name: args.name,
+      description: args.description,
+      sourceType: args.source.type,
+      sourceEntityId: args.source.entity_id || null,
+      sourceEntityName: args.source.entity_name || null,
+      category: args.category,
+      powerLevel: args.power_level,
+      mechanics: JSON.stringify(args.mechanics),
+      durationType: args.duration.type,
+      durationValue: args.duration.value || null,
+      roundsRemaining: args.duration.type === "rounds" ? args.duration.value : null,
+      triggers: JSON.stringify(args.triggers),
+      removalConditions: JSON.stringify(args.removal_conditions),
+      stackable: args.stackable ? 1 : 0,
+      maxStacks: args.max_stacks ?? 1,
+      currentStacks: 1,
+      isActive: 1,
+      createdAt: now,
+      expiresAt
+    });
+    return this.findById(result.lastInsertRowid);
+  }
+  /**
+   * Find an effect by ID
+   */
+  findById(id) {
+    const stmt = this.db.prepare("SELECT * FROM custom_effects WHERE id = ?");
+    const row = stmt.get(id);
+    return row ? this.rowToEffect(row) : null;
+  }
+  /**
+   * Find effect by target and name
+   */
+  findByTargetAndName(targetId, targetType, name) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM custom_effects
+            WHERE target_id = ? AND target_type = ? AND name = ? AND is_active = 1
+        `);
+    const row = stmt.get(targetId, targetType, name);
+    return row ? this.rowToEffect(row) : null;
+  }
+  /**
+   * Get all active effects on a target
+   */
+  getEffectsOnTarget(targetId, targetType, filters) {
+    let query = "SELECT * FROM custom_effects WHERE target_id = ? AND target_type = ?";
+    const params = [targetId, targetType];
+    if (filters?.category) {
+      query += " AND category = ?";
+      params.push(filters.category);
+    }
+    if (filters?.source_type) {
+      query += " AND source_type = ?";
+      params.push(filters.source_type);
+    }
+    if (filters?.is_active !== void 0) {
+      query += " AND is_active = ?";
+      params.push(filters.is_active ? 1 : 0);
+    } else {
+      query += " AND is_active = 1";
+    }
+    const stmt = this.db.prepare(query);
+    const rows = stmt.all(...params);
+    return rows.map((row) => this.rowToEffect(row));
+  }
+  /**
+   * Get effects by trigger event
+   */
+  getEffectsByTrigger(targetId, targetType, event) {
+    const effects = this.getEffectsOnTarget(targetId, targetType);
+    return effects.filter((effect) => effect.triggers.some((trigger) => trigger.event === event || trigger.event === "always_active"));
+  }
+  /**
+   * Remove an effect by ID
+   */
+  remove(id) {
+    const stmt = this.db.prepare("DELETE FROM custom_effects WHERE id = ?");
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+  /**
+   * Remove effect by target and name
+   */
+  removeByName(targetId, targetType, name) {
+    const stmt = this.db.prepare(`
+            DELETE FROM custom_effects
+            WHERE target_id = ? AND target_type = ? AND name = ?
+        `);
+    const result = stmt.run(targetId, targetType, name);
+    return result.changes > 0;
+  }
+  /**
+   * Deactivate an effect (keep record but mark inactive)
+   */
+  deactivate(id) {
+    const stmt = this.db.prepare("UPDATE custom_effects SET is_active = 0 WHERE id = ?");
+    stmt.run(id);
+    return this.findById(id);
+  }
+  /**
+   * Advance round-based durations, deactivating expired effects
+   */
+  advanceRounds(targetId, targetType, rounds = 1) {
+    const effects = this.getEffectsOnTarget(targetId, targetType);
+    const advanced = [];
+    const expired = [];
+    for (const effect of effects) {
+      if (effect.duration_type === "rounds" && effect.rounds_remaining !== null) {
+        const newRoundsRemaining = effect.rounds_remaining - rounds;
+        if (newRoundsRemaining <= 0) {
+          this.deactivate(effect.id);
+          expired.push({ ...effect, is_active: false, rounds_remaining: 0 });
+        } else {
+          const stmt = this.db.prepare("UPDATE custom_effects SET rounds_remaining = ? WHERE id = ?");
+          stmt.run(newRoundsRemaining, effect.id);
+          advanced.push({ ...effect, rounds_remaining: newRoundsRemaining });
+        }
+      } else {
+        advanced.push(effect);
+      }
+    }
+    return { advanced, expired };
+  }
+  /**
+   * Refresh duration on an existing effect
+   */
+  refreshDuration(id, newDurationValue) {
+    const effect = this.findById(id);
+    if (!effect) {
+      throw new Error(`Effect ${id} not found`);
+    }
+    if (effect.duration_type === "rounds") {
+      const stmt = this.db.prepare("UPDATE custom_effects SET rounds_remaining = ? WHERE id = ?");
+      stmt.run(newDurationValue, id);
+    } else if (effect.duration_type !== "permanent" && effect.duration_type !== "until_removed") {
+      const expireDate = /* @__PURE__ */ new Date();
+      const value = newDurationValue || effect.duration_value || 1;
+      switch (effect.duration_type) {
+        case "minutes":
+          expireDate.setMinutes(expireDate.getMinutes() + value);
+          break;
+        case "hours":
+          expireDate.setHours(expireDate.getHours() + value);
+          break;
+        case "days":
+          expireDate.setDate(expireDate.getDate() + value);
+          break;
+      }
+      const stmt = this.db.prepare("UPDATE custom_effects SET expires_at = ?, duration_value = ? WHERE id = ?");
+      stmt.run(expireDate.toISOString(), value, id);
+    }
+    return this.findById(id);
+  }
+  /**
+   * Increment stacks on a stackable effect
+   */
+  incrementStacks(id) {
+    const effect = this.findById(id);
+    if (!effect) {
+      throw new Error(`Effect ${id} not found`);
+    }
+    if (!effect.stackable) {
+      throw new Error(`Effect ${effect.name} is not stackable`);
+    }
+    if (effect.current_stacks >= effect.max_stacks) {
+      return this.refreshDuration(id, effect.duration_value);
+    }
+    const stmt = this.db.prepare("UPDATE custom_effects SET current_stacks = current_stacks + 1 WHERE id = ?");
+    stmt.run(id);
+    return this.findById(id);
+  }
+  /**
+   * Decrement stacks on a stackable effect (removes if reaches 0)
+   */
+  decrementStacks(id) {
+    const effect = this.findById(id);
+    if (!effect) {
+      return null;
+    }
+    if (effect.current_stacks <= 1) {
+      this.remove(id);
+      return null;
+    }
+    const stmt = this.db.prepare("UPDATE custom_effects SET current_stacks = current_stacks - 1 WHERE id = ?");
+    stmt.run(id);
+    return this.findById(id);
+  }
+  /**
+   * Check and remove expired time-based effects
+   */
+  cleanupExpired() {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const stmt = this.db.prepare(`
+            UPDATE custom_effects
+            SET is_active = 0
+            WHERE is_active = 1 AND expires_at IS NOT NULL AND expires_at < ?
+        `);
+    const result = stmt.run(now);
+    return result.changes;
+  }
+  /**
+   * Get all active effects with a specific mechanic type
+   */
+  getEffectsByMechanicType(targetId, targetType, mechanicType) {
+    const effects = this.getEffectsOnTarget(targetId, targetType);
+    return effects.filter((effect) => effect.mechanics.some((m) => m.type === mechanicType));
+  }
+  /**
+   * Calculate total bonus from all effects of a given mechanic type
+   */
+  calculateTotalBonus(targetId, targetType, mechanicType, condition) {
+    const effects = this.getEffectsByMechanicType(targetId, targetType, mechanicType);
+    let total = 0;
+    for (const effect of effects) {
+      for (const mechanic of effect.mechanics) {
+        if (mechanic.type === mechanicType) {
+          if (condition && mechanic.condition && !mechanic.condition.includes(condition)) {
+            continue;
+          }
+          if (typeof mechanic.value === "number") {
+            total += mechanic.value * effect.current_stacks;
+          }
+        }
+      }
+    }
+    return total;
+  }
+  /**
+   * Convert database row to CustomEffect object
+   */
+  rowToEffect(row) {
+    return CustomEffectSchema.parse({
+      id: row.id,
+      target_id: row.target_id,
+      target_type: row.target_type,
+      name: row.name,
+      description: row.description,
+      source_type: row.source_type,
+      source_entity_id: row.source_entity_id,
+      source_entity_name: row.source_entity_name,
+      category: row.category,
+      power_level: row.power_level,
+      mechanics: JSON.parse(row.mechanics),
+      duration_type: row.duration_type,
+      duration_value: row.duration_value,
+      rounds_remaining: row.rounds_remaining,
+      triggers: JSON.parse(row.triggers),
+      removal_conditions: JSON.parse(row.removal_conditions),
+      stackable: row.stackable === 1,
+      max_stacks: row.max_stacks,
+      current_stacks: row.current_stacks,
+      is_active: row.is_active === 1,
+      created_at: row.created_at,
+      expires_at: row.expires_at
+    });
+  }
+};
+
+// dist/server/improvisation-tools.js
+init_character_repo();
+function ensureDb10() {
+  const dbPath = process.env.NODE_ENV === "test" ? ":memory:" : process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db";
+  const db = getDb(dbPath);
+  const effectsRepo = new CustomEffectsRepository(db);
+  const charRepo = new CharacterRepository(db);
+  return { db, effectsRepo, charRepo };
+}
+function rollDice3(notation, rng2) {
+  const match = notation.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+  if (!match) {
+    throw new Error(`Invalid dice notation: ${notation}`);
+  }
+  const count = parseInt(match[1], 10);
+  const sides = parseInt(match[2], 10);
+  const modifier = match[3] ? parseInt(match[3], 10) : 0;
+  const rolls = [];
+  const random = rng2 || Math.random;
+  for (let i = 0; i < count; i++) {
+    rolls.push(Math.floor(random() * sides) + 1);
+  }
+  const sum = rolls.reduce((a, b) => a + b, 0);
+  return {
+    total: Math.max(0, sum + modifier),
+    // Minimum 0
+    rolls,
+    notation
+  };
+}
+function rollD202(advantage, disadvantage, rng2) {
+  const random = rng2 || Math.random;
+  const roll1 = Math.floor(random() * 20) + 1;
+  if (!advantage && !disadvantage) {
+    return { roll: roll1, rolls: [roll1] };
+  }
+  const roll2 = Math.floor(random() * 20) + 1;
+  if (advantage && !disadvantage) {
+    return { roll: Math.max(roll1, roll2), rolls: [roll1, roll2] };
+  }
+  if (disadvantage && !advantage) {
+    return { roll: Math.min(roll1, roll2), rolls: [roll1, roll2] };
+  }
+  return { roll: roll1, rolls: [roll1] };
+}
+function getSkillModifier(stats, skill) {
+  const ability = SKILL_TO_ABILITY[skill];
+  const abilityScore = stats[ability.substring(0, 3)] ?? stats[ability] ?? 10;
+  return Math.floor((abilityScore - 10) / 2);
+}
+function getAbilityModifier4(score) {
+  return Math.floor((score - 10) / 2);
+}
+var ImprovisationTools = {
+  // ========================================================================
+  // RULE OF COOL - IMPROVISED STUNTS
+  // ========================================================================
+  RESOLVE_IMPROVISED_STUNT: {
+    name: "resolve_improvised_stunt",
+    description: `Resolve a creative player action using the Rule of Cool.
+
+When a player says "I want to kick the brazier of coals into the zombie horde" or
+"I swing from the chandelier and kick both guards," this tool handles it mechanically.
+
+DC Guidelines:
+- 5: Trivial (kick open unlocked door)
+- 10: Easy (swing from rope)
+- 15: Medium (kick stuck mine cart)
+- 20: Hard (catch thrown weapon)
+- 25: Very Hard (run across crumbling bridge)
+- 30: Nearly Impossible (catch arrow mid-flight)
+
+Damage Guidelines:
+- 1d4: Nuisance (thrown mug)
+- 1d6: Light (chair smash)
+- 2d6: Moderate (barrel roll)
+- 3d6: Heavy (mine cart)
+- 4d6: Severe (chandelier drop)
+- 6d6: Massive (collapsing pillar)
+- 8d6+: Catastrophic (building collapse)
+
+Example:
+{
+  "encounter_id": 1,
+  "actor_id": 1,
+  "actor_type": "character",
+  "target_ids": [5, 6],
+  "target_types": ["npc", "npc"],
+  "narrative_intent": "I kick the brazier of hot coals into the zombie horde",
+  "skill_check": { "skill": "athletics", "dc": 15 },
+  "action_cost": "action",
+  "consequences": {
+    "success_damage": "2d6",
+    "damage_type": "fire",
+    "area_of_effect": { "shape": "cone", "size": 15 }
+  }
+}`,
+    inputSchema: ResolveImprovisedStuntArgsSchema
+  },
+  // ========================================================================
+  // CUSTOM EFFECTS SYSTEM
+  // ========================================================================
+  APPLY_CUSTOM_EFFECT: {
+    name: "apply_custom_effect",
+    description: `Apply a custom effect (divine boon, curse, transformation) to a target.
+
+Power Level Guidelines:
+1: Hours duration, +1/-1 bonus, minor condition (Lucky charm)
+2: Days duration, +2/-2 bonus, advantage/disadvantage (Battle blessing)
+3: Weeks duration, +3/-3 bonus, resistance/vulnerability (Champion's mantle)
+4: Months duration, +5/-5 bonus, immunity, extra actions (Avatar's grace)
+5: Permanent, reality-warping effects (Demigod status)
+
+Mechanic Types:
+- attack_bonus, damage_bonus, ac_bonus, saving_throw_bonus, skill_bonus
+- advantage_on, disadvantage_on
+- damage_resistance, damage_vulnerability, damage_immunity
+- damage_over_time, healing_over_time
+- extra_action, prevent_action, movement_modifier
+- sense_granted, sense_removed, speak_language, cannot_speak
+- custom_trigger
+
+Example:
+{
+  "target_id": "char-123",
+  "target_type": "character",
+  "name": "Blessing of the Sun God",
+  "description": "Golden light surrounds you, burning undead on contact",
+  "source": { "type": "divine", "entity_name": "Pelor" },
+  "category": "boon",
+  "power_level": 3,
+  "mechanics": [
+    { "type": "damage_bonus", "value": 2, "condition": "against undead" },
+    { "type": "damage_resistance", "value": "radiant" }
+  ],
+  "duration": { "type": "days", "value": 7 },
+  "triggers": [{ "event": "on_attack", "condition": "against undead" }],
+  "removal_conditions": [{ "type": "dispelled", "difficulty_class": 15 }]
+}`,
+    inputSchema: ApplyCustomEffectArgsSchema
+  },
+  GET_CUSTOM_EFFECTS: {
+    name: "get_custom_effects",
+    description: "Get all active effects on a target, with optional filtering.",
+    inputSchema: external_exports.object({
+      target_id: external_exports.string(),
+      target_type: external_exports.enum(["character", "npc"]),
+      category: external_exports.enum(["boon", "curse", "neutral", "transformative"]).optional(),
+      source_type: external_exports.enum(["divine", "arcane", "natural", "cursed", "psionic", "unknown"]).optional(),
+      include_inactive: external_exports.boolean().optional().default(false)
+    })
+  },
+  REMOVE_CUSTOM_EFFECT: {
+    name: "remove_custom_effect",
+    description: "Remove a custom effect by ID or by name.",
+    inputSchema: external_exports.object({
+      effect_id: external_exports.number().int().optional(),
+      target_id: external_exports.string().optional(),
+      target_type: external_exports.enum(["character", "npc"]).optional(),
+      effect_name: external_exports.string().optional()
+    })
+  },
+  PROCESS_EFFECT_TRIGGERS: {
+    name: "process_effect_triggers",
+    description: "Fire effect triggers at specific events (start_of_turn, on_attack, on_damage_taken, etc). Returns activated effects.",
+    inputSchema: external_exports.object({
+      target_id: external_exports.string(),
+      target_type: external_exports.enum(["character", "npc"]),
+      event: external_exports.enum([
+        "always_active",
+        "start_of_turn",
+        "end_of_turn",
+        "on_attack",
+        "on_hit",
+        "on_miss",
+        "on_damage_taken",
+        "on_heal",
+        "on_rest",
+        "on_spell_cast",
+        "on_death"
+      ]),
+      context: external_exports.record(external_exports.any()).optional().describe("Additional context for condition checking")
+    })
+  },
+  ADVANCE_EFFECT_DURATIONS: {
+    name: "advance_effect_durations",
+    description: "Advance round-based effect durations. Call at end of each round.",
+    inputSchema: external_exports.object({
+      target_id: external_exports.string(),
+      target_type: external_exports.enum(["character", "npc"]),
+      rounds: external_exports.number().int().min(1).default(1)
+    })
+  },
+  // ========================================================================
+  // ARCANE SYNTHESIS - DYNAMIC SPELL CREATION
+  // ========================================================================
+  ATTEMPT_ARCANE_SYNTHESIS: {
+    name: "attempt_arcane_synthesis",
+    description: `Attempt to create a spell on the fly through Arcane Synthesis.
+
+DC Calculation:
+Base DC = 10 + (Spell Level \xD7 2)
+
+Modifiers:
++2 if in combat (encounter_id provided)
++3 if novel effect (no similar spell known)
+-1 per 100gp of material component (max -5)
+-2 if related spell known
+-2 if school specialization
+-3 if near ley line/magical nexus
+-2 if celestial event (blood moon, eclipse)
++2 if desperation/urgency
+
+Outcomes:
+- Mastery (nat 20 OR beat DC by 10+): Spell works AND permanently learned
+- Success (beat DC): Spell works this time only
+- Fizzle (within 5 of DC): Slot consumed, no effect, minor mishap
+- Backfire (fail by 5-10): Spell damages caster (level \xD7 d6)
+- Catastrophic (nat 1 OR fail by 10+): WILD SURGE!
+
+Spell Level Damage Guidelines:
+Level 1: Single 3d6, AoE 2d6 (10ft)
+Level 2: Single 4d6, AoE 3d6 (15ft)
+Level 3: Single 8d6, AoE 6d6 (20ft)
+Level 4: Single 10d6, AoE 8d6 (30ft)
+Level 5+: Progressively more powerful
+
+Example:
+{
+  "caster_id": "wizard-1",
+  "caster_type": "character",
+  "narrative_intent": "I weave shadows together to blind the orc chieftain",
+  "proposed_name": "Shadow Blind",
+  "estimated_level": 2,
+  "school": "illusion",
+  "effect_specification": {
+    "type": "status",
+    "condition": "blinded",
+    "condition_duration": "1 minute"
+  },
+  "targeting": { "type": "single", "range": 60 },
+  "saving_throw": { "ability": "wisdom", "effect_on_save": "negates" },
+  "components": { "verbal": true, "somatic": true },
+  "concentration": true,
+  "duration": "1 minute"
+}`,
+    inputSchema: AttemptArcaneSynthesisArgsSchema
+  },
+  GET_SYNTHESIZED_SPELLS: {
+    name: "get_synthesized_spells",
+    description: "Get all spells a character has permanently learned through Arcane Synthesis.",
+    inputSchema: external_exports.object({
+      character_id: external_exports.string(),
+      school: external_exports.enum([
+        "abjuration",
+        "conjuration",
+        "divination",
+        "enchantment",
+        "evocation",
+        "illusion",
+        "necromancy",
+        "transmutation"
+      ]).optional()
+    })
+  }
+};
+async function handleResolveImprovisedStunt(args, _ctx) {
+  const parsed = ImprovisationTools.RESOLVE_IMPROVISED_STUNT.inputSchema.parse(args);
+  const { charRepo } = ensureDb10();
+  const seed = `stunt-${parsed.encounter_id}-${parsed.actor_id}-${Date.now()}`;
+  const rng2 = (0, import_seedrandom9.default)(seed);
+  let skillModifier = 0;
+  try {
+    const actor = charRepo.findById(String(parsed.actor_id));
+    if (actor?.stats) {
+      skillModifier = getSkillModifier(actor.stats, parsed.skill_check.skill);
+    }
+  } catch {
+  }
+  const d20Result = rollD202(parsed.skill_check.advantage, parsed.skill_check.disadvantage, rng2);
+  const total = d20Result.roll + skillModifier;
+  const isNat20 = d20Result.roll === 20;
+  const isNat1 = d20Result.roll === 1;
+  const beatDC = total >= parsed.skill_check.dc;
+  const criticalSuccess = isNat20 || beatDC && total >= parsed.skill_check.dc + 10;
+  const criticalFailure = isNat1 || !beatDC && total <= parsed.skill_check.dc - 10;
+  const success = isNat20 || beatDC && !isNat1;
+  const result = {
+    success,
+    roll: d20Result.roll,
+    modifier: skillModifier,
+    total,
+    dc: parsed.skill_check.dc,
+    critical_success: criticalSuccess,
+    critical_failure: criticalFailure,
+    narrative: "",
+    audit_log: {
+      seed,
+      d20_rolls: d20Result.rolls,
+      skill: parsed.skill_check.skill,
+      advantage: parsed.skill_check.advantage,
+      disadvantage: parsed.skill_check.disadvantage
+    }
+  };
+  if (success && parsed.consequences.success_damage) {
+    const damageRoll = rollDice3(parsed.consequences.success_damage, rng2);
+    let baseDamage = damageRoll.total;
+    if (criticalSuccess) {
+      baseDamage *= 2;
+    }
+    result.damage_dealt = baseDamage;
+    result.targets_affected = [];
+    const targetNames = /* @__PURE__ */ new Map();
+    if (parsed.target_ids) {
+      for (let i = 0; i < parsed.target_ids.length; i++) {
+        const targetId = parsed.target_ids[i];
+        try {
+          const char = charRepo.findById(String(targetId));
+          targetNames.set(targetId, char?.name || `Target ${i + 1}`);
+        } catch {
+          targetNames.set(targetId, `Target ${i + 1}`);
+        }
+      }
+    }
+    if (parsed.target_ids && parsed.target_types) {
+      for (let i = 0; i < parsed.target_ids.length; i++) {
+        let targetDamage = baseDamage;
+        let saved = false;
+        if (parsed.consequences.saving_throw) {
+          const saveRoll = Math.floor(rng2() * 20) + 1;
+          saved = saveRoll >= parsed.consequences.saving_throw.dc;
+          if (saved && parsed.consequences.saving_throw.half_damage_on_save) {
+            targetDamage = Math.floor(targetDamage / 2);
+          } else if (saved) {
+            targetDamage = 0;
+          }
+        }
+        result.targets_affected.push({
+          id: parsed.target_ids[i],
+          name: targetNames.get(parsed.target_ids[i]) || `Target ${i + 1}`,
+          damage_taken: targetDamage,
+          saved,
+          condition_applied: !saved && parsed.consequences.apply_condition ? parsed.consequences.apply_condition : void 0
+        });
+      }
+    }
+    result.narrative = parsed.narrative_on_success || `The stunt succeeds spectacularly! ${result.damage_dealt} ${parsed.consequences.damage_type || ""} damage dealt.`;
+  } else if (!success) {
+    if (criticalFailure && parsed.consequences.failure_damage) {
+      const selfDamage = rollDice3(parsed.consequences.failure_damage, rng2);
+      result.self_damage = selfDamage.total;
+      result.narrative = parsed.narrative_on_failure || `Critical failure! The stunt backfires, dealing ${result.self_damage} damage to the actor.`;
+    } else {
+      result.narrative = parsed.narrative_on_failure || `The stunt fails. The attempt doesn't produce the intended effect.`;
+    }
+  }
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F3AD} IMPROVISED STUNT - RULE OF COOL
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += `\u{1F4DC} Intent: "${parsed.narrative_intent}"
+
+`;
+  output += `\u{1F3B2} ${parsed.skill_check.skill.toUpperCase()} Check (DC ${parsed.skill_check.dc})
+`;
+  output += `   Roll: ${d20Result.roll}${d20Result.rolls.length > 1 ? ` (${d20Result.rolls.join(", ")})` : ""}`;
+  output += ` + ${skillModifier} = ${total}
+`;
+  if (isNat20)
+    output += `   \u2B50 NATURAL 20!
+`;
+  if (isNat1)
+    output += `   \u{1F4A5} NATURAL 1!
+`;
+  output += `
+`;
+  if (result.critical_success) {
+    output += `\u2728 CRITICAL SUCCESS!
+`;
+  } else if (result.success) {
+    output += `\u2713 SUCCESS
+`;
+  } else if (result.critical_failure) {
+    output += `\u{1F4A5} CRITICAL FAILURE!
+`;
+  } else {
+    output += `\u2717 FAILURE
+`;
+  }
+  output += `
+${result.narrative}
+`;
+  if (result.targets_affected && result.targets_affected.length > 0) {
+    output += `
+\u{1F3AF} Targets:
+`;
+    for (const target of result.targets_affected) {
+      output += `   \u2022 ${target.name}: ${target.damage_taken} damage`;
+      if (target.saved)
+        output += ` (saved)`;
+      if (target.condition_applied)
+        output += ` [${target.condition_applied}]`;
+      output += `
+`;
+    }
+  }
+  if (result.self_damage) {
+    output += `
+\u26A0\uFE0F Self-damage: ${result.self_damage}
+`;
+  }
+  output += `
+<!-- STUNT_AUDIT
+${JSON.stringify(result.audit_log, null, 2)}
+STUNT_AUDIT -->`;
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+async function handleApplyCustomEffect(args, _ctx) {
+  const parsed = ImprovisationTools.APPLY_CUSTOM_EFFECT.inputSchema.parse(args);
+  const { effectsRepo } = ensureDb10();
+  const effect = effectsRepo.apply(parsed);
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u2728 CUSTOM EFFECT APPLIED
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  const categoryIcon = {
+    boon: "\u{1F31F}",
+    curse: "\u{1F480}",
+    neutral: "\u2696\uFE0F",
+    transformative: "\u{1F52E}"
+  }[effect.category];
+  output += `${categoryIcon} ${effect.name}
+`;
+  output += `   ${effect.description || "No description"}
+
+`;
+  output += `\u{1F4CA} Details:
+`;
+  output += `   Source: ${effect.source_type}${effect.source_entity_name ? ` (${effect.source_entity_name})` : ""}
+`;
+  output += `   Power Level: ${"\u2605".repeat(effect.power_level)}${"\u2606".repeat(5 - effect.power_level)}
+`;
+  output += `   Duration: ${effect.duration_type}${effect.duration_value ? ` (${effect.duration_value})` : ""}
+`;
+  if (effect.rounds_remaining !== null) {
+    output += `   Rounds Remaining: ${effect.rounds_remaining}
+`;
+  }
+  if (effect.stackable) {
+    output += `   Stacks: ${effect.current_stacks}/${effect.max_stacks}
+`;
+  }
+  output += `
+\u{1F4CB} Mechanics:
+`;
+  for (const mechanic of effect.mechanics) {
+    output += `   \u2022 ${mechanic.type}: ${mechanic.value}${mechanic.condition ? ` (${mechanic.condition})` : ""}
+`;
+  }
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+async function handleGetCustomEffects(args, _ctx) {
+  const parsed = ImprovisationTools.GET_CUSTOM_EFFECTS.inputSchema.parse(args);
+  const { effectsRepo } = ensureDb10();
+  const effects = effectsRepo.getEffectsOnTarget(parsed.target_id, parsed.target_type, {
+    category: parsed.category,
+    source_type: parsed.source_type,
+    is_active: parsed.include_inactive ? void 0 : true
+  });
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F4CB} EFFECTS ON ${parsed.target_id}
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  if (effects.length === 0) {
+    output += `No active effects found.
+`;
+  } else {
+    const boons = effects.filter((e) => e.category === "boon");
+    const curses = effects.filter((e) => e.category === "curse");
+    const others = effects.filter((e) => e.category !== "boon" && e.category !== "curse");
+    if (boons.length > 0) {
+      output += `\u{1F31F} BOONS:
+`;
+      for (const effect of boons) {
+        output += formatEffectSummary(effect);
+      }
+      output += `
+`;
+    }
+    if (curses.length > 0) {
+      output += `\u{1F480} CURSES:
+`;
+      for (const effect of curses) {
+        output += formatEffectSummary(effect);
+      }
+      output += `
+`;
+    }
+    if (others.length > 0) {
+      output += `\u2696\uFE0F OTHER EFFECTS:
+`;
+      for (const effect of others) {
+        output += formatEffectSummary(effect);
+      }
+    }
+  }
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+function formatEffectSummary(effect) {
+  let str = `   \u2022 ${effect.name}`;
+  if (effect.power_level) {
+    str += ` [${"\u2605".repeat(effect.power_level)}]`;
+  }
+  if (effect.rounds_remaining !== null) {
+    str += ` (${effect.rounds_remaining} rounds)`;
+  } else if (effect.duration_type !== "permanent" && effect.duration_type !== "until_removed") {
+    str += ` (${effect.duration_type})`;
+  }
+  if (!effect.is_active) {
+    str += ` [INACTIVE]`;
+  }
+  str += `
+`;
+  return str;
+}
+async function handleRemoveCustomEffect(args, _ctx) {
+  const parsed = ImprovisationTools.REMOVE_CUSTOM_EFFECT.inputSchema.parse(args);
+  if (parsed.effect_id === void 0 && !(parsed.target_id && parsed.target_type && parsed.effect_name)) {
+    throw new Error("Must provide either effect_id or (target_id, target_type, effect_name)");
+  }
+  const { effectsRepo } = ensureDb10();
+  let removed = false;
+  let effectName = "";
+  if (parsed.effect_id !== void 0) {
+    const effect = effectsRepo.findById(parsed.effect_id);
+    effectName = effect?.name || `ID ${parsed.effect_id}`;
+    removed = effectsRepo.remove(parsed.effect_id);
+  } else if (parsed.target_id && parsed.target_type && parsed.effect_name) {
+    effectName = parsed.effect_name;
+    removed = effectsRepo.removeByName(parsed.target_id, parsed.target_type, parsed.effect_name);
+  }
+  let output = `
+`;
+  if (removed) {
+    output += `\u2713 Effect "${effectName}" has been removed.
+`;
+  } else {
+    output += `\u26A0\uFE0F Effect "${effectName}" not found or already removed.
+`;
+  }
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+async function handleProcessEffectTriggers(args, _ctx) {
+  const parsed = ImprovisationTools.PROCESS_EFFECT_TRIGGERS.inputSchema.parse(args);
+  const { effectsRepo } = ensureDb10();
+  const triggeredEffects = effectsRepo.getEffectsByTrigger(parsed.target_id, parsed.target_type, parsed.event);
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u26A1 EFFECT TRIGGERS: ${parsed.event.toUpperCase()}
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  if (triggeredEffects.length === 0) {
+    output += `No effects triggered by ${parsed.event}.
+`;
+  } else {
+    output += `${triggeredEffects.length} effect(s) triggered:
+
+`;
+    for (const effect of triggeredEffects) {
+      output += `\u{1F52E} ${effect.name}
+`;
+      for (const mechanic of effect.mechanics) {
+        output += `   \u2192 ${mechanic.type}: ${mechanic.value}`;
+        if (mechanic.condition) {
+          output += ` (${mechanic.condition})`;
+        }
+        output += `
+`;
+      }
+      output += `
+`;
+    }
+  }
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+async function handleAdvanceEffectDurations(args, _ctx) {
+  const parsed = ImprovisationTools.ADVANCE_EFFECT_DURATIONS.inputSchema.parse(args);
+  const { effectsRepo } = ensureDb10();
+  const { advanced, expired } = effectsRepo.advanceRounds(parsed.target_id, parsed.target_type, parsed.rounds);
+  const cleanedUp = effectsRepo.cleanupExpired();
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u23F1\uFE0F EFFECT DURATIONS ADVANCED
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += `Advanced ${parsed.rounds} round(s).
+
+`;
+  if (expired.length > 0) {
+    output += `\u{1F4A8} EXPIRED EFFECTS:
+`;
+    for (const effect of expired) {
+      output += `   \u2022 ${effect.name}
+`;
+    }
+    output += `
+`;
+  }
+  if (advanced.length > 0) {
+    output += `\u{1F4CB} REMAINING EFFECTS:
+`;
+    for (const effect of advanced) {
+      if (effect.rounds_remaining !== null) {
+        output += `   \u2022 ${effect.name}: ${effect.rounds_remaining} rounds remaining
+`;
+      } else {
+        output += `   \u2022 ${effect.name}: ${effect.duration_type}
+`;
+      }
+    }
+  }
+  if (cleanedUp > 0) {
+    output += `
+(Also cleaned up ${cleanedUp} time-expired effect(s))
+`;
+  }
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+async function handleAttemptArcaneSynthesis(args, _ctx) {
+  const parsed = ImprovisationTools.ATTEMPT_ARCANE_SYNTHESIS.inputSchema.parse(args);
+  const { db, charRepo } = ensureDb10();
+  const seed = `synthesis-${parsed.caster_id}-${Date.now()}`;
+  const rng2 = (0, import_seedrandom9.default)(seed);
+  let spellcastingModifier = 0;
+  let casterName = "Caster";
+  let knownSpells = [];
+  try {
+    const caster = charRepo.findById(parsed.caster_id);
+    if (caster) {
+      casterName = caster.name;
+      knownSpells = caster.knownSpells || [];
+      const stats = caster.stats;
+      const intScore = stats.int ?? stats.intelligence ?? 10;
+      spellcastingModifier = getAbilityModifier4(intScore);
+      const profBonus = Math.floor((caster.level || 1) / 4) + 2;
+      spellcastingModifier += profBonus;
+    }
+  } catch {
+  }
+  let dc = 10 + parsed.estimated_level * 2;
+  const dcBreakdown = {
+    base: 10,
+    spell_level: parsed.estimated_level * 2
+  };
+  if (parsed.encounter_id !== void 0) {
+    dc += 2;
+    dcBreakdown.in_combat = 2;
+  }
+  const hasRelatedSpell = knownSpells.some((spell) => spell.toLowerCase().includes(parsed.school) || spell.toLowerCase().includes(parsed.effect_specification.type));
+  if (!hasRelatedSpell) {
+    dc += 3;
+    dcBreakdown.novel_effect = 3;
+  } else {
+    dc -= 2;
+    dcBreakdown.related_spell = -2;
+  }
+  if (parsed.components.material?.value) {
+    const reduction = Math.min(5, Math.floor(parsed.components.material.value / 100));
+    dc -= reduction;
+    dcBreakdown.material_reduction = -reduction;
+  }
+  if (parsed.circumstance_modifiers) {
+    for (const modifier of parsed.circumstance_modifiers) {
+      const lowerMod = modifier.toLowerCase();
+      if (lowerMod.includes("ley line") || lowerMod.includes("magical nexus")) {
+        dc -= 3;
+        dcBreakdown.ley_line = -3;
+      }
+      if (lowerMod.includes("blood moon") || lowerMod.includes("eclipse") || lowerMod.includes("celestial")) {
+        dc -= 2;
+        dcBreakdown.celestial_event = -2;
+      }
+      if (lowerMod.includes("desperation") || lowerMod.includes("urgency")) {
+        dc += 2;
+        dcBreakdown.desperation = 2;
+      }
+    }
+  }
+  const d20Roll = Math.floor(rng2() * 20) + 1;
+  const total = d20Roll + spellcastingModifier;
+  const isNat20 = d20Roll === 20;
+  const isNat1 = d20Roll === 1;
+  const beatDC = total >= dc;
+  const margin = total - dc;
+  let outcome;
+  if (isNat20 || margin >= 10) {
+    outcome = "mastery";
+  } else if (beatDC) {
+    outcome = "success";
+  } else if (margin >= -5) {
+    outcome = "fizzle";
+  } else if (isNat1 || margin <= -10) {
+    outcome = "catastrophic";
+  } else {
+    outcome = "backfire";
+  }
+  const result = {
+    outcome,
+    roll: d20Roll,
+    modifier: spellcastingModifier,
+    total,
+    dc,
+    dc_breakdown: dcBreakdown,
+    spell_worked: outcome === "mastery" || outcome === "success",
+    spell_mastered: outcome === "mastery",
+    spell_slot_consumed: outcome !== "mastery",
+    // Mastery doesn't consume slot
+    narrative: "",
+    audit_log: { seed, caster: casterName, dc_calculation: dcBreakdown }
+  };
+  const spellName = parsed.proposed_name || `${casterName}'s ${parsed.school} ${parsed.effect_specification.type}`;
+  switch (outcome) {
+    case "mastery": {
+      result.narrative = `MASTERY! ${casterName} has not only cast the spell successfully, but has permanently learned "${spellName}"!`;
+      const stmt = db.prepare(`
+                INSERT INTO synthesized_spells (
+                    character_id, name, level, school, effect_type, effect_dice, damage_type,
+                    targeting_type, targeting_range, targeting_area_size, targeting_max_targets,
+                    saving_throw_ability, saving_throw_effect,
+                    components_verbal, components_somatic, components_material,
+                    concentration, duration, synthesis_dc, created_at, mastered_at, times_cast
+                ) VALUES (
+                    @characterId, @name, @level, @school, @effectType, @effectDice, @damageType,
+                    @targetingType, @targetingRange, @targetingAreaSize, @targetingMaxTargets,
+                    @savingThrowAbility, @savingThrowEffect,
+                    @componentsVerbal, @componentsSomatic, @componentsMaterial,
+                    @concentration, @duration, @synthesisDc, @createdAt, @masteredAt, @timesCast
+                )
+            `);
+      try {
+        stmt.run({
+          characterId: parsed.caster_id,
+          name: spellName,
+          level: parsed.estimated_level,
+          school: parsed.school,
+          effectType: parsed.effect_specification.type,
+          effectDice: parsed.effect_specification.dice || null,
+          damageType: parsed.effect_specification.damage_type || null,
+          targetingType: parsed.targeting.type,
+          targetingRange: parsed.targeting.range,
+          targetingAreaSize: parsed.targeting.area_size || null,
+          targetingMaxTargets: parsed.targeting.max_targets || null,
+          savingThrowAbility: parsed.saving_throw?.ability || null,
+          savingThrowEffect: parsed.saving_throw?.effect_on_save || null,
+          componentsVerbal: parsed.components.verbal ? 1 : 0,
+          componentsSomatic: parsed.components.somatic ? 1 : 0,
+          componentsMaterial: parsed.components.material ? JSON.stringify(parsed.components.material) : null,
+          concentration: parsed.concentration ? 1 : 0,
+          duration: parsed.duration,
+          synthesisDc: dc,
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          masteredAt: (/* @__PURE__ */ new Date()).toISOString(),
+          timesCast: 1
+        });
+      } catch {
+      }
+      if (parsed.effect_specification.dice) {
+        const effectRoll = rollDice3(parsed.effect_specification.dice, rng2);
+        if (parsed.effect_specification.type === "damage") {
+          result.damage_dealt = effectRoll.total;
+        } else if (parsed.effect_specification.type === "healing") {
+          result.healing_done = effectRoll.total;
+        }
+      }
+      break;
+    }
+    case "success": {
+      result.narrative = `Success! ${casterName} successfully channels the magical energy. "${spellName}" takes effect!`;
+      if (parsed.effect_specification.dice) {
+        const effectRoll = rollDice3(parsed.effect_specification.dice, rng2);
+        if (parsed.effect_specification.type === "damage") {
+          result.damage_dealt = effectRoll.total;
+        } else if (parsed.effect_specification.type === "healing") {
+          result.healing_done = effectRoll.total;
+        }
+      }
+      break;
+    }
+    case "fizzle": {
+      result.narrative = `Fizzle. The magic slips away as ${casterName} attempts to shape it. The spell slot is consumed, but nothing happens.`;
+      break;
+    }
+    case "backfire": {
+      const backfireDamage = rollDice3(`${parsed.estimated_level}d6`, rng2);
+      result.backfire_damage = backfireDamage.total;
+      result.narrative = `BACKFIRE! The spell turns against ${casterName}, dealing ${result.backfire_damage} force damage!`;
+      break;
+    }
+    case "catastrophic": {
+      const surgeRoll = Math.floor(rng2() * 20) + 1;
+      const wildSurge = WILD_SURGE_TABLE.find((ws) => ws.roll === surgeRoll) || WILD_SURGE_TABLE[0];
+      result.wild_surge = wildSurge;
+      result.narrative = `CATASTROPHIC FAILURE! WILD SURGE!
+
+${wildSurge.name}: ${wildSurge.effect}`;
+      break;
+    }
+  }
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F52E} ARCANE SYNTHESIS
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  output += `\u{1F4DC} Intent: "${parsed.narrative_intent}"
+`;
+  output += `\u{1F4DA} School: ${parsed.school.charAt(0).toUpperCase() + parsed.school.slice(1)}
+`;
+  output += `\u26A1 Level: ${parsed.estimated_level}
+
+`;
+  output += `\u{1F3B2} Synthesis Check (DC ${dc})
+`;
+  output += `   Roll: ${d20Roll} + ${spellcastingModifier} = ${total}
+`;
+  if (isNat20)
+    output += `   \u2B50 NATURAL 20!
+`;
+  if (isNat1)
+    output += `   \u{1F4A5} NATURAL 1!
+`;
+  output += `
+\u{1F4CA} DC Breakdown:
+`;
+  output += `   Base: ${dcBreakdown.base}
+`;
+  output += `   Spell Level (\xD72): +${dcBreakdown.spell_level}
+`;
+  if (dcBreakdown.in_combat)
+    output += `   In Combat: +${dcBreakdown.in_combat}
+`;
+  if (dcBreakdown.novel_effect)
+    output += `   Novel Effect: +${dcBreakdown.novel_effect}
+`;
+  if (dcBreakdown.related_spell)
+    output += `   Related Spell Known: ${dcBreakdown.related_spell}
+`;
+  if (dcBreakdown.material_reduction)
+    output += `   Material Components: ${dcBreakdown.material_reduction}
+`;
+  if (dcBreakdown.ley_line)
+    output += `   Ley Line: ${dcBreakdown.ley_line}
+`;
+  if (dcBreakdown.celestial_event)
+    output += `   Celestial Event: ${dcBreakdown.celestial_event}
+`;
+  if (dcBreakdown.desperation)
+    output += `   Desperation: +${dcBreakdown.desperation}
+`;
+  output += `
+`;
+  const outcomeEmoji = {
+    mastery: "\u2B50",
+    success: "\u2713",
+    fizzle: "\u{1F4A8}",
+    backfire: "\u{1F4A5}",
+    catastrophic: "\u{1F300}"
+  }[outcome];
+  output += `${outcomeEmoji} OUTCOME: ${outcome.toUpperCase()}
+
+`;
+  output += `${result.narrative}
+`;
+  if (result.damage_dealt) {
+    output += `
+\u{1F4A5} Damage: ${result.damage_dealt}${parsed.effect_specification.damage_type ? ` ${parsed.effect_specification.damage_type}` : ""}
+`;
+  }
+  if (result.healing_done) {
+    output += `
+\u{1F49A} Healing: ${result.healing_done}
+`;
+  }
+  if (result.backfire_damage) {
+    output += `
+\u26A0\uFE0F Backfire Damage to Caster: ${result.backfire_damage}
+`;
+  }
+  if (result.wild_surge) {
+    output += `
+\u{1F300} WILD SURGE (Roll: ${result.wild_surge.roll})
+`;
+    output += `   ${result.wild_surge.name}
+`;
+    output += `   ${result.wild_surge.effect}
+`;
+  }
+  if (result.spell_mastered) {
+    output += `
+\u{1F4D6} "${spellName}" has been added to your spellbook!
+`;
+  }
+  if (!result.spell_slot_consumed) {
+    output += `
+\u2728 Spell slot preserved (mastery bonus)!
+`;
+  }
+  output += `
+<!-- SYNTHESIS_AUDIT
+${JSON.stringify(result.audit_log, null, 2)}
+SYNTHESIS_AUDIT -->`;
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+async function handleGetSynthesizedSpells(args, _ctx) {
+  const parsed = ImprovisationTools.GET_SYNTHESIZED_SPELLS.inputSchema.parse(args);
+  const { db } = ensureDb10();
+  let query = "SELECT * FROM synthesized_spells WHERE character_id = ?";
+  const params = [parsed.character_id];
+  if (parsed.school) {
+    query += " AND school = ?";
+    params.push(parsed.school);
+  }
+  query += " ORDER BY level, name";
+  const stmt = db.prepare(query);
+  const rows = stmt.all(...params);
+  let output = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+`;
+  output += `\u2502 \u{1F4D6} SYNTHESIZED SPELLBOOK
+`;
+  output += `\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+
+`;
+  if (rows.length === 0) {
+    output += `No synthesized spells found.
+`;
+    output += `
+Master spells through Arcane Synthesis to add them here!
+`;
+  } else {
+    const byLevel = {};
+    for (const row of rows) {
+      if (!byLevel[row.level])
+        byLevel[row.level] = [];
+      byLevel[row.level].push(row);
+    }
+    for (const level of Object.keys(byLevel).map(Number).sort()) {
+      output += `\u2550\u2550\u2550 LEVEL ${level} \u2550\u2550\u2550
+`;
+      for (const spell of byLevel[level]) {
+        output += `
+\u{1F4DC} ${spell.name}
+`;
+        output += `   School: ${spell.school}
+`;
+        output += `   Effect: ${spell.effect_type}`;
+        if (spell.effect_dice)
+          output += ` (${spell.effect_dice})`;
+        if (spell.damage_type)
+          output += ` ${spell.damage_type}`;
+        output += `
+`;
+        output += `   Range: ${spell.targeting_range}ft (${spell.targeting_type})
+`;
+        if (spell.concentration)
+          output += `   \u26A1 Concentration
+`;
+        output += `   Duration: ${spell.duration}
+`;
+        output += `   Times Cast: ${spell.times_cast}
+`;
+      }
+      output += `
+`;
+    }
+  }
+  return {
+    content: [{
+      type: "text",
+      text: output
+    }]
+  };
+}
+
+// dist/server/spatial-tools.js
+init_zod();
+init_character_repo();
+var SpatialTools = {
+  LOOK_AT_SURROUNDINGS: {
+    name: "look_at_surroundings",
+    description: "Get filtered room description accounting for darkness, fog, and perception. Returns exits and entities.",
+    inputSchema: external_exports.object({
+      observerId: external_exports.string().uuid().describe("ID of the character observing their surroundings")
+    })
+  },
+  GENERATE_ROOM_NODE: {
+    name: "generate_room_node",
+    description: "Create a persistent room with immutable description. Optionally links to previous room.",
+    inputSchema: external_exports.object({
+      name: external_exports.string().min(1).max(100).describe(`Name of the room (e.g., "The Dragon's Rest Tavern")`),
+      baseDescription: external_exports.string().min(10).max(2e3).describe("Detailed description of the room (immutable once created)"),
+      biomeContext: external_exports.enum(["forest", "mountain", "urban", "dungeon", "coastal", "cavern", "divine", "arcane"]).describe("Biome/environment type"),
+      atmospherics: external_exports.array(external_exports.enum(["DARKNESS", "FOG", "ANTIMAGIC", "SILENCE", "BRIGHT", "MAGICAL"])).default([]).describe("Environmental effects in this room"),
+      previousNodeId: external_exports.string().uuid().optional().describe("If specified, creates an exit FROM this room TO the new room"),
+      direction: external_exports.enum(["north", "south", "east", "west", "up", "down", "northeast", "northwest", "southeast", "southwest"]).optional().describe("Direction of the exit from previousNodeId to the new room")
+    })
+  },
+  GET_ROOM_EXITS: {
+    name: "get_room_exits",
+    description: "Get all exits from a room. Use look_at_surroundings for perception-filtered exits.",
+    inputSchema: external_exports.object({
+      roomId: external_exports.string().uuid().describe("ID of the room to get exits for")
+    })
+  },
+  MOVE_CHARACTER_TO_ROOM: {
+    name: "move_character_to_room",
+    description: "Move a character to a room and increment its visit count.",
+    inputSchema: external_exports.object({
+      characterId: external_exports.string().uuid().describe("ID of the character to move"),
+      roomId: external_exports.string().uuid().describe("ID of the destination room")
+    })
+  }
+};
+function getSpatialRepo() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return new SpatialRepository(db);
+}
+function getCharacterRepo() {
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  return new CharacterRepository(db);
+}
+function rollD203() {
+  return Math.floor(Math.random() * 20) + 1;
+}
+function getModifier2(abilityScore) {
+  return Math.floor((abilityScore - 10) / 2);
+}
+async function handleLookAtSurroundings(args, _ctx) {
+  const parsed = SpatialTools.LOOK_AT_SURROUNDINGS.inputSchema.parse(args);
+  const spatialRepo = getSpatialRepo();
+  const characterRepo = getCharacterRepo();
+  const observer = characterRepo.findById(parsed.observerId);
+  if (!observer) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "Observer not found"
+        }, null, 2)
+      }]
+    };
+  }
+  const currentRoomId = observer.currentRoomId;
+  if (!currentRoomId) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "Observer is not in any room. Use move_character_to_room first."
+        }, null, 2)
+      }]
+    };
+  }
+  const currentRoom = spatialRepo.findById(currentRoomId);
+  if (!currentRoom) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "Observer's current room not found in database"
+        }, null, 2)
+      }]
+    };
+  }
+  const isInDarkness = currentRoom.atmospherics.includes("DARKNESS");
+  const hasLight = observer.conditions?.includes("HAS_LIGHT") || observer.conditions?.includes("DARKVISION");
+  if (isInDarkness && !hasLight) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          description: "It's pitch black. You can't see anything.",
+          exits: [],
+          entities: [],
+          atmospherics: currentRoom.atmospherics,
+          roomId: currentRoom.id,
+          roomName: currentRoom.name
+        }, null, 2)
+      }]
+    };
+  }
+  const perceptionModifier = getModifier2(observer.stats.wis);
+  const visibleExits = currentRoom.exits.filter((exit) => {
+    if (exit.type === "OPEN")
+      return true;
+    if (exit.type === "LOCKED")
+      return false;
+    if (exit.type === "HIDDEN") {
+      const perceptionRoll = rollD203() + perceptionModifier;
+      return perceptionRoll >= (exit.dc || 15);
+    }
+    return false;
+  });
+  const formattedExits = visibleExits.map((e) => ({
+    direction: e.direction,
+    type: e.type,
+    description: e.description || `A ${e.type.toLowerCase()} passage leads ${e.direction}`,
+    targetNodeId: e.targetNodeId
+  }));
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        roomId: currentRoom.id,
+        roomName: currentRoom.name,
+        description: currentRoom.baseDescription,
+        exits: formattedExits,
+        entities: currentRoom.entityIds,
+        atmospherics: currentRoom.atmospherics,
+        biomeContext: currentRoom.biomeContext,
+        visitedCount: currentRoom.visitedCount
+      }, null, 2)
+    }]
+  };
+}
+async function handleGenerateRoomNode(args, _ctx) {
+  const parsed = SpatialTools.GENERATE_ROOM_NODE.inputSchema.parse(args);
+  const spatialRepo = getSpatialRepo();
+  const newRoom = {
+    id: crypto.randomUUID(),
+    name: parsed.name,
+    baseDescription: parsed.baseDescription,
+    biomeContext: parsed.biomeContext,
+    atmospherics: parsed.atmospherics,
+    exits: [],
+    entityIds: [],
+    createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    visitedCount: 0,
+    lastVisitedAt: void 0
+  };
+  spatialRepo.create(newRoom);
+  if (parsed.previousNodeId && parsed.direction) {
+    const prevRoom = spatialRepo.findById(parsed.previousNodeId);
+    if (prevRoom) {
+      const exit = {
+        direction: parsed.direction,
+        targetNodeId: newRoom.id,
+        type: "OPEN"
+      };
+      spatialRepo.addExit(parsed.previousNodeId, exit);
+    }
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        roomId: newRoom.id,
+        name: newRoom.name,
+        description: newRoom.baseDescription,
+        biomeContext: newRoom.biomeContext,
+        atmospherics: newRoom.atmospherics,
+        linkedToPrevious: !!(parsed.previousNodeId && parsed.direction)
+      }, null, 2)
+    }]
+  };
+}
+async function handleGetRoomExits(args, _ctx) {
+  const parsed = SpatialTools.GET_ROOM_EXITS.inputSchema.parse(args);
+  const spatialRepo = getSpatialRepo();
+  const room = spatialRepo.findById(parsed.roomId);
+  if (!room) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "Room not found"
+        }, null, 2)
+      }]
+    };
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        roomId: room.id,
+        roomName: room.name,
+        exits: room.exits.map((e) => ({
+          direction: e.direction,
+          targetNodeId: e.targetNodeId,
+          type: e.type,
+          dc: e.dc,
+          description: e.description
+        }))
+      }, null, 2)
+    }]
+  };
+}
+async function handleMoveCharacterToRoom(args, _ctx) {
+  const parsed = SpatialTools.MOVE_CHARACTER_TO_ROOM.inputSchema.parse(args);
+  const spatialRepo = getSpatialRepo();
+  const characterRepo = getCharacterRepo();
+  const character = characterRepo.findById(parsed.characterId);
+  if (!character) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "Character not found"
+        }, null, 2)
+      }]
+    };
+  }
+  const room = spatialRepo.findById(parsed.roomId);
+  if (!room) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: "Room not found"
+        }, null, 2)
+      }]
+    };
+  }
+  const oldRoomId = character.currentRoomId;
+  if (oldRoomId) {
+    try {
+      spatialRepo.removeEntityFromRoom(oldRoomId, parsed.characterId);
+    } catch (e) {
+    }
+  }
+  const updatedChar = {
+    ...character,
+    currentRoomId: parsed.roomId
+  };
+  characterRepo.update(parsed.characterId, updatedChar);
+  spatialRepo.addEntityToRoom(parsed.roomId, parsed.characterId);
+  spatialRepo.incrementVisitCount(parsed.roomId);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        characterId: parsed.characterId,
+        characterName: character.name,
+        newRoomId: parsed.roomId,
+        newRoomName: room.name,
+        visitedCount: room.visitedCount + 1
+      }, null, 2)
+    }]
+  };
+}
+
+// dist/server/tool-registry.js
+function meta(name, description, category, keywords, capabilities, contextAware = false, estimatedTokenCost = "medium") {
+  return {
+    name,
+    description,
+    category,
+    keywords,
+    capabilities,
+    contextAware,
+    estimatedTokenCost,
+    usageExample: `${name}({ ... })`
+  };
+}
+var cachedRegistry = null;
+function buildToolRegistry() {
+  if (cachedRegistry)
+    return cachedRegistry;
+  cachedRegistry = {
+    // === WORLD TOOLS ===
+    [Tools.GENERATE_WORLD.name]: {
+      metadata: meta(Tools.GENERATE_WORLD.name, Tools.GENERATE_WORLD.description, "world", ["world", "generation", "seed", "terrain", "biome", "procedural"], ["Procedural world generation", "Biome distribution", "River generation"], true, "high"),
+      schema: Tools.GENERATE_WORLD.inputSchema,
+      handler: handleGenerateWorld
+    },
+    [Tools.GET_WORLD_STATE.name]: {
+      metadata: meta(Tools.GET_WORLD_STATE.name, Tools.GET_WORLD_STATE.description, "world", ["world", "state", "query", "environment"], ["World state retrieval", "Environment info"], true, "high"),
+      schema: Tools.GET_WORLD_STATE.inputSchema,
+      handler: handleGetWorldState
+    },
+    [Tools.APPLY_MAP_PATCH.name]: {
+      metadata: meta(Tools.APPLY_MAP_PATCH.name, Tools.APPLY_MAP_PATCH.description, "world", ["map", "patch", "edit", "terrain", "structure"], ["Terrain modification", "Structure placement"], false, "medium"),
+      schema: Tools.APPLY_MAP_PATCH.inputSchema,
+      handler: handleApplyMapPatch
+    },
+    [Tools.GET_WORLD_MAP_OVERVIEW.name]: {
+      metadata: meta(Tools.GET_WORLD_MAP_OVERVIEW.name, Tools.GET_WORLD_MAP_OVERVIEW.description, "world", ["map", "overview", "biome", "region", "statistics"], ["Map overview", "Biome distribution"], true, "high"),
+      schema: Tools.GET_WORLD_MAP_OVERVIEW.inputSchema,
+      handler: handleGetWorldMapOverview
+    },
+    [Tools.GET_REGION_MAP.name]: {
+      metadata: meta(Tools.GET_REGION_MAP.name, Tools.GET_REGION_MAP.description, "world", ["region", "map", "terrain", "tiles"], ["Regional mapping", "Tile details"], false, "medium"),
+      schema: Tools.GET_REGION_MAP.inputSchema,
+      handler: handleGetRegionMap
+    },
+    [Tools.GET_WORLD_TILES.name]: {
+      metadata: meta(Tools.GET_WORLD_TILES.name, Tools.GET_WORLD_TILES.description, "world", ["tiles", "grid", "render", "map", "visualization"], ["Full tile grid", "Visualization data"], true, "high"),
+      schema: Tools.GET_WORLD_TILES.inputSchema,
+      handler: handleGetWorldTiles
+    },
+    [Tools.PREVIEW_MAP_PATCH.name]: {
+      metadata: meta(Tools.PREVIEW_MAP_PATCH.name, Tools.PREVIEW_MAP_PATCH.description, "world", ["preview", "patch", "simulate", "dsl"], ["Non-destructive preview", "DSL validation"], false, "low"),
+      schema: Tools.PREVIEW_MAP_PATCH.inputSchema,
+      handler: handlePreviewMapPatch
+    },
+    [Tools.FIND_VALID_POI_LOCATION.name]: {
+      metadata: meta(Tools.FIND_VALID_POI_LOCATION.name, Tools.FIND_VALID_POI_LOCATION.description, "world", ["poi", "location", "placement", "terrain", "valid"], ["Terrain-aware placement", "Suitability scoring"], false, "medium"),
+      schema: Tools.FIND_VALID_POI_LOCATION.inputSchema,
+      handler: handleFindValidPoiLocation
+    },
+    [Tools.SUGGEST_POI_LOCATIONS.name]: {
+      metadata: meta(Tools.SUGGEST_POI_LOCATIONS.name, Tools.SUGGEST_POI_LOCATIONS.description, "world", ["poi", "suggestions", "locations", "batch", "placement"], ["Multiple suggestions", "Suitability ranking"], false, "medium"),
+      schema: Tools.SUGGEST_POI_LOCATIONS.inputSchema,
+      handler: handleSuggestPoiLocations
+    },
+    // === COMBAT TOOLS ===
+    [CombatTools.CREATE_ENCOUNTER.name]: {
+      metadata: meta(CombatTools.CREATE_ENCOUNTER.name, CombatTools.CREATE_ENCOUNTER.description, "combat", ["encounter", "combat", "battle", "initiative", "fight"], ["Initiative rolling", "Participant setup", "Combat state"], false, "medium"),
+      schema: CombatTools.CREATE_ENCOUNTER.inputSchema,
+      handler: handleCreateEncounter
+    },
+    [CombatTools.GET_ENCOUNTER_STATE.name]: {
+      metadata: meta(CombatTools.GET_ENCOUNTER_STATE.name, CombatTools.GET_ENCOUNTER_STATE.description, "combat", ["encounter", "state", "turn", "status", "combat"], ["Encounter status", "Combatant info", "Turn order"], true, "high"),
+      schema: CombatTools.GET_ENCOUNTER_STATE.inputSchema,
+      handler: handleGetEncounterState
+    },
+    [CombatTools.EXECUTE_COMBAT_ACTION.name]: {
+      metadata: meta(CombatTools.EXECUTE_COMBAT_ACTION.name, CombatTools.EXECUTE_COMBAT_ACTION.description, "combat", ["action", "attack", "heal", "move", "combat", "damage"], ["Attack resolution", "Damage calculation", "Movement"], false, "medium"),
+      schema: CombatTools.EXECUTE_COMBAT_ACTION.inputSchema,
+      handler: handleExecuteCombatAction
+    },
+    [CombatTools.ADVANCE_TURN.name]: {
+      metadata: meta(CombatTools.ADVANCE_TURN.name, CombatTools.ADVANCE_TURN.description, "combat", ["turn", "advance", "next", "combat", "initiative"], ["Turn progression", "Initiative tracking"], false, "low"),
+      schema: CombatTools.ADVANCE_TURN.inputSchema,
+      handler: handleAdvanceTurn
+    },
+    [CombatTools.END_ENCOUNTER.name]: {
+      metadata: meta(CombatTools.END_ENCOUNTER.name, CombatTools.END_ENCOUNTER.description, "combat", ["end", "encounter", "combat", "conclude", "finish"], ["Combat resolution", "Cleanup"], false, "low"),
+      schema: CombatTools.END_ENCOUNTER.inputSchema,
+      handler: handleEndEncounter
+    },
+    [CombatTools.LOAD_ENCOUNTER.name]: {
+      metadata: meta(CombatTools.LOAD_ENCOUNTER.name, CombatTools.LOAD_ENCOUNTER.description, "combat", ["load", "encounter", "restore", "resume"], ["Encounter persistence"], false, "medium"),
+      schema: CombatTools.LOAD_ENCOUNTER.inputSchema,
+      handler: handleLoadEncounter
+    },
+    [CombatTools.ROLL_DEATH_SAVE.name]: {
+      metadata: meta(CombatTools.ROLL_DEATH_SAVE.name, CombatTools.ROLL_DEATH_SAVE.description, "combat", ["death", "save", "dying", "unconscious", "d20"], ["Death saving throw", "Unconsciousness tracking"], false, "low"),
+      schema: CombatTools.ROLL_DEATH_SAVE.inputSchema,
+      handler: handleRollDeathSave
+    },
+    [CombatTools.EXECUTE_LAIR_ACTION.name]: {
+      metadata: meta(CombatTools.EXECUTE_LAIR_ACTION.name, CombatTools.EXECUTE_LAIR_ACTION.description, "combat", ["lair", "action", "legendary", "environment", "boss"], ["Lair action resolution", "Environmental effects"], false, "medium"),
+      schema: CombatTools.EXECUTE_LAIR_ACTION.inputSchema,
+      handler: handleExecuteLairAction
+    },
+    // === CHARACTER/CRUD TOOLS ===
+    [CRUDTools.CREATE_WORLD.name]: {
+      metadata: meta(CRUDTools.CREATE_WORLD.name, CRUDTools.CREATE_WORLD.description, "world", ["world", "create", "new", "initialize"], ["World creation", "Initialization"], false, "medium"),
+      schema: CRUDTools.CREATE_WORLD.inputSchema,
+      handler: handleCreateWorld
+    },
+    [CRUDTools.GET_WORLD.name]: {
+      metadata: meta(CRUDTools.GET_WORLD.name, CRUDTools.GET_WORLD.description, "world", ["world", "get", "retrieve", "fetch"], ["World retrieval"], false, "medium"),
+      schema: CRUDTools.GET_WORLD.inputSchema,
+      handler: handleGetWorld
+    },
+    [CRUDTools.LIST_WORLDS.name]: {
+      metadata: meta(CRUDTools.LIST_WORLDS.name, CRUDTools.LIST_WORLDS.description, "world", ["world", "list", "all", "query"], ["World listing"], false, "medium"),
+      schema: CRUDTools.LIST_WORLDS.inputSchema,
+      handler: handleListWorlds
+    },
+    [CRUDTools.UPDATE_WORLD_ENVIRONMENT.name]: {
+      metadata: meta(CRUDTools.UPDATE_WORLD_ENVIRONMENT.name, CRUDTools.UPDATE_WORLD_ENVIRONMENT.description, "world", ["world", "environment", "time", "weather", "season"], ["Environmental updates", "Season/time"], false, "low"),
+      schema: CRUDTools.UPDATE_WORLD_ENVIRONMENT.inputSchema,
+      handler: handleUpdateWorldEnvironment
+    },
+    [CRUDTools.DELETE_WORLD.name]: {
+      metadata: meta(CRUDTools.DELETE_WORLD.name, CRUDTools.DELETE_WORLD.description, "world", ["world", "delete", "remove"], ["World deletion"], false, "low"),
+      schema: CRUDTools.DELETE_WORLD.inputSchema,
+      handler: handleDeleteWorld
+    },
+    [CRUDTools.CREATE_CHARACTER.name]: {
+      metadata: meta(CRUDTools.CREATE_CHARACTER.name, CRUDTools.CREATE_CHARACTER.description, "character", ["character", "create", "new", "player", "npc", "pc"], ["Character creation", "Class/race setup"], false, "medium"),
+      schema: CRUDTools.CREATE_CHARACTER.inputSchema,
+      handler: handleCreateCharacter
+    },
+    [CRUDTools.GET_CHARACTER.name]: {
+      metadata: meta(CRUDTools.GET_CHARACTER.name, CRUDTools.GET_CHARACTER.description, "character", ["character", "get", "retrieve", "info", "sheet"], ["Character retrieval", "Full character sheet"], false, "medium"),
+      schema: CRUDTools.GET_CHARACTER.inputSchema,
+      handler: handleGetCharacter
+    },
+    [CRUDTools.UPDATE_CHARACTER.name]: {
+      metadata: meta(CRUDTools.UPDATE_CHARACTER.name, CRUDTools.UPDATE_CHARACTER.description, "character", ["character", "update", "modify", "change", "edit"], ["Character modification", "Stat updates"], false, "medium"),
+      schema: CRUDTools.UPDATE_CHARACTER.inputSchema,
+      handler: handleUpdateCharacter
+    },
+    [CRUDTools.LIST_CHARACTERS.name]: {
+      metadata: meta(CRUDTools.LIST_CHARACTERS.name, CRUDTools.LIST_CHARACTERS.description, "character", ["character", "list", "all", "query", "search"], ["Character listing", "Filtering"], true, "medium"),
+      schema: CRUDTools.LIST_CHARACTERS.inputSchema,
+      handler: handleListCharacters
+    },
+    [CRUDTools.DELETE_CHARACTER.name]: {
+      metadata: meta(CRUDTools.DELETE_CHARACTER.name, CRUDTools.DELETE_CHARACTER.description, "character", ["character", "delete", "remove"], ["Character deletion"], false, "low"),
+      schema: CRUDTools.DELETE_CHARACTER.inputSchema,
+      handler: handleDeleteCharacter
+    },
+    // === PARTY TOOLS ===
+    [PartyTools.CREATE_PARTY.name]: {
+      metadata: meta(PartyTools.CREATE_PARTY.name, PartyTools.CREATE_PARTY.description, "party", ["party", "create", "new", "group", "adventuring"], ["Party formation", "Member setup"], false, "medium"),
+      schema: PartyTools.CREATE_PARTY.inputSchema,
+      handler: handleCreateParty
+    },
+    [PartyTools.GET_PARTY.name]: {
+      metadata: meta(PartyTools.GET_PARTY.name, PartyTools.GET_PARTY.description, "party", ["party", "get", "retrieve", "info", "members"], ["Full party info", "Member details"], true, "high"),
+      schema: PartyTools.GET_PARTY.inputSchema,
+      handler: handleGetParty
+    },
+    [PartyTools.LIST_PARTIES.name]: {
+      metadata: meta(PartyTools.LIST_PARTIES.name, PartyTools.LIST_PARTIES.description, "party", ["party", "list", "all", "groups"], ["Party listing", "Multiple parties"], true, "medium"),
+      schema: PartyTools.LIST_PARTIES.inputSchema,
+      handler: handleListParties
+    },
+    [PartyTools.UPDATE_PARTY.name]: {
+      metadata: meta(PartyTools.UPDATE_PARTY.name, PartyTools.UPDATE_PARTY.description, "party", ["party", "update", "modify", "edit"], ["Party metadata update"], false, "low"),
+      schema: PartyTools.UPDATE_PARTY.inputSchema,
+      handler: handleUpdateParty
+    },
+    [PartyTools.DELETE_PARTY.name]: {
+      metadata: meta(PartyTools.DELETE_PARTY.name, PartyTools.DELETE_PARTY.description, "party", ["party", "delete", "remove", "disband"], ["Party deletion"], false, "low"),
+      schema: PartyTools.DELETE_PARTY.inputSchema,
+      handler: handleDeleteParty
+    },
+    [PartyTools.ADD_PARTY_MEMBER.name]: {
+      metadata: meta(PartyTools.ADD_PARTY_MEMBER.name, PartyTools.ADD_PARTY_MEMBER.description, "party", ["party", "member", "add", "join", "recruit"], ["Member addition", "Role assignment"], false, "low"),
+      schema: PartyTools.ADD_PARTY_MEMBER.inputSchema,
+      handler: handleAddPartyMember
+    },
+    [PartyTools.REMOVE_PARTY_MEMBER.name]: {
+      metadata: meta(PartyTools.REMOVE_PARTY_MEMBER.name, PartyTools.REMOVE_PARTY_MEMBER.description, "party", ["party", "member", "remove", "leave", "kick"], ["Member removal"], false, "low"),
+      schema: PartyTools.REMOVE_PARTY_MEMBER.inputSchema,
+      handler: handleRemovePartyMember
+    },
+    [PartyTools.UPDATE_PARTY_MEMBER.name]: {
+      metadata: meta(PartyTools.UPDATE_PARTY_MEMBER.name, PartyTools.UPDATE_PARTY_MEMBER.description, "party", ["party", "member", "update", "role", "position"], ["Member role/position update"], false, "low"),
+      schema: PartyTools.UPDATE_PARTY_MEMBER.inputSchema,
+      handler: handleUpdatePartyMember
+    },
+    [PartyTools.SET_PARTY_LEADER.name]: {
+      metadata: meta(PartyTools.SET_PARTY_LEADER.name, PartyTools.SET_PARTY_LEADER.description, "party", ["party", "leader", "designate", "captain"], ["Leader assignment"], false, "low"),
+      schema: PartyTools.SET_PARTY_LEADER.inputSchema,
+      handler: handleSetPartyLeader
+    },
+    [PartyTools.SET_ACTIVE_CHARACTER.name]: {
+      metadata: meta(PartyTools.SET_ACTIVE_CHARACTER.name, PartyTools.SET_ACTIVE_CHARACTER.description, "party", ["party", "active", "player", "character", "pov", "focus"], ["Active character selection", "POV"], false, "low"),
+      schema: PartyTools.SET_ACTIVE_CHARACTER.inputSchema,
+      handler: handleSetActiveCharacter
+    },
+    [PartyTools.GET_PARTY_MEMBERS.name]: {
+      metadata: meta(PartyTools.GET_PARTY_MEMBERS.name, PartyTools.GET_PARTY_MEMBERS.description, "party", ["party", "member", "list", "all", "roster"], ["Member listing with details"], true, "high"),
+      schema: PartyTools.GET_PARTY_MEMBERS.inputSchema,
+      handler: handleGetPartyMembers
+    },
+    [PartyTools.GET_PARTY_CONTEXT.name]: {
+      metadata: meta(PartyTools.GET_PARTY_CONTEXT.name, PartyTools.GET_PARTY_CONTEXT.description, "party", ["party", "context", "summary", "brief", "llm"], ["Condensed party context", "LLM-friendly format"], true, "medium"),
+      schema: PartyTools.GET_PARTY_CONTEXT.inputSchema,
+      handler: handleGetPartyContext
+    },
+    [PartyTools.GET_UNASSIGNED_CHARACTERS.name]: {
+      metadata: meta(PartyTools.GET_UNASSIGNED_CHARACTERS.name, PartyTools.GET_UNASSIGNED_CHARACTERS.description, "character", ["character", "unassigned", "available", "free"], ["Available character listing"], false, "medium"),
+      schema: PartyTools.GET_UNASSIGNED_CHARACTERS.inputSchema,
+      handler: handleGetUnassignedCharacters
+    },
+    [PartyTools.MOVE_PARTY.name]: {
+      metadata: meta(PartyTools.MOVE_PARTY.name, PartyTools.MOVE_PARTY.description, "spatial", ["party", "move", "travel", "location", "position"], ["Party positioning", "World map movement"], false, "low"),
+      schema: PartyTools.MOVE_PARTY.inputSchema,
+      handler: handleMoveParty
+    },
+    [PartyTools.GET_PARTY_POSITION.name]: {
+      metadata: meta(PartyTools.GET_PARTY_POSITION.name, PartyTools.GET_PARTY_POSITION.description, "spatial", ["party", "position", "location", "coordinates", "where"], ["Party location retrieval"], false, "low"),
+      schema: PartyTools.GET_PARTY_POSITION.inputSchema,
+      handler: handleGetPartyPosition
+    },
+    [PartyTools.GET_PARTIES_IN_REGION.name]: {
+      metadata: meta(PartyTools.GET_PARTIES_IN_REGION.name, PartyTools.GET_PARTIES_IN_REGION.description, "spatial", ["party", "region", "nearby", "proximity", "search"], ["Regional party discovery"], false, "medium"),
+      schema: PartyTools.GET_PARTIES_IN_REGION.inputSchema,
+      handler: handleGetPartiesInRegion
+    },
+    // === INVENTORY TOOLS ===
+    [InventoryTools.CREATE_ITEM_TEMPLATE.name]: {
+      metadata: meta(InventoryTools.CREATE_ITEM_TEMPLATE.name, InventoryTools.CREATE_ITEM_TEMPLATE.description, "inventory", ["item", "template", "create", "type", "define"], ["Item type creation", "Properties"], false, "low"),
+      schema: InventoryTools.CREATE_ITEM_TEMPLATE.inputSchema,
+      handler: handleCreateItemTemplate
+    },
+    [InventoryTools.GIVE_ITEM.name]: {
+      metadata: meta(InventoryTools.GIVE_ITEM.name, InventoryTools.GIVE_ITEM.description, "inventory", ["item", "give", "grant", "add", "receive"], ["Item assignment", "Quantity tracking"], false, "low"),
+      schema: InventoryTools.GIVE_ITEM.inputSchema,
+      handler: handleGiveItem
+    },
+    [InventoryTools.REMOVE_ITEM.name]: {
+      metadata: meta(InventoryTools.REMOVE_ITEM.name, InventoryTools.REMOVE_ITEM.description, "inventory", ["item", "remove", "drop", "delete", "discard"], ["Item removal"], false, "low"),
+      schema: InventoryTools.REMOVE_ITEM.inputSchema,
+      handler: handleRemoveItem
+    },
+    [InventoryTools.EQUIP_ITEM.name]: {
+      metadata: meta(InventoryTools.EQUIP_ITEM.name, InventoryTools.EQUIP_ITEM.description, "inventory", ["item", "equip", "wield", "wear", "slot"], ["Equipment slot management"], false, "low"),
+      schema: InventoryTools.EQUIP_ITEM.inputSchema,
+      handler: handleEquipItem
+    },
+    [InventoryTools.UNEQUIP_ITEM.name]: {
+      metadata: meta(InventoryTools.UNEQUIP_ITEM.name, InventoryTools.UNEQUIP_ITEM.description, "inventory", ["item", "unequip", "remove", "store", "doff"], ["Equipment removal"], false, "low"),
+      schema: InventoryTools.UNEQUIP_ITEM.inputSchema,
+      handler: handleUnequipItem
+    },
+    [InventoryTools.GET_INVENTORY.name]: {
+      metadata: meta(InventoryTools.GET_INVENTORY.name, InventoryTools.GET_INVENTORY.description, "inventory", ["inventory", "items", "list", "bag", "backpack"], ["Inventory listing", "Item tracking"], true, "medium"),
+      schema: InventoryTools.GET_INVENTORY.inputSchema,
+      handler: handleGetInventory
+    },
+    [InventoryTools.GET_ITEM.name]: {
+      metadata: meta(InventoryTools.GET_ITEM.name, InventoryTools.GET_ITEM.description, "inventory", ["item", "get", "retrieve", "details", "info"], ["Item details"], false, "low"),
+      schema: InventoryTools.GET_ITEM.inputSchema,
+      handler: handleGetItem
+    },
+    [InventoryTools.LIST_ITEMS.name]: {
+      metadata: meta(InventoryTools.LIST_ITEMS.name, InventoryTools.LIST_ITEMS.description, "inventory", ["item", "list", "all", "template", "catalog"], ["Item type listing"], false, "medium"),
+      schema: InventoryTools.LIST_ITEMS.inputSchema,
+      handler: handleListItems
+    },
+    [InventoryTools.SEARCH_ITEMS.name]: {
+      metadata: meta(InventoryTools.SEARCH_ITEMS.name, InventoryTools.SEARCH_ITEMS.description, "inventory", ["item", "search", "filter", "find", "query"], ["Item search/filtering"], false, "medium"),
+      schema: InventoryTools.SEARCH_ITEMS.inputSchema,
+      handler: handleSearchItems
+    },
+    [InventoryTools.UPDATE_ITEM.name]: {
+      metadata: meta(InventoryTools.UPDATE_ITEM.name, InventoryTools.UPDATE_ITEM.description, "inventory", ["item", "update", "modify", "edit"], ["Item property updates"], false, "low"),
+      schema: InventoryTools.UPDATE_ITEM.inputSchema,
+      handler: handleUpdateItem
+    },
+    [InventoryTools.DELETE_ITEM.name]: {
+      metadata: meta(InventoryTools.DELETE_ITEM.name, InventoryTools.DELETE_ITEM.description, "inventory", ["item", "delete", "remove", "type"], ["Item type deletion"], false, "low"),
+      schema: InventoryTools.DELETE_ITEM.inputSchema,
+      handler: handleDeleteItem
+    },
+    [InventoryTools.TRANSFER_ITEM.name]: {
+      metadata: meta(InventoryTools.TRANSFER_ITEM.name, InventoryTools.TRANSFER_ITEM.description, "inventory", ["item", "transfer", "trade", "exchange", "give"], ["Item exchange between characters"], false, "low"),
+      schema: InventoryTools.TRANSFER_ITEM.inputSchema,
+      handler: handleTransferItem
+    },
+    [InventoryTools.USE_ITEM.name]: {
+      metadata: meta(InventoryTools.USE_ITEM.name, InventoryTools.USE_ITEM.description, "inventory", ["item", "use", "consume", "activate", "potion"], ["Consumable item usage"], false, "medium"),
+      schema: InventoryTools.USE_ITEM.inputSchema,
+      handler: handleUseItem
+    },
+    [InventoryTools.GET_INVENTORY_DETAILED.name]: {
+      metadata: meta(InventoryTools.GET_INVENTORY_DETAILED.name, InventoryTools.GET_INVENTORY_DETAILED.description, "inventory", ["inventory", "detailed", "full", "equipped", "complete"], ["Detailed inventory with equipped items"], true, "high"),
+      schema: InventoryTools.GET_INVENTORY_DETAILED.inputSchema,
+      handler: handleGetInventoryDetailed
+    },
+    // === QUEST TOOLS ===
+    [QuestTools.CREATE_QUEST.name]: {
+      metadata: meta(QuestTools.CREATE_QUEST.name, QuestTools.CREATE_QUEST.description, "quest", ["quest", "create", "new", "mission", "objective"], ["Quest creation", "Objective setup"], false, "medium"),
+      schema: QuestTools.CREATE_QUEST.inputSchema,
+      handler: handleCreateQuest
+    },
+    [QuestTools.GET_QUEST.name]: {
+      metadata: meta(QuestTools.GET_QUEST.name, QuestTools.GET_QUEST.description, "quest", ["quest", "get", "retrieve", "details", "info"], ["Quest retrieval with objectives"], false, "medium"),
+      schema: QuestTools.GET_QUEST.inputSchema,
+      handler: handleGetQuest
+    },
+    [QuestTools.LIST_QUESTS.name]: {
+      metadata: meta(QuestTools.LIST_QUESTS.name, QuestTools.LIST_QUESTS.description, "quest", ["quest", "list", "all", "query", "active"], ["Quest listing", "Filtering"], true, "medium"),
+      schema: QuestTools.LIST_QUESTS.inputSchema,
+      handler: handleListQuests
+    },
+    [QuestTools.ASSIGN_QUEST.name]: {
+      metadata: meta(QuestTools.ASSIGN_QUEST.name, QuestTools.ASSIGN_QUEST.description, "quest", ["quest", "assign", "give", "character", "accept"], ["Quest assignment to character"], false, "low"),
+      schema: QuestTools.ASSIGN_QUEST.inputSchema,
+      handler: handleAssignQuest
+    },
+    [QuestTools.UPDATE_OBJECTIVE.name]: {
+      metadata: meta(QuestTools.UPDATE_OBJECTIVE.name, QuestTools.UPDATE_OBJECTIVE.description, "quest", ["quest", "objective", "progress", "update", "track"], ["Objective progress tracking"], false, "low"),
+      schema: QuestTools.UPDATE_OBJECTIVE.inputSchema,
+      handler: handleUpdateObjective
+    },
+    [QuestTools.COMPLETE_OBJECTIVE.name]: {
+      metadata: meta(QuestTools.COMPLETE_OBJECTIVE.name, QuestTools.COMPLETE_OBJECTIVE.description, "quest", ["quest", "objective", "complete", "finish", "done"], ["Objective completion"], false, "low"),
+      schema: QuestTools.COMPLETE_OBJECTIVE.inputSchema,
+      handler: handleCompleteObjective
+    },
+    [QuestTools.COMPLETE_QUEST.name]: {
+      metadata: meta(QuestTools.COMPLETE_QUEST.name, QuestTools.COMPLETE_QUEST.description, "quest", ["quest", "complete", "finish", "reward", "turn-in"], ["Quest completion", "Reward granting"], false, "medium"),
+      schema: QuestTools.COMPLETE_QUEST.inputSchema,
+      handler: handleCompleteQuest
+    },
+    [QuestTools.GET_QUEST_LOG.name]: {
+      metadata: meta(QuestTools.GET_QUEST_LOG.name, QuestTools.GET_QUEST_LOG.description, "quest", ["quest", "log", "character", "journal", "active"], ["Character quest history", "Active quests"], true, "medium"),
+      schema: QuestTools.GET_QUEST_LOG.inputSchema,
+      handler: handleGetQuestLog
+    },
+    // === MATH TOOLS ===
+    [MathTools.DICE_ROLL.name]: {
+      metadata: meta(MathTools.DICE_ROLL.name, MathTools.DICE_ROLL.description, "math", ["dice", "roll", "random", "d20", "d6", "probability"], ["Dice rolling", "Probability notation support"], false, "low"),
+      schema: MathTools.DICE_ROLL.inputSchema,
+      handler: handleDiceRoll
+    },
+    [MathTools.PROBABILITY_CALCULATE.name]: {
+      metadata: meta(MathTools.PROBABILITY_CALCULATE.name, MathTools.PROBABILITY_CALCULATE.description, "math", ["probability", "calculate", "chance", "odds", "statistics"], ["Probability calculation", "Distribution analysis"], false, "low"),
+      schema: MathTools.PROBABILITY_CALCULATE.inputSchema,
+      handler: handleProbabilityCalculate
+    },
+    [MathTools.ALGEBRA_SOLVE.name]: {
+      metadata: meta(MathTools.ALGEBRA_SOLVE.name, MathTools.ALGEBRA_SOLVE.description, "math", ["algebra", "solve", "equation", "math", "variable"], ["Equation solving", "Variable isolation"], false, "low"),
+      schema: MathTools.ALGEBRA_SOLVE.inputSchema,
+      handler: handleAlgebraSolve
+    },
+    [MathTools.ALGEBRA_SIMPLIFY.name]: {
+      metadata: meta(MathTools.ALGEBRA_SIMPLIFY.name, MathTools.ALGEBRA_SIMPLIFY.description, "math", ["algebra", "simplify", "expression", "reduce"], ["Expression simplification"], false, "low"),
+      schema: MathTools.ALGEBRA_SIMPLIFY.inputSchema,
+      handler: handleAlgebraSimplify
+    },
+    [MathTools.PHYSICS_PROJECTILE.name]: {
+      metadata: meta(MathTools.PHYSICS_PROJECTILE.name, MathTools.PHYSICS_PROJECTILE.description, "math", ["physics", "projectile", "trajectory", "motion", "ballistics"], ["Projectile motion calculation", "Range/impact"], false, "low"),
+      schema: MathTools.PHYSICS_PROJECTILE.inputSchema,
+      handler: handlePhysicsProjectile
+    },
+    // === STRATEGY TOOLS ===
+    [StrategyTools.CREATE_NATION.name]: {
+      metadata: meta(StrategyTools.CREATE_NATION.name, StrategyTools.CREATE_NATION.description, "strategy", ["nation", "create", "new", "country", "faction"], ["Nation creation", "Ideology/resources setup"], false, "medium"),
+      schema: StrategyTools.CREATE_NATION.inputSchema,
+      handler: (args) => handleStrategyTool(StrategyTools.CREATE_NATION.name, args)
+    },
+    [StrategyTools.GET_STRATEGY_STATE.name]: {
+      metadata: meta(StrategyTools.GET_STRATEGY_STATE.name, StrategyTools.GET_STRATEGY_STATE.description, "strategy", ["strategy", "state", "world", "nations", "fog"], ["World strategy state", "Fog of war"], true, "high"),
+      schema: StrategyTools.GET_STRATEGY_STATE.inputSchema,
+      handler: (args) => handleStrategyTool(StrategyTools.GET_STRATEGY_STATE.name, args)
+    },
+    [StrategyTools.GET_NATION_STATE.name]: {
+      metadata: meta(StrategyTools.GET_NATION_STATE.name, StrategyTools.GET_NATION_STATE.description, "strategy", ["nation", "state", "private", "info", "resources"], ["Nation private state", "Resources"], false, "medium"),
+      schema: StrategyTools.GET_NATION_STATE.inputSchema,
+      handler: (args) => handleStrategyTool(StrategyTools.GET_NATION_STATE.name, args)
+    },
+    [StrategyTools.PROPOSE_ALLIANCE.name]: {
+      metadata: meta(StrategyTools.PROPOSE_ALLIANCE.name, StrategyTools.PROPOSE_ALLIANCE.description, "strategy", ["alliance", "propose", "diplomacy", "treaty", "pact"], ["Alliance proposal", "Diplomacy"], false, "low"),
+      schema: StrategyTools.PROPOSE_ALLIANCE.inputSchema,
+      handler: (args) => handleStrategyTool(StrategyTools.PROPOSE_ALLIANCE.name, args)
+    },
+    [StrategyTools.CLAIM_REGION.name]: {
+      metadata: meta(StrategyTools.CLAIM_REGION.name, StrategyTools.CLAIM_REGION.description, "strategy", ["claim", "region", "territory", "nation", "expand"], ["Territorial claim", "Justification"], false, "low"),
+      schema: StrategyTools.CLAIM_REGION.inputSchema,
+      handler: (args) => handleStrategyTool(StrategyTools.CLAIM_REGION.name, args)
+    },
+    [StrategyTools.RESOLVE_TURN.name]: {
+      metadata: meta(StrategyTools.RESOLVE_TURN.name, StrategyTools.RESOLVE_TURN.description, "strategy", ["turn", "resolve", "process", "strategy", "economy"], ["Turn processing", "Conflict resolution"], true, "high"),
+      schema: StrategyTools.RESOLVE_TURN.inputSchema,
+      handler: (args) => handleStrategyTool(StrategyTools.RESOLVE_TURN.name, args)
+    },
+    // === TURN MANAGEMENT TOOLS ===
+    [TurnManagementTools.INIT_TURN_STATE.name]: {
+      metadata: meta(TurnManagementTools.INIT_TURN_STATE.name, TurnManagementTools.INIT_TURN_STATE.description, "turn-management", ["turn", "init", "initialize", "state", "setup"], ["Turn state initialization"], false, "low"),
+      schema: TurnManagementTools.INIT_TURN_STATE.inputSchema,
+      handler: (args) => handleTurnManagementTool(TurnManagementTools.INIT_TURN_STATE.name, args)
+    },
+    [TurnManagementTools.GET_TURN_STATUS.name]: {
+      metadata: meta(TurnManagementTools.GET_TURN_STATUS.name, TurnManagementTools.GET_TURN_STATUS.description, "turn-management", ["turn", "status", "ready", "nations", "phase"], ["Current turn status", "Ready status"], false, "medium"),
+      schema: TurnManagementTools.GET_TURN_STATUS.inputSchema,
+      handler: (args) => handleTurnManagementTool(TurnManagementTools.GET_TURN_STATUS.name, args)
+    },
+    [TurnManagementTools.SUBMIT_TURN_ACTIONS.name]: {
+      metadata: meta(TurnManagementTools.SUBMIT_TURN_ACTIONS.name, TurnManagementTools.SUBMIT_TURN_ACTIONS.description, "turn-management", ["turn", "action", "submit", "batch", "orders"], ["Batch action submission"], false, "medium"),
+      schema: TurnManagementTools.SUBMIT_TURN_ACTIONS.inputSchema,
+      handler: (args) => handleTurnManagementTool(TurnManagementTools.SUBMIT_TURN_ACTIONS.name, args)
+    },
+    [TurnManagementTools.MARK_READY.name]: {
+      metadata: meta(TurnManagementTools.MARK_READY.name, TurnManagementTools.MARK_READY.description, "turn-management", ["turn", "ready", "mark", "status", "done"], ["Turn readiness marking"], false, "low"),
+      schema: TurnManagementTools.MARK_READY.inputSchema,
+      handler: (args) => handleTurnManagementTool(TurnManagementTools.MARK_READY.name, args)
+    },
+    [TurnManagementTools.POLL_TURN_RESULTS.name]: {
+      metadata: meta(TurnManagementTools.POLL_TURN_RESULTS.name, TurnManagementTools.POLL_TURN_RESULTS.description, "turn-management", ["turn", "results", "poll", "outcome", "resolution"], ["Turn result polling", "Outcome"], false, "medium"),
+      schema: TurnManagementTools.POLL_TURN_RESULTS.inputSchema,
+      handler: (args) => handleTurnManagementTool(TurnManagementTools.POLL_TURN_RESULTS.name, args)
+    },
+    // === SECRET TOOLS ===
+    [SecretTools.CREATE_SECRET.name]: {
+      metadata: meta(SecretTools.CREATE_SECRET.name, SecretTools.CREATE_SECRET.description, "secret", ["secret", "create", "dm", "hidden", "mystery"], ["Secret creation", "Reveal conditions"], false, "medium"),
+      schema: SecretTools.CREATE_SECRET.inputSchema,
+      handler: handleCreateSecret
+    },
+    [SecretTools.GET_SECRET.name]: {
+      metadata: meta(SecretTools.GET_SECRET.name, SecretTools.GET_SECRET.description, "secret", ["secret", "get", "retrieve", "dm", "view"], ["Secret retrieval (DM only)"], false, "low"),
+      schema: SecretTools.GET_SECRET.inputSchema,
+      handler: handleGetSecret
+    },
+    [SecretTools.LIST_SECRETS.name]: {
+      metadata: meta(SecretTools.LIST_SECRETS.name, SecretTools.LIST_SECRETS.description, "secret", ["secret", "list", "all", "dm", "query"], ["Secret listing (DM only)"], true, "medium"),
+      schema: SecretTools.LIST_SECRETS.inputSchema,
+      handler: handleListSecrets
+    },
+    [SecretTools.UPDATE_SECRET.name]: {
+      metadata: meta(SecretTools.UPDATE_SECRET.name, SecretTools.UPDATE_SECRET.description, "secret", ["secret", "update", "modify", "dm", "edit"], ["Secret modification"], false, "low"),
+      schema: SecretTools.UPDATE_SECRET.inputSchema,
+      handler: handleUpdateSecret
+    },
+    [SecretTools.DELETE_SECRET.name]: {
+      metadata: meta(SecretTools.DELETE_SECRET.name, SecretTools.DELETE_SECRET.description, "secret", ["secret", "delete", "remove", "dm"], ["Secret deletion"], false, "low"),
+      schema: SecretTools.DELETE_SECRET.inputSchema,
+      handler: handleDeleteSecret
+    },
+    [SecretTools.REVEAL_SECRET.name]: {
+      metadata: meta(SecretTools.REVEAL_SECRET.name, SecretTools.REVEAL_SECRET.description, "secret", ["secret", "reveal", "disclosure", "player", "spoiler"], ["Secret revealing", "Spoiler formatting"], false, "medium"),
+      schema: SecretTools.REVEAL_SECRET.inputSchema,
+      handler: handleRevealSecret
+    },
+    [SecretTools.CHECK_REVEAL_CONDITIONS.name]: {
+      metadata: meta(SecretTools.CHECK_REVEAL_CONDITIONS.name, SecretTools.CHECK_REVEAL_CONDITIONS.description, "secret", ["secret", "reveal", "check", "condition", "trigger"], ["Reveal condition evaluation"], false, "medium"),
+      schema: SecretTools.CHECK_REVEAL_CONDITIONS.inputSchema,
+      handler: handleCheckRevealConditions
+    },
+    [SecretTools.GET_SECRETS_FOR_CONTEXT.name]: {
+      metadata: meta(SecretTools.GET_SECRETS_FOR_CONTEXT.name, SecretTools.GET_SECRETS_FOR_CONTEXT.description, "secret", ["secret", "context", "dm", "prompt", "inject"], ["Context-injected secrets (DM prompts)"], true, "high"),
+      schema: SecretTools.GET_SECRETS_FOR_CONTEXT.inputSchema,
+      handler: handleGetSecretsForContext
+    },
+    [SecretTools.CHECK_FOR_LEAKS.name]: {
+      metadata: meta(SecretTools.CHECK_FOR_LEAKS.name, SecretTools.CHECK_FOR_LEAKS.description, "secret", ["secret", "leak", "detect", "check", "safety"], ["Secret leak detection"], false, "low"),
+      schema: SecretTools.CHECK_FOR_LEAKS.inputSchema,
+      handler: handleCheckForLeaks
+    },
+    // === REST TOOLS ===
+    [RestTools.TAKE_LONG_REST.name]: {
+      metadata: meta(RestTools.TAKE_LONG_REST.name, RestTools.TAKE_LONG_REST.description, "rest", ["rest", "long", "sleep", "recovery", "heal", "8hours"], ["Long rest (8 hours)", "HP recovery"], false, "low"),
+      schema: RestTools.TAKE_LONG_REST.inputSchema,
+      handler: handleTakeLongRest
+    },
+    [RestTools.TAKE_SHORT_REST.name]: {
+      metadata: meta(RestTools.TAKE_SHORT_REST.name, RestTools.TAKE_SHORT_REST.description, "rest", ["rest", "short", "sleep", "recovery", "hit-dice", "1hour"], ["Short rest (1 hour)", "Hit die usage"], false, "low"),
+      schema: RestTools.TAKE_SHORT_REST.inputSchema,
+      handler: handleTakeShortRest
+    },
+    // === CONCENTRATION TOOLS ===
+    [ConcentrationTools.CHECK_CONCENTRATION_SAVE.name]: {
+      metadata: meta(ConcentrationTools.CHECK_CONCENTRATION_SAVE.name, ConcentrationTools.CHECK_CONCENTRATION_SAVE.description, "concentration", ["concentration", "save", "damage", "maintain", "constitution"], ["Concentration save throwing"], false, "low"),
+      schema: ConcentrationTools.CHECK_CONCENTRATION_SAVE.inputSchema,
+      handler: handleCheckConcentrationSave
+    },
+    [ConcentrationTools.BREAK_CONCENTRATION.name]: {
+      metadata: meta(ConcentrationTools.BREAK_CONCENTRATION.name, ConcentrationTools.BREAK_CONCENTRATION.description, "concentration", ["concentration", "break", "end", "spell", "drop"], ["Voluntary concentration break"], false, "low"),
+      schema: ConcentrationTools.BREAK_CONCENTRATION.inputSchema,
+      handler: handleBreakConcentration
+    },
+    [ConcentrationTools.GET_CONCENTRATION_STATE.name]: {
+      metadata: meta(ConcentrationTools.GET_CONCENTRATION_STATE.name, ConcentrationTools.GET_CONCENTRATION_STATE.description, "concentration", ["concentration", "state", "spell", "duration", "active"], ["Current concentration info"], false, "low"),
+      schema: ConcentrationTools.GET_CONCENTRATION_STATE.inputSchema,
+      handler: handleGetConcentrationState
+    },
+    [ConcentrationTools.CHECK_CONCENTRATION_DURATION.name]: {
+      metadata: meta(ConcentrationTools.CHECK_CONCENTRATION_DURATION.name, ConcentrationTools.CHECK_CONCENTRATION_DURATION.description, "concentration", ["concentration", "duration", "expire", "round", "time"], ["Duration checking", "Auto-expiration"], false, "low"),
+      schema: ConcentrationTools.CHECK_CONCENTRATION_DURATION.inputSchema,
+      handler: handleCheckConcentrationDuration
+    },
+    [ConcentrationTools.CHECK_AUTO_BREAK.name]: {
+      metadata: meta(ConcentrationTools.CHECK_AUTO_BREAK.name, ConcentrationTools.CHECK_AUTO_BREAK.description, "concentration", ["concentration", "break", "condition", "auto", "incapacitated"], ["Automatic break detection"], false, "low"),
+      schema: ConcentrationTools.CHECK_AUTO_BREAK.inputSchema,
+      handler: handleCheckAutoBreak
+    },
+    // === SCROLL TOOLS ===
+    [ScrollTools.USE_SPELL_SCROLL.name]: {
+      metadata: meta(ScrollTools.USE_SPELL_SCROLL.name, ScrollTools.USE_SPELL_SCROLL.description, "scroll", ["scroll", "use", "spell", "cast", "arcana"], ["Spell scroll usage", "Arcana checks"], false, "medium"),
+      schema: ScrollTools.USE_SPELL_SCROLL.inputSchema,
+      handler: handleUseSpellScroll
+    },
+    [ScrollTools.CREATE_SPELL_SCROLL.name]: {
+      metadata: meta(ScrollTools.CREATE_SPELL_SCROLL.name, ScrollTools.CREATE_SPELL_SCROLL.description, "scroll", ["scroll", "create", "spell", "new", "scribe"], ["Spell scroll creation", "DC setup"], false, "low"),
+      schema: ScrollTools.CREATE_SPELL_SCROLL.inputSchema,
+      handler: handleCreateSpellScroll
+    },
+    [ScrollTools.IDENTIFY_SCROLL.name]: {
+      metadata: meta(ScrollTools.IDENTIFY_SCROLL.name, ScrollTools.IDENTIFY_SCROLL.description, "scroll", ["scroll", "identify", "arcana", "check", "read"], ["Scroll identification", "Arcana DC"], false, "low"),
+      schema: ScrollTools.IDENTIFY_SCROLL.inputSchema,
+      handler: handleIdentifyScroll
+    },
+    [ScrollTools.GET_SCROLL_USE_DC.name]: {
+      metadata: meta(ScrollTools.GET_SCROLL_USE_DC.name, ScrollTools.GET_SCROLL_USE_DC.description, "scroll", ["scroll", "dc", "difficulty", "class", "level"], ["DC calculation for scroll usage"], false, "low"),
+      schema: ScrollTools.GET_SCROLL_USE_DC.inputSchema,
+      handler: handleGetScrollUseDC
+    },
+    [ScrollTools.GET_SCROLL_DETAILS.name]: {
+      metadata: meta(ScrollTools.GET_SCROLL_DETAILS.name, ScrollTools.GET_SCROLL_DETAILS.description, "scroll", ["scroll", "details", "info", "spell", "properties"], ["Scroll details retrieval"], false, "low"),
+      schema: ScrollTools.GET_SCROLL_DETAILS.inputSchema,
+      handler: handleGetScrollDetails
+    },
+    [ScrollTools.CHECK_SCROLL_USABILITY.name]: {
+      metadata: meta(ScrollTools.CHECK_SCROLL_USABILITY.name, ScrollTools.CHECK_SCROLL_USABILITY.description, "scroll", ["scroll", "usable", "check", "class", "can-use"], ["Scroll usability checking"], false, "low"),
+      schema: ScrollTools.CHECK_SCROLL_USABILITY.inputSchema,
+      handler: handleCheckScrollUsability
+    },
+    // === AURA TOOLS ===
+    [AuraTools.CREATE_AURA.name]: {
+      metadata: meta(AuraTools.CREATE_AURA.name, AuraTools.CREATE_AURA.description, "aura", ["aura", "create", "effect", "area", "spirit-guardians"], ["Aura creation", "Effect setup", "Concentration"], false, "medium"),
+      schema: AuraTools.CREATE_AURA.inputSchema,
+      handler: handleCreateAura
+    },
+    [AuraTools.GET_ACTIVE_AURAS.name]: {
+      metadata: meta(AuraTools.GET_ACTIVE_AURAS.name, AuraTools.GET_ACTIVE_AURAS.description, "aura", ["aura", "active", "list", "effect", "current"], ["Active aura listing"], true, "medium"),
+      schema: AuraTools.GET_ACTIVE_AURAS.inputSchema,
+      handler: handleGetActiveAuras
+    },
+    [AuraTools.GET_AURAS_AFFECTING_CHARACTER.name]: {
+      metadata: meta(AuraTools.GET_AURAS_AFFECTING_CHARACTER.name, AuraTools.GET_AURAS_AFFECTING_CHARACTER.description, "aura", ["aura", "character", "affecting", "effect", "check"], ["Character-specific aura list"], false, "medium"),
+      schema: AuraTools.GET_AURAS_AFFECTING_CHARACTER.inputSchema,
+      handler: handleGetAurasAffectingCharacter
+    },
+    [AuraTools.PROCESS_AURA_EFFECTS.name]: {
+      metadata: meta(AuraTools.PROCESS_AURA_EFFECTS.name, AuraTools.PROCESS_AURA_EFFECTS.description, "aura", ["aura", "effect", "process", "trigger", "apply"], ["Aura effect processing"], false, "low"),
+      schema: AuraTools.PROCESS_AURA_EFFECTS.inputSchema,
+      handler: handleProcessAuraEffects
+    },
+    [AuraTools.REMOVE_AURA.name]: {
+      metadata: meta(AuraTools.REMOVE_AURA.name, AuraTools.REMOVE_AURA.description, "aura", ["aura", "remove", "end", "effect", "dismiss"], ["Aura removal"], false, "low"),
+      schema: AuraTools.REMOVE_AURA.inputSchema,
+      handler: handleRemoveAura
+    },
+    [AuraTools.REMOVE_CHARACTER_AURAS.name]: {
+      metadata: meta(AuraTools.REMOVE_CHARACTER_AURAS.name, AuraTools.REMOVE_CHARACTER_AURAS.description, "aura", ["aura", "character", "remove", "all", "clear"], ["Bulk aura removal for character"], false, "low"),
+      schema: AuraTools.REMOVE_CHARACTER_AURAS.inputSchema,
+      handler: handleRemoveCharacterAuras
+    },
+    [AuraTools.EXPIRE_AURAS.name]: {
+      metadata: meta(AuraTools.EXPIRE_AURAS.name, AuraTools.EXPIRE_AURAS.description, "aura", ["aura", "expire", "duration", "check", "cleanup"], ["Expired aura cleanup"], false, "low"),
+      schema: AuraTools.EXPIRE_AURAS.inputSchema,
+      handler: handleExpireAuras
+    },
+    // === NPC MEMORY TOOLS ===
+    [NpcMemoryTools.GET_NPC_RELATIONSHIP.name]: {
+      metadata: meta(NpcMemoryTools.GET_NPC_RELATIONSHIP.name, NpcMemoryTools.GET_NPC_RELATIONSHIP.description, "npc", ["npc", "relationship", "disposition", "familiarity", "status"], ["Relationship retrieval", "Status info"], false, "low"),
+      schema: NpcMemoryTools.GET_NPC_RELATIONSHIP.inputSchema,
+      handler: handleGetNpcRelationship
+    },
+    [NpcMemoryTools.UPDATE_NPC_RELATIONSHIP.name]: {
+      metadata: meta(NpcMemoryTools.UPDATE_NPC_RELATIONSHIP.name, NpcMemoryTools.UPDATE_NPC_RELATIONSHIP.description, "npc", ["npc", "relationship", "update", "disposition", "change"], ["Relationship modification"], false, "low"),
+      schema: NpcMemoryTools.UPDATE_NPC_RELATIONSHIP.inputSchema,
+      handler: handleUpdateNpcRelationship
+    },
+    [NpcMemoryTools.RECORD_CONVERSATION_MEMORY.name]: {
+      metadata: meta(NpcMemoryTools.RECORD_CONVERSATION_MEMORY.name, NpcMemoryTools.RECORD_CONVERSATION_MEMORY.description, "npc", ["npc", "memory", "conversation", "record", "log"], ["Conversation logging", "Importance tracking"], false, "low"),
+      schema: NpcMemoryTools.RECORD_CONVERSATION_MEMORY.inputSchema,
+      handler: handleRecordConversationMemory
+    },
+    [NpcMemoryTools.GET_CONVERSATION_HISTORY.name]: {
+      metadata: meta(NpcMemoryTools.GET_CONVERSATION_HISTORY.name, NpcMemoryTools.GET_CONVERSATION_HISTORY.description, "npc", ["npc", "conversation", "history", "memory", "past"], ["Interaction history retrieval"], true, "medium"),
+      schema: NpcMemoryTools.GET_CONVERSATION_HISTORY.inputSchema,
+      handler: handleGetConversationHistory
+    },
+    [NpcMemoryTools.GET_RECENT_INTERACTIONS.name]: {
+      metadata: meta(NpcMemoryTools.GET_RECENT_INTERACTIONS.name, NpcMemoryTools.GET_RECENT_INTERACTIONS.description, "npc", ["npc", "recent", "interaction", "history", "latest"], ["Recent interaction listing"], true, "medium"),
+      schema: NpcMemoryTools.GET_RECENT_INTERACTIONS.inputSchema,
+      handler: handleGetRecentInteractions
+    },
+    [NpcMemoryTools.GET_NPC_CONTEXT.name]: {
+      metadata: meta(NpcMemoryTools.GET_NPC_CONTEXT.name, NpcMemoryTools.GET_NPC_CONTEXT.description, "npc", ["npc", "context", "info", "relationship", "llm"], ["NPC context injection", "LLM-friendly"], true, "medium"),
+      schema: NpcMemoryTools.GET_NPC_CONTEXT.inputSchema,
+      handler: handleGetNpcContext
+    },
+    [NpcMemoryTools.INTERACT_SOCIALLY.name]: {
+      metadata: meta(NpcMemoryTools.INTERACT_SOCIALLY.name, NpcMemoryTools.INTERACT_SOCIALLY.description, "npc", ["npc", "interact", "social", "conversation", "speak"], ["Social interaction", "Stealth vs Perception"], false, "medium"),
+      schema: NpcMemoryTools.INTERACT_SOCIALLY.inputSchema,
+      handler: handleInteractSocially
+    },
+    // === SPATIAL TOOLS ===
+    [SpatialTools.LOOK_AT_SURROUNDINGS.name]: {
+      metadata: meta(SpatialTools.LOOK_AT_SURROUNDINGS.name, SpatialTools.LOOK_AT_SURROUNDINGS.description, "spatial", ["spatial", "surroundings", "look", "perception", "room"], ["Environment description", "Darkness handling"], true, "high"),
+      schema: SpatialTools.LOOK_AT_SURROUNDINGS.inputSchema,
+      handler: handleLookAtSurroundings
+    },
+    [SpatialTools.GENERATE_ROOM_NODE.name]: {
+      metadata: meta(SpatialTools.GENERATE_ROOM_NODE.name, SpatialTools.GENERATE_ROOM_NODE.description, "spatial", ["spatial", "room", "generate", "node", "create"], ["Room generation", "Atmosphere setup"], false, "medium"),
+      schema: SpatialTools.GENERATE_ROOM_NODE.inputSchema,
+      handler: handleGenerateRoomNode
+    },
+    [SpatialTools.GET_ROOM_EXITS.name]: {
+      metadata: meta(SpatialTools.GET_ROOM_EXITS.name, SpatialTools.GET_ROOM_EXITS.description, "spatial", ["spatial", "exit", "room", "direction", "doors"], ["Exit listing", "Navigation"], false, "low"),
+      schema: SpatialTools.GET_ROOM_EXITS.inputSchema,
+      handler: handleGetRoomExits
+    },
+    [SpatialTools.MOVE_CHARACTER_TO_ROOM.name]: {
+      metadata: meta(SpatialTools.MOVE_CHARACTER_TO_ROOM.name, SpatialTools.MOVE_CHARACTER_TO_ROOM.description, "spatial", ["spatial", "move", "character", "room", "enter"], ["Character positioning", "Location tracking"], false, "low"),
+      schema: SpatialTools.MOVE_CHARACTER_TO_ROOM.inputSchema,
+      handler: handleMoveCharacterToRoom
+    },
+    // === THEFT TOOLS ===
+    [TheftTools.STEAL_ITEM.name]: {
+      metadata: meta(TheftTools.STEAL_ITEM.name, TheftTools.STEAL_ITEM.description, "theft", ["theft", "steal", "item", "heat", "crime"], ["Item theft", "Heat generation"], false, "low"),
+      schema: TheftTools.STEAL_ITEM.inputSchema,
+      handler: handleStealItem
+    },
+    [TheftTools.CHECK_ITEM_STOLEN.name]: {
+      metadata: meta(TheftTools.CHECK_ITEM_STOLEN.name, TheftTools.CHECK_ITEM_STOLEN.description, "theft", ["theft", "stolen", "check", "status", "provenance"], ["Theft status checking"], false, "low"),
+      schema: TheftTools.CHECK_ITEM_STOLEN.inputSchema,
+      handler: handleCheckItemStolen
+    },
+    [TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.name]: {
+      metadata: meta(TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.name, TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.description, "theft", ["theft", "stolen", "check", "inventory", "search"], ["Character theft detection"], false, "medium"),
+      schema: TheftTools.CHECK_STOLEN_ITEMS_ON_CHARACTER.inputSchema,
+      handler: handleCheckStolenItemsOnCharacter
+    },
+    [TheftTools.CHECK_ITEM_RECOGNITION.name]: {
+      metadata: meta(TheftTools.CHECK_ITEM_RECOGNITION.name, TheftTools.CHECK_ITEM_RECOGNITION.description, "theft", ["theft", "recognition", "npc", "detection", "owner"], ["NPC item recognition"], false, "low"),
+      schema: TheftTools.CHECK_ITEM_RECOGNITION.inputSchema,
+      handler: handleCheckItemRecognition
+    },
+    [TheftTools.SELL_TO_FENCE.name]: {
+      metadata: meta(TheftTools.SELL_TO_FENCE.name, TheftTools.SELL_TO_FENCE.description, "theft", ["theft", "fence", "sell", "stolen", "black-market"], ["Stolen item fencing"], false, "low"),
+      schema: TheftTools.SELL_TO_FENCE.inputSchema,
+      handler: handleSellToFence
+    },
+    [TheftTools.REGISTER_FENCE.name]: {
+      metadata: meta(TheftTools.REGISTER_FENCE.name, TheftTools.REGISTER_FENCE.description, "theft", ["theft", "fence", "register", "npc", "dealer"], ["Fence NPC registration"], false, "low"),
+      schema: TheftTools.REGISTER_FENCE.inputSchema,
+      handler: handleRegisterFence
+    },
+    [TheftTools.REPORT_THEFT.name]: {
+      metadata: meta(TheftTools.REPORT_THEFT.name, TheftTools.REPORT_THEFT.description, "theft", ["theft", "report", "guards", "bounty", "crime"], ["Theft reporting", "Bounty setting"], false, "low"),
+      schema: TheftTools.REPORT_THEFT.inputSchema,
+      handler: handleReportTheft
+    },
+    [TheftTools.ADVANCE_HEAT_DECAY.name]: {
+      metadata: meta(TheftTools.ADVANCE_HEAT_DECAY.name, TheftTools.ADVANCE_HEAT_DECAY.description, "theft", ["theft", "heat", "decay", "time", "cooldown"], ["Heat level decay tracking"], false, "low"),
+      schema: TheftTools.ADVANCE_HEAT_DECAY.inputSchema,
+      handler: handleAdvanceHeatDecay
+    },
+    [TheftTools.GET_FENCE.name]: {
+      metadata: meta(TheftTools.GET_FENCE.name, TheftTools.GET_FENCE.description, "theft", ["theft", "fence", "info", "npc", "dealer"], ["Fence information retrieval"], false, "low"),
+      schema: TheftTools.GET_FENCE.inputSchema,
+      handler: handleGetFence
+    },
+    [TheftTools.LIST_FENCES.name]: {
+      metadata: meta(TheftTools.LIST_FENCES.name, TheftTools.LIST_FENCES.description, "theft", ["theft", "fence", "list", "all", "dealers"], ["Fence listing"], false, "medium"),
+      schema: TheftTools.LIST_FENCES.inputSchema,
+      handler: handleListFences
+    },
+    // === CORPSE/LOOT TOOLS ===
+    [CorpseTools.GET_CORPSE.name]: {
+      metadata: meta(CorpseTools.GET_CORPSE.name, CorpseTools.GET_CORPSE.description, "corpse", ["corpse", "get", "loot", "body", "dead"], ["Corpse retrieval with loot"], false, "medium"),
+      schema: CorpseTools.GET_CORPSE.inputSchema,
+      handler: handleGetCorpse
+    },
+    [CorpseTools.GET_CORPSE_BY_CHARACTER.name]: {
+      metadata: meta(CorpseTools.GET_CORPSE_BY_CHARACTER.name, CorpseTools.GET_CORPSE_BY_CHARACTER.description, "corpse", ["corpse", "character", "body", "death", "remains"], ["Dead character's corpse"], false, "low"),
+      schema: CorpseTools.GET_CORPSE_BY_CHARACTER.inputSchema,
+      handler: handleGetCorpseByCharacter
+    },
+    [CorpseTools.LIST_CORPSES_IN_ENCOUNTER.name]: {
+      metadata: meta(CorpseTools.LIST_CORPSES_IN_ENCOUNTER.name, CorpseTools.LIST_CORPSES_IN_ENCOUNTER.description, "corpse", ["corpse", "encounter", "list", "battle", "dead"], ["Encounter corpse listing"], true, "medium"),
+      schema: CorpseTools.LIST_CORPSES_IN_ENCOUNTER.inputSchema,
+      handler: handleListCorpsesInEncounter
+    },
+    [CorpseTools.LIST_CORPSES_NEARBY.name]: {
+      metadata: meta(CorpseTools.LIST_CORPSES_NEARBY.name, CorpseTools.LIST_CORPSES_NEARBY.description, "corpse", ["corpse", "nearby", "proximity", "region", "search"], ["Spatial corpse discovery"], false, "medium"),
+      schema: CorpseTools.LIST_CORPSES_NEARBY.inputSchema,
+      handler: handleListCorpsesNearby
+    },
+    [CorpseTools.LOOT_CORPSE.name]: {
+      metadata: meta(CorpseTools.LOOT_CORPSE.name, CorpseTools.LOOT_CORPSE.description, "corpse", ["corpse", "loot", "item", "take", "pickup"], ["Corpse looting", "Item extraction"], false, "low"),
+      schema: CorpseTools.LOOT_CORPSE.inputSchema,
+      handler: handleLootCorpse
+    },
+    [CorpseTools.HARVEST_CORPSE.name]: {
+      metadata: meta(CorpseTools.HARVEST_CORPSE.name, CorpseTools.HARVEST_CORPSE.description, "corpse", ["corpse", "harvest", "resource", "material", "skin"], ["Resource harvesting", "Skill checks"], false, "low"),
+      schema: CorpseTools.HARVEST_CORPSE.inputSchema,
+      handler: handleHarvestCorpse
+    },
+    [CorpseTools.CREATE_CORPSE.name]: {
+      metadata: meta(CorpseTools.CREATE_CORPSE.name, CorpseTools.CREATE_CORPSE.description, "corpse", ["corpse", "create", "death", "body", "manual"], ["Corpse creation for dead NPCs"], false, "low"),
+      schema: CorpseTools.CREATE_CORPSE.inputSchema,
+      handler: handleCreateCorpse
+    },
+    [CorpseTools.GENERATE_LOOT.name]: {
+      metadata: meta(CorpseTools.GENERATE_LOOT.name, CorpseTools.GENERATE_LOOT.description, "corpse", ["corpse", "loot", "generate", "table", "random"], ["Loot generation by CR/type"], false, "medium"),
+      schema: CorpseTools.GENERATE_LOOT.inputSchema,
+      handler: handleGenerateLoot
+    },
+    [CorpseTools.GET_CORPSE_INVENTORY.name]: {
+      metadata: meta(CorpseTools.GET_CORPSE_INVENTORY.name, CorpseTools.GET_CORPSE_INVENTORY.description, "corpse", ["corpse", "inventory", "items", "loot", "contents"], ["Corpse inventory listing"], true, "medium"),
+      schema: CorpseTools.GET_CORPSE_INVENTORY.inputSchema,
+      handler: handleGetCorpseInventory
+    },
+    [CorpseTools.CREATE_LOOT_TABLE.name]: {
+      metadata: meta(CorpseTools.CREATE_LOOT_TABLE.name, CorpseTools.CREATE_LOOT_TABLE.description, "corpse", ["corpse", "loot", "table", "template", "create"], ["Loot table creation", "Customization"], false, "medium"),
+      schema: CorpseTools.CREATE_LOOT_TABLE.inputSchema,
+      handler: handleCreateLootTable
+    },
+    [CorpseTools.GET_LOOT_TABLE.name]: {
+      metadata: meta(CorpseTools.GET_LOOT_TABLE.name, CorpseTools.GET_LOOT_TABLE.description, "corpse", ["corpse", "loot", "table", "query", "get"], ["Loot table retrieval"], false, "medium"),
+      schema: CorpseTools.GET_LOOT_TABLE.inputSchema,
+      handler: handleGetLootTable
+    },
+    [CorpseTools.LIST_LOOT_TABLES.name]: {
+      metadata: meta(CorpseTools.LIST_LOOT_TABLES.name, CorpseTools.LIST_LOOT_TABLES.description, "corpse", ["corpse", "loot", "table", "all", "list"], ["Loot table listing"], false, "medium"),
+      schema: CorpseTools.LIST_LOOT_TABLES.inputSchema,
+      handler: handleListLootTables
+    },
+    [CorpseTools.ADVANCE_CORPSE_DECAY.name]: {
+      metadata: meta(CorpseTools.ADVANCE_CORPSE_DECAY.name, CorpseTools.ADVANCE_CORPSE_DECAY.description, "corpse", ["corpse", "decay", "time", "rot", "advance"], ["Corpse decay progression"], false, "low"),
+      schema: CorpseTools.ADVANCE_CORPSE_DECAY.inputSchema,
+      handler: handleAdvanceCorpseDecay
+    },
+    [CorpseTools.CLEANUP_CORPSES.name]: {
+      metadata: meta(CorpseTools.CLEANUP_CORPSES.name, CorpseTools.CLEANUP_CORPSES.description, "corpse", ["corpse", "cleanup", "decay", "remove", "gone"], ["Decayed corpse cleanup"], false, "low"),
+      schema: CorpseTools.CLEANUP_CORPSES.inputSchema,
+      handler: handleCleanupCorpses
+    },
+    // === IMPROVISATION TOOLS ===
+    [ImprovisationTools.RESOLVE_IMPROVISED_STUNT.name]: {
+      metadata: meta(ImprovisationTools.RESOLVE_IMPROVISED_STUNT.name, ImprovisationTools.RESOLVE_IMPROVISED_STUNT.description, "improvisation", ["stunt", "improvise", "cool", "action", "creative"], ["Rule of Cool resolution", "Skill checks"], false, "medium"),
+      schema: ImprovisationTools.RESOLVE_IMPROVISED_STUNT.inputSchema,
+      handler: handleResolveImprovisedStunt
+    },
+    [ImprovisationTools.APPLY_CUSTOM_EFFECT.name]: {
+      metadata: meta(ImprovisationTools.APPLY_CUSTOM_EFFECT.name, ImprovisationTools.APPLY_CUSTOM_EFFECT.description, "improvisation", ["effect", "custom", "apply", "buff", "curse", "boon"], ["Custom effect application", "Power levels"], false, "medium"),
+      schema: ImprovisationTools.APPLY_CUSTOM_EFFECT.inputSchema,
+      handler: handleApplyCustomEffect
+    },
+    [ImprovisationTools.GET_CUSTOM_EFFECTS.name]: {
+      metadata: meta(ImprovisationTools.GET_CUSTOM_EFFECTS.name, ImprovisationTools.GET_CUSTOM_EFFECTS.description, "improvisation", ["effect", "custom", "list", "character", "active"], ["Active effect listing"], true, "medium"),
+      schema: ImprovisationTools.GET_CUSTOM_EFFECTS.inputSchema,
+      handler: handleGetCustomEffects
+    },
+    [ImprovisationTools.REMOVE_CUSTOM_EFFECT.name]: {
+      metadata: meta(ImprovisationTools.REMOVE_CUSTOM_EFFECT.name, ImprovisationTools.REMOVE_CUSTOM_EFFECT.description, "improvisation", ["effect", "custom", "remove", "end", "dispel"], ["Effect removal"], false, "low"),
+      schema: ImprovisationTools.REMOVE_CUSTOM_EFFECT.inputSchema,
+      handler: handleRemoveCustomEffect
+    },
+    [ImprovisationTools.PROCESS_EFFECT_TRIGGERS.name]: {
+      metadata: meta(ImprovisationTools.PROCESS_EFFECT_TRIGGERS.name, ImprovisationTools.PROCESS_EFFECT_TRIGGERS.description, "improvisation", ["effect", "trigger", "process", "event", "fire"], ["Effect trigger evaluation"], false, "low"),
+      schema: ImprovisationTools.PROCESS_EFFECT_TRIGGERS.inputSchema,
+      handler: handleProcessEffectTriggers
+    },
+    [ImprovisationTools.ADVANCE_EFFECT_DURATIONS.name]: {
+      metadata: meta(ImprovisationTools.ADVANCE_EFFECT_DURATIONS.name, ImprovisationTools.ADVANCE_EFFECT_DURATIONS.description, "improvisation", ["effect", "duration", "advance", "round", "time"], ["Duration progression", "Expiration"], false, "low"),
+      schema: ImprovisationTools.ADVANCE_EFFECT_DURATIONS.inputSchema,
+      handler: handleAdvanceEffectDurations
+    },
+    [ImprovisationTools.ATTEMPT_ARCANE_SYNTHESIS.name]: {
+      metadata: meta(ImprovisationTools.ATTEMPT_ARCANE_SYNTHESIS.name, ImprovisationTools.ATTEMPT_ARCANE_SYNTHESIS.description, "improvisation", ["spell", "synthesis", "create", "new", "wild-magic", "arcane"], ["Spell creation via Arcane Synthesis", "Wild Magic"], false, "high"),
+      schema: ImprovisationTools.ATTEMPT_ARCANE_SYNTHESIS.inputSchema,
+      handler: handleAttemptArcaneSynthesis
+    },
+    [ImprovisationTools.GET_SYNTHESIZED_SPELLS.name]: {
+      metadata: meta(ImprovisationTools.GET_SYNTHESIZED_SPELLS.name, ImprovisationTools.GET_SYNTHESIZED_SPELLS.description, "improvisation", ["spell", "synthesis", "learned", "list", "created"], ["Learned synthesized spells listing"], false, "medium"),
+      schema: ImprovisationTools.GET_SYNTHESIZED_SPELLS.inputSchema,
+      handler: handleGetSynthesizedSpells
+    }
+    // Note: search_tools and load_tool_schema are registered separately in index.ts with full handlers
+  };
+  return cachedRegistry;
+}
+function getAllToolMetadata() {
+  const registry2 = buildToolRegistry();
+  return Object.values(registry2).map((entry) => entry.metadata);
+}
+function getToolCategories() {
+  const registry2 = buildToolRegistry();
+  const counts = {};
+  for (const entry of Object.values(registry2)) {
+    const cat = entry.metadata.category;
+    counts[cat] = (counts[cat] || 0) + 1;
+  }
+  return Object.entries(counts).map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
+}
+
+// dist/server/meta-tools.js
+var SearchToolsSchema = external_exports.object({
+  query: external_exports.string().optional().describe("Natural language or keyword query to search for tools"),
+  category: external_exports.enum([
+    "world",
+    "combat",
+    "character",
+    "inventory",
+    "quest",
+    "party",
+    "math",
+    "strategy",
+    "secret",
+    "concentration",
+    "rest",
+    "scroll",
+    "aura",
+    "npc",
+    "spatial",
+    "theft",
+    "corpse",
+    "improvisation",
+    "turn-management",
+    "meta"
+  ]).optional().describe("Filter by category"),
+  maxResults: external_exports.number().min(1).max(50).default(10).describe("Maximum results to return"),
+  contextAwareOnly: external_exports.boolean().optional().describe("Only return context-aware tools")
+});
+function calculateRelevance(metadata, query) {
+  if (!query)
+    return 1;
+  const queryLower = query.toLowerCase();
+  const queryWords = queryLower.split(/\s+/);
+  let score = 0;
+  if (metadata.name.toLowerCase() === queryLower)
+    return 100;
+  if (metadata.name.toLowerCase().includes(queryLower))
+    score += 50;
+  for (const word of queryWords) {
+    if (metadata.name.toLowerCase().includes(word))
+      score += 20;
+  }
+  if (metadata.description.toLowerCase().includes(queryLower))
+    score += 15;
+  for (const word of queryWords) {
+    if (metadata.description.toLowerCase().includes(word))
+      score += 5;
+  }
+  for (const kw of metadata.keywords) {
+    const kwLower = kw.toLowerCase();
+    if (kwLower === queryLower)
+      score += 30;
+    else if (kwLower.includes(queryLower) || queryLower.includes(kwLower))
+      score += 15;
+    for (const word of queryWords) {
+      if (kwLower === word)
+        score += 10;
+      else if (kwLower.includes(word))
+        score += 5;
+    }
+  }
+  for (const cap of metadata.capabilities) {
+    if (cap.toLowerCase().includes(queryLower))
+      score += 8;
+    for (const word of queryWords) {
+      if (cap.toLowerCase().includes(word))
+        score += 3;
+    }
+  }
+  return score;
+}
+async function handleSearchTools(args) {
+  const allMetadata = getAllToolMetadata();
+  let results = allMetadata;
+  if (args.category) {
+    results = results.filter((t) => t.category === args.category);
+  }
+  if (args.contextAwareOnly) {
+    results = results.filter((t) => t.contextAware);
+  }
+  const scored = results.map((tool) => ({
+    ...tool,
+    relevanceScore: calculateRelevance(tool, args.query || "")
+  }));
+  let filtered = args.query ? scored.filter((t) => t.relevanceScore > 0) : scored;
+  filtered.sort((a, b) => b.relevanceScore - a.relevanceScore);
+  const truncated = filtered.slice(0, args.maxResults || 10);
+  const suggestions = [];
+  if (truncated.length === 0 && args.query) {
+    suggestions.push(`No tools matched "${args.query}". Try broader keywords or browse by category.`);
+  }
+  if (truncated.length > 0) {
+    suggestions.push("Use load_tool_schema to get full parameter details before calling a tool.");
+  }
+  const contextAwareCount = truncated.filter((t) => t.contextAware).length;
+  if (contextAwareCount > 0) {
+    suggestions.push(`${contextAwareCount} context-aware tools found - these return larger result sets.`);
+  }
+  const categoriesInResults = [...new Set(truncated.map((t) => t.category))];
+  return {
+    tools: truncated,
+    summary: {
+      total_found: filtered.length,
+      returned: truncated.length,
+      categories: categoriesInResults,
+      query_used: args.query || null
+    },
+    categories_available: getToolCategories(),
+    suggestions
+  };
+}
+var LoadToolSchemaSchema = external_exports.object({
+  toolName: external_exports.string().describe("Name of the tool to load schema for")
+});
+async function handleLoadToolSchema(args) {
+  const registry2 = buildToolRegistry();
+  const tool = registry2[args.toolName];
+  if (!tool) {
+    const allNames = Object.keys(registry2);
+    const similar = allNames.filter((name) => name.toLowerCase().includes(args.toolName.toLowerCase()) || args.toolName.toLowerCase().includes(name.toLowerCase().split("_")[0])).slice(0, 5);
+    return {
+      error: `Unknown tool: ${args.toolName}`,
+      suggestion: "Use search_tools to find the correct tool name.",
+      similarTools: similar.length > 0 ? similar : allNames.slice(0, 10)
+    };
+  }
+  const fullSchema = tool.schema.extend({
+    sessionId: external_exports.string().optional().describe("Optional session ID for request tracking")
+  });
+  return {
+    toolName: args.toolName,
+    description: tool.metadata.description,
+    inputSchema: fullSchema.shape,
+    metadata: tool.metadata,
+    note: `Schema loaded successfully. You can now call ${args.toolName} with these parameters.`
+  };
+}
+var MetaTools = {
+  SEARCH_TOOLS: {
+    name: "search_tools",
+    description: "Search for available RPG tools by category, capability, or keyword. Use this to discover tools before using them.",
+    inputSchema: SearchToolsSchema
+  },
+  LOAD_TOOL_SCHEMA: {
+    name: "load_tool_schema",
+    description: "Load the full input schema for a specific tool (required before first use). Returns parameter definitions, types, and usage info.",
+    inputSchema: LoadToolSchemaSchema
+  }
+};
+
+// dist/server/tool-metadata.js
+var MINIMAL_SCHEMA = {};
+
 // dist/engine/pubsub.js
 var PubSub = class {
   subscribers = /* @__PURE__ */ new Map();
@@ -52611,7 +64873,11 @@ var PubSub = class {
   }
 };
 
+// dist/server/events.js
+init_zod();
+
 // dist/server/types.js
+init_zod();
 function withSession(schema, handler) {
   const sessionSchema = external_exports.intersection(schema, external_exports.object({
     sessionId: external_exports.string().optional().default("default")
@@ -52628,10 +64894,7 @@ function withSession(schema, handler) {
 var EventTools = {
   SUBSCRIBE: {
     name: "subscribe_to_events",
-    description: `Subscribe to real-time events.
-        
-Events will be sent as JSON-RPC notifications with method 'notifications/rpg/event'.
-Supported topics: 'world', 'combat'.`,
+    description: "Subscribe to real-time events on world or combat topics. Events sent as JSON-RPC notifications.",
     inputSchema: external_exports.object({
       topics: external_exports.array(external_exports.enum(["world", "combat"])).min(1)
     })
@@ -52717,7 +64980,46 @@ var AuditLogger = class {
 };
 
 // dist/server/index.js
+function setupShutdownHandlers() {
+  let isShuttingDown = false;
+  const shutdown = (signal) => {
+    if (isShuttingDown)
+      return;
+    isShuttingDown = true;
+    console.error(`[Server] Received ${signal}, shutting down gracefully...`);
+    try {
+      closeDb();
+      console.error("[Server] Shutdown complete");
+      process.exit(0);
+    } catch (e) {
+      console.error("[Server] Error during shutdown:", e.message);
+      process.exit(1);
+    }
+  };
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGHUP", () => shutdown("SIGHUP"));
+  if (process.platform === "win32") {
+    process.on("SIGBREAK", () => shutdown("SIGBREAK"));
+  }
+  process.on("uncaughtException", (error) => {
+    console.error("[Server] Uncaught exception:", error);
+    shutdown("uncaughtException");
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[Server] Unhandled rejection:", reason);
+    shutdown("unhandledRejection");
+  });
+  process.on("exit", (code) => {
+    if (!isShuttingDown) {
+      console.error(`[Server] Process exiting with code ${code}`);
+      closeDb();
+    }
+  });
+}
 async function main() {
+  setupShutdownHandlers();
+  console.error(`[Server] Database path: ${getDbPath()}`);
   const server = new McpServer({
     name: "rpg-mcp",
     version: "1.1.0"
@@ -52727,94 +65029,21 @@ async function main() {
   setWorldPubSub(pubsub3);
   registerEventTools(server, pubsub3);
   const auditLogger = new AuditLogger();
-  server.tool(Tools.GENERATE_WORLD.name, Tools.GENERATE_WORLD.description, Tools.GENERATE_WORLD.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.GENERATE_WORLD.name, withSession(Tools.GENERATE_WORLD.inputSchema, handleGenerateWorld)));
-  server.tool(Tools.GET_WORLD_STATE.name, Tools.GET_WORLD_STATE.description, Tools.GET_WORLD_STATE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.GET_WORLD_STATE.name, withSession(Tools.GET_WORLD_STATE.inputSchema, handleGetWorldState)));
-  server.tool(Tools.APPLY_MAP_PATCH.name, Tools.APPLY_MAP_PATCH.description, Tools.APPLY_MAP_PATCH.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.APPLY_MAP_PATCH.name, withSession(Tools.APPLY_MAP_PATCH.inputSchema, handleApplyMapPatch)));
-  server.tool(Tools.GET_WORLD_MAP_OVERVIEW.name, Tools.GET_WORLD_MAP_OVERVIEW.description, Tools.GET_WORLD_MAP_OVERVIEW.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.GET_WORLD_MAP_OVERVIEW.name, withSession(Tools.GET_WORLD_MAP_OVERVIEW.inputSchema, handleGetWorldMapOverview)));
-  server.tool(Tools.GET_REGION_MAP.name, Tools.GET_REGION_MAP.description, Tools.GET_REGION_MAP.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.GET_REGION_MAP.name, withSession(Tools.GET_REGION_MAP.inputSchema, handleGetRegionMap)));
-  server.tool(Tools.GET_WORLD_TILES.name, Tools.GET_WORLD_TILES.description, Tools.GET_WORLD_TILES.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.GET_WORLD_TILES.name, withSession(Tools.GET_WORLD_TILES.inputSchema, handleGetWorldTiles)));
-  server.tool(Tools.PREVIEW_MAP_PATCH.name, Tools.PREVIEW_MAP_PATCH.description, Tools.PREVIEW_MAP_PATCH.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.PREVIEW_MAP_PATCH.name, withSession(Tools.PREVIEW_MAP_PATCH.inputSchema, handlePreviewMapPatch)));
-  server.tool(Tools.FIND_VALID_POI_LOCATION.name, Tools.FIND_VALID_POI_LOCATION.description, Tools.FIND_VALID_POI_LOCATION.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.FIND_VALID_POI_LOCATION.name, withSession(Tools.FIND_VALID_POI_LOCATION.inputSchema, handleFindValidPoiLocation)));
-  server.tool(Tools.SUGGEST_POI_LOCATIONS.name, Tools.SUGGEST_POI_LOCATIONS.description, Tools.SUGGEST_POI_LOCATIONS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(Tools.SUGGEST_POI_LOCATIONS.name, withSession(Tools.SUGGEST_POI_LOCATIONS.inputSchema, handleSuggestPoiLocations)));
-  server.tool(CombatTools.CREATE_ENCOUNTER.name, CombatTools.CREATE_ENCOUNTER.description, CombatTools.CREATE_ENCOUNTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CombatTools.CREATE_ENCOUNTER.name, withSession(CombatTools.CREATE_ENCOUNTER.inputSchema, handleCreateEncounter)));
-  server.tool(CombatTools.GET_ENCOUNTER_STATE.name, CombatTools.GET_ENCOUNTER_STATE.description, CombatTools.GET_ENCOUNTER_STATE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CombatTools.GET_ENCOUNTER_STATE.name, withSession(CombatTools.GET_ENCOUNTER_STATE.inputSchema, handleGetEncounterState)));
-  server.tool(CombatTools.EXECUTE_COMBAT_ACTION.name, CombatTools.EXECUTE_COMBAT_ACTION.description, CombatTools.EXECUTE_COMBAT_ACTION.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CombatTools.EXECUTE_COMBAT_ACTION.name, withSession(CombatTools.EXECUTE_COMBAT_ACTION.inputSchema, handleExecuteCombatAction)));
-  server.tool(CombatTools.ADVANCE_TURN.name, CombatTools.ADVANCE_TURN.description, CombatTools.ADVANCE_TURN.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CombatTools.ADVANCE_TURN.name, withSession(CombatTools.ADVANCE_TURN.inputSchema, handleAdvanceTurn)));
-  server.tool(CombatTools.END_ENCOUNTER.name, CombatTools.END_ENCOUNTER.description, CombatTools.END_ENCOUNTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CombatTools.END_ENCOUNTER.name, withSession(CombatTools.END_ENCOUNTER.inputSchema, handleEndEncounter)));
-  server.tool(CombatTools.LOAD_ENCOUNTER.name, CombatTools.LOAD_ENCOUNTER.description, CombatTools.LOAD_ENCOUNTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CombatTools.LOAD_ENCOUNTER.name, withSession(CombatTools.LOAD_ENCOUNTER.inputSchema, handleLoadEncounter)));
-  server.tool(CRUDTools.CREATE_WORLD.name, CRUDTools.CREATE_WORLD.description, CRUDTools.CREATE_WORLD.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.CREATE_WORLD.name, withSession(CRUDTools.CREATE_WORLD.inputSchema, handleCreateWorld)));
-  server.tool(CRUDTools.GET_WORLD.name, CRUDTools.GET_WORLD.description, CRUDTools.GET_WORLD.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.GET_WORLD.name, withSession(CRUDTools.GET_WORLD.inputSchema, handleGetWorld)));
-  server.tool(CRUDTools.LIST_WORLDS.name, CRUDTools.LIST_WORLDS.description, CRUDTools.LIST_WORLDS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.LIST_WORLDS.name, withSession(CRUDTools.LIST_WORLDS.inputSchema, handleListWorlds)));
-  server.tool(CRUDTools.UPDATE_WORLD_ENVIRONMENT.name, CRUDTools.UPDATE_WORLD_ENVIRONMENT.description, CRUDTools.UPDATE_WORLD_ENVIRONMENT.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.UPDATE_WORLD_ENVIRONMENT.name, withSession(CRUDTools.UPDATE_WORLD_ENVIRONMENT.inputSchema, handleUpdateWorldEnvironment)));
-  server.tool(CRUDTools.DELETE_WORLD.name, CRUDTools.DELETE_WORLD.description, CRUDTools.DELETE_WORLD.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.DELETE_WORLD.name, withSession(CRUDTools.DELETE_WORLD.inputSchema, handleDeleteWorld)));
-  server.tool(CRUDTools.CREATE_CHARACTER.name, CRUDTools.CREATE_CHARACTER.description, CRUDTools.CREATE_CHARACTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.CREATE_CHARACTER.name, withSession(CRUDTools.CREATE_CHARACTER.inputSchema, handleCreateCharacter)));
-  server.tool(CRUDTools.GET_CHARACTER.name, CRUDTools.GET_CHARACTER.description, CRUDTools.GET_CHARACTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.GET_CHARACTER.name, withSession(CRUDTools.GET_CHARACTER.inputSchema, handleGetCharacter)));
-  server.tool(CRUDTools.UPDATE_CHARACTER.name, CRUDTools.UPDATE_CHARACTER.description, CRUDTools.UPDATE_CHARACTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.UPDATE_CHARACTER.name, withSession(CRUDTools.UPDATE_CHARACTER.inputSchema, handleUpdateCharacter)));
-  server.tool(CRUDTools.LIST_CHARACTERS.name, CRUDTools.LIST_CHARACTERS.description, CRUDTools.LIST_CHARACTERS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.LIST_CHARACTERS.name, withSession(CRUDTools.LIST_CHARACTERS.inputSchema, handleListCharacters)));
-  server.tool(CRUDTools.DELETE_CHARACTER.name, CRUDTools.DELETE_CHARACTER.description, CRUDTools.DELETE_CHARACTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(CRUDTools.DELETE_CHARACTER.name, withSession(CRUDTools.DELETE_CHARACTER.inputSchema, handleDeleteCharacter)));
-  server.tool(PartyTools.CREATE_PARTY.name, PartyTools.CREATE_PARTY.description, PartyTools.CREATE_PARTY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.CREATE_PARTY.name, withSession(PartyTools.CREATE_PARTY.inputSchema, handleCreateParty)));
-  server.tool(PartyTools.GET_PARTY.name, PartyTools.GET_PARTY.description, PartyTools.GET_PARTY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.GET_PARTY.name, withSession(PartyTools.GET_PARTY.inputSchema, handleGetParty)));
-  server.tool(PartyTools.LIST_PARTIES.name, PartyTools.LIST_PARTIES.description, PartyTools.LIST_PARTIES.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.LIST_PARTIES.name, withSession(PartyTools.LIST_PARTIES.inputSchema, handleListParties)));
-  server.tool(PartyTools.UPDATE_PARTY.name, PartyTools.UPDATE_PARTY.description, PartyTools.UPDATE_PARTY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.UPDATE_PARTY.name, withSession(PartyTools.UPDATE_PARTY.inputSchema, handleUpdateParty)));
-  server.tool(PartyTools.DELETE_PARTY.name, PartyTools.DELETE_PARTY.description, PartyTools.DELETE_PARTY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.DELETE_PARTY.name, withSession(PartyTools.DELETE_PARTY.inputSchema, handleDeleteParty)));
-  server.tool(PartyTools.ADD_PARTY_MEMBER.name, PartyTools.ADD_PARTY_MEMBER.description, PartyTools.ADD_PARTY_MEMBER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.ADD_PARTY_MEMBER.name, withSession(PartyTools.ADD_PARTY_MEMBER.inputSchema, handleAddPartyMember)));
-  server.tool(PartyTools.REMOVE_PARTY_MEMBER.name, PartyTools.REMOVE_PARTY_MEMBER.description, PartyTools.REMOVE_PARTY_MEMBER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.REMOVE_PARTY_MEMBER.name, withSession(PartyTools.REMOVE_PARTY_MEMBER.inputSchema, handleRemovePartyMember)));
-  server.tool(PartyTools.UPDATE_PARTY_MEMBER.name, PartyTools.UPDATE_PARTY_MEMBER.description, PartyTools.UPDATE_PARTY_MEMBER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.UPDATE_PARTY_MEMBER.name, withSession(PartyTools.UPDATE_PARTY_MEMBER.inputSchema, handleUpdatePartyMember)));
-  server.tool(PartyTools.SET_PARTY_LEADER.name, PartyTools.SET_PARTY_LEADER.description, PartyTools.SET_PARTY_LEADER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.SET_PARTY_LEADER.name, withSession(PartyTools.SET_PARTY_LEADER.inputSchema, handleSetPartyLeader)));
-  server.tool(PartyTools.SET_ACTIVE_CHARACTER.name, PartyTools.SET_ACTIVE_CHARACTER.description, PartyTools.SET_ACTIVE_CHARACTER.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.SET_ACTIVE_CHARACTER.name, withSession(PartyTools.SET_ACTIVE_CHARACTER.inputSchema, handleSetActiveCharacter)));
-  server.tool(PartyTools.GET_PARTY_MEMBERS.name, PartyTools.GET_PARTY_MEMBERS.description, PartyTools.GET_PARTY_MEMBERS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.GET_PARTY_MEMBERS.name, withSession(PartyTools.GET_PARTY_MEMBERS.inputSchema, handleGetPartyMembers)));
-  server.tool(PartyTools.GET_PARTY_CONTEXT.name, PartyTools.GET_PARTY_CONTEXT.description, PartyTools.GET_PARTY_CONTEXT.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.GET_PARTY_CONTEXT.name, withSession(PartyTools.GET_PARTY_CONTEXT.inputSchema, handleGetPartyContext)));
-  server.tool(PartyTools.GET_UNASSIGNED_CHARACTERS.name, PartyTools.GET_UNASSIGNED_CHARACTERS.description, PartyTools.GET_UNASSIGNED_CHARACTERS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.GET_UNASSIGNED_CHARACTERS.name, withSession(PartyTools.GET_UNASSIGNED_CHARACTERS.inputSchema, handleGetUnassignedCharacters)));
-  server.tool(PartyTools.MOVE_PARTY.name, PartyTools.MOVE_PARTY.description, PartyTools.MOVE_PARTY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.MOVE_PARTY.name, withSession(PartyTools.MOVE_PARTY.inputSchema, handleMoveParty)));
-  server.tool(PartyTools.GET_PARTY_POSITION.name, PartyTools.GET_PARTY_POSITION.description, PartyTools.GET_PARTY_POSITION.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.GET_PARTY_POSITION.name, withSession(PartyTools.GET_PARTY_POSITION.inputSchema, handleGetPartyPosition)));
-  server.tool(PartyTools.GET_PARTIES_IN_REGION.name, PartyTools.GET_PARTIES_IN_REGION.description, PartyTools.GET_PARTIES_IN_REGION.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(PartyTools.GET_PARTIES_IN_REGION.name, withSession(PartyTools.GET_PARTIES_IN_REGION.inputSchema, handleGetPartiesInRegion)));
-  server.tool(InventoryTools.CREATE_ITEM_TEMPLATE.name, InventoryTools.CREATE_ITEM_TEMPLATE.description, InventoryTools.CREATE_ITEM_TEMPLATE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.CREATE_ITEM_TEMPLATE.name, withSession(InventoryTools.CREATE_ITEM_TEMPLATE.inputSchema, handleCreateItemTemplate)));
-  server.tool(InventoryTools.GIVE_ITEM.name, InventoryTools.GIVE_ITEM.description, InventoryTools.GIVE_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.GIVE_ITEM.name, withSession(InventoryTools.GIVE_ITEM.inputSchema, handleGiveItem)));
-  server.tool(InventoryTools.REMOVE_ITEM.name, InventoryTools.REMOVE_ITEM.description, InventoryTools.REMOVE_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.REMOVE_ITEM.name, withSession(InventoryTools.REMOVE_ITEM.inputSchema, handleRemoveItem)));
-  server.tool(InventoryTools.EQUIP_ITEM.name, InventoryTools.EQUIP_ITEM.description, InventoryTools.EQUIP_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.EQUIP_ITEM.name, withSession(InventoryTools.EQUIP_ITEM.inputSchema, handleEquipItem)));
-  server.tool(InventoryTools.UNEQUIP_ITEM.name, InventoryTools.UNEQUIP_ITEM.description, InventoryTools.UNEQUIP_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.UNEQUIP_ITEM.name, withSession(InventoryTools.UNEQUIP_ITEM.inputSchema, handleUnequipItem)));
-  server.tool(InventoryTools.GET_INVENTORY.name, InventoryTools.GET_INVENTORY.description, InventoryTools.GET_INVENTORY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.GET_INVENTORY.name, withSession(InventoryTools.GET_INVENTORY.inputSchema, handleGetInventory)));
-  server.tool(InventoryTools.GET_ITEM.name, InventoryTools.GET_ITEM.description, InventoryTools.GET_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.GET_ITEM.name, withSession(InventoryTools.GET_ITEM.inputSchema, handleGetItem)));
-  server.tool(InventoryTools.LIST_ITEMS.name, InventoryTools.LIST_ITEMS.description, InventoryTools.LIST_ITEMS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.LIST_ITEMS.name, withSession(InventoryTools.LIST_ITEMS.inputSchema, handleListItems)));
-  server.tool(InventoryTools.SEARCH_ITEMS.name, InventoryTools.SEARCH_ITEMS.description, InventoryTools.SEARCH_ITEMS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.SEARCH_ITEMS.name, withSession(InventoryTools.SEARCH_ITEMS.inputSchema, handleSearchItems)));
-  server.tool(InventoryTools.UPDATE_ITEM.name, InventoryTools.UPDATE_ITEM.description, InventoryTools.UPDATE_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.UPDATE_ITEM.name, withSession(InventoryTools.UPDATE_ITEM.inputSchema, handleUpdateItem)));
-  server.tool(InventoryTools.DELETE_ITEM.name, InventoryTools.DELETE_ITEM.description, InventoryTools.DELETE_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.DELETE_ITEM.name, withSession(InventoryTools.DELETE_ITEM.inputSchema, handleDeleteItem)));
-  server.tool(InventoryTools.TRANSFER_ITEM.name, InventoryTools.TRANSFER_ITEM.description, InventoryTools.TRANSFER_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.TRANSFER_ITEM.name, withSession(InventoryTools.TRANSFER_ITEM.inputSchema, handleTransferItem)));
-  server.tool(InventoryTools.USE_ITEM.name, InventoryTools.USE_ITEM.description, InventoryTools.USE_ITEM.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.USE_ITEM.name, withSession(InventoryTools.USE_ITEM.inputSchema, handleUseItem)));
-  server.tool(InventoryTools.GET_INVENTORY_DETAILED.name, InventoryTools.GET_INVENTORY_DETAILED.description, InventoryTools.GET_INVENTORY_DETAILED.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(InventoryTools.GET_INVENTORY_DETAILED.name, withSession(InventoryTools.GET_INVENTORY_DETAILED.inputSchema, handleGetInventoryDetailed)));
-  server.tool(QuestTools.CREATE_QUEST.name, QuestTools.CREATE_QUEST.description, QuestTools.CREATE_QUEST.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.CREATE_QUEST.name, withSession(QuestTools.CREATE_QUEST.inputSchema, handleCreateQuest)));
-  server.tool(QuestTools.GET_QUEST.name, QuestTools.GET_QUEST.description, QuestTools.GET_QUEST.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.GET_QUEST.name, withSession(QuestTools.GET_QUEST.inputSchema, handleGetQuest)));
-  server.tool(QuestTools.LIST_QUESTS.name, QuestTools.LIST_QUESTS.description, QuestTools.LIST_QUESTS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.LIST_QUESTS.name, withSession(QuestTools.LIST_QUESTS.inputSchema, handleListQuests)));
-  server.tool(QuestTools.ASSIGN_QUEST.name, QuestTools.ASSIGN_QUEST.description, QuestTools.ASSIGN_QUEST.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.ASSIGN_QUEST.name, withSession(QuestTools.ASSIGN_QUEST.inputSchema, handleAssignQuest)));
-  server.tool(QuestTools.UPDATE_OBJECTIVE.name, QuestTools.UPDATE_OBJECTIVE.description, QuestTools.UPDATE_OBJECTIVE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.UPDATE_OBJECTIVE.name, withSession(QuestTools.UPDATE_OBJECTIVE.inputSchema, handleUpdateObjective)));
-  server.tool(QuestTools.COMPLETE_OBJECTIVE.name, QuestTools.COMPLETE_OBJECTIVE.description, QuestTools.COMPLETE_OBJECTIVE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.COMPLETE_OBJECTIVE.name, withSession(QuestTools.COMPLETE_OBJECTIVE.inputSchema, handleCompleteObjective)));
-  server.tool(QuestTools.COMPLETE_QUEST.name, QuestTools.COMPLETE_QUEST.description, QuestTools.COMPLETE_QUEST.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.COMPLETE_QUEST.name, withSession(QuestTools.COMPLETE_QUEST.inputSchema, handleCompleteQuest)));
-  server.tool(QuestTools.GET_QUEST_LOG.name, QuestTools.GET_QUEST_LOG.description, QuestTools.GET_QUEST_LOG.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(QuestTools.GET_QUEST_LOG.name, withSession(QuestTools.GET_QUEST_LOG.inputSchema, handleGetQuestLog)));
-  server.tool(MathTools.DICE_ROLL.name, MathTools.DICE_ROLL.description, MathTools.DICE_ROLL.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(MathTools.DICE_ROLL.name, withSession(MathTools.DICE_ROLL.inputSchema, handleDiceRoll)));
-  server.tool(MathTools.PROBABILITY_CALCULATE.name, MathTools.PROBABILITY_CALCULATE.description, MathTools.PROBABILITY_CALCULATE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(MathTools.PROBABILITY_CALCULATE.name, withSession(MathTools.PROBABILITY_CALCULATE.inputSchema, handleProbabilityCalculate)));
-  server.tool(MathTools.ALGEBRA_SOLVE.name, MathTools.ALGEBRA_SOLVE.description, MathTools.ALGEBRA_SOLVE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(MathTools.ALGEBRA_SOLVE.name, withSession(MathTools.ALGEBRA_SOLVE.inputSchema, handleAlgebraSolve)));
-  server.tool(MathTools.ALGEBRA_SIMPLIFY.name, MathTools.ALGEBRA_SIMPLIFY.description, MathTools.ALGEBRA_SIMPLIFY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(MathTools.ALGEBRA_SIMPLIFY.name, withSession(MathTools.ALGEBRA_SIMPLIFY.inputSchema, handleAlgebraSimplify)));
-  server.tool(MathTools.PHYSICS_PROJECTILE.name, MathTools.PHYSICS_PROJECTILE.description, MathTools.PHYSICS_PROJECTILE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(MathTools.PHYSICS_PROJECTILE.name, withSession(MathTools.PHYSICS_PROJECTILE.inputSchema, handlePhysicsProjectile)));
-  server.tool(StrategyTools.CREATE_NATION.name, StrategyTools.CREATE_NATION.description, StrategyTools.CREATE_NATION.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(StrategyTools.CREATE_NATION.name, withSession(StrategyTools.CREATE_NATION.inputSchema, handleStrategyTool.bind(null, StrategyTools.CREATE_NATION.name))));
-  server.tool(StrategyTools.GET_STRATEGY_STATE.name, StrategyTools.GET_STRATEGY_STATE.description, StrategyTools.GET_STRATEGY_STATE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(StrategyTools.GET_STRATEGY_STATE.name, withSession(StrategyTools.GET_STRATEGY_STATE.inputSchema, handleStrategyTool.bind(null, StrategyTools.GET_STRATEGY_STATE.name))));
-  server.tool(StrategyTools.GET_NATION_STATE.name, StrategyTools.GET_NATION_STATE.description, StrategyTools.GET_NATION_STATE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(StrategyTools.GET_NATION_STATE.name, withSession(StrategyTools.GET_NATION_STATE.inputSchema, handleStrategyTool.bind(null, StrategyTools.GET_NATION_STATE.name))));
-  server.tool(StrategyTools.PROPOSE_ALLIANCE.name, StrategyTools.PROPOSE_ALLIANCE.description, StrategyTools.PROPOSE_ALLIANCE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(StrategyTools.PROPOSE_ALLIANCE.name, withSession(StrategyTools.PROPOSE_ALLIANCE.inputSchema, handleStrategyTool.bind(null, StrategyTools.PROPOSE_ALLIANCE.name))));
-  server.tool(StrategyTools.CLAIM_REGION.name, StrategyTools.CLAIM_REGION.description, StrategyTools.CLAIM_REGION.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(StrategyTools.CLAIM_REGION.name, withSession(StrategyTools.CLAIM_REGION.inputSchema, handleStrategyTool.bind(null, StrategyTools.CLAIM_REGION.name))));
-  server.tool(StrategyTools.RESOLVE_TURN.name, StrategyTools.RESOLVE_TURN.description, StrategyTools.RESOLVE_TURN.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(StrategyTools.RESOLVE_TURN.name, withSession(StrategyTools.RESOLVE_TURN.inputSchema, handleStrategyTool.bind(null, StrategyTools.RESOLVE_TURN.name))));
-  server.tool(TurnManagementTools.INIT_TURN_STATE.name, TurnManagementTools.INIT_TURN_STATE.description, TurnManagementTools.INIT_TURN_STATE.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(TurnManagementTools.INIT_TURN_STATE.name, withSession(TurnManagementTools.INIT_TURN_STATE.inputSchema, handleTurnManagementTool.bind(null, TurnManagementTools.INIT_TURN_STATE.name))));
-  server.tool(TurnManagementTools.GET_TURN_STATUS.name, TurnManagementTools.GET_TURN_STATUS.description, TurnManagementTools.GET_TURN_STATUS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(TurnManagementTools.GET_TURN_STATUS.name, withSession(TurnManagementTools.GET_TURN_STATUS.inputSchema, handleTurnManagementTool.bind(null, TurnManagementTools.GET_TURN_STATUS.name))));
-  server.tool(TurnManagementTools.SUBMIT_TURN_ACTIONS.name, TurnManagementTools.SUBMIT_TURN_ACTIONS.description, TurnManagementTools.SUBMIT_TURN_ACTIONS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(TurnManagementTools.SUBMIT_TURN_ACTIONS.name, withSession(TurnManagementTools.SUBMIT_TURN_ACTIONS.inputSchema, handleTurnManagementTool.bind(null, TurnManagementTools.SUBMIT_TURN_ACTIONS.name))));
-  server.tool(TurnManagementTools.MARK_READY.name, TurnManagementTools.MARK_READY.description, TurnManagementTools.MARK_READY.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(TurnManagementTools.MARK_READY.name, withSession(TurnManagementTools.MARK_READY.inputSchema, handleTurnManagementTool.bind(null, TurnManagementTools.MARK_READY.name))));
-  server.tool(TurnManagementTools.POLL_TURN_RESULTS.name, TurnManagementTools.POLL_TURN_RESULTS.description, TurnManagementTools.POLL_TURN_RESULTS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(TurnManagementTools.POLL_TURN_RESULTS.name, withSession(TurnManagementTools.POLL_TURN_RESULTS.inputSchema, handleTurnManagementTool.bind(null, TurnManagementTools.POLL_TURN_RESULTS.name))));
-  server.tool(SecretTools.CREATE_SECRET.name, SecretTools.CREATE_SECRET.description, SecretTools.CREATE_SECRET.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.CREATE_SECRET.name, withSession(SecretTools.CREATE_SECRET.inputSchema, handleCreateSecret)));
-  server.tool(SecretTools.GET_SECRET.name, SecretTools.GET_SECRET.description, SecretTools.GET_SECRET.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.GET_SECRET.name, withSession(SecretTools.GET_SECRET.inputSchema, handleGetSecret)));
-  server.tool(SecretTools.LIST_SECRETS.name, SecretTools.LIST_SECRETS.description, SecretTools.LIST_SECRETS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.LIST_SECRETS.name, withSession(SecretTools.LIST_SECRETS.inputSchema, handleListSecrets)));
-  server.tool(SecretTools.UPDATE_SECRET.name, SecretTools.UPDATE_SECRET.description, SecretTools.UPDATE_SECRET.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.UPDATE_SECRET.name, withSession(SecretTools.UPDATE_SECRET.inputSchema, handleUpdateSecret)));
-  server.tool(SecretTools.DELETE_SECRET.name, SecretTools.DELETE_SECRET.description, SecretTools.DELETE_SECRET.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.DELETE_SECRET.name, withSession(SecretTools.DELETE_SECRET.inputSchema, handleDeleteSecret)));
-  server.tool(SecretTools.REVEAL_SECRET.name, SecretTools.REVEAL_SECRET.description, SecretTools.REVEAL_SECRET.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.REVEAL_SECRET.name, withSession(SecretTools.REVEAL_SECRET.inputSchema, handleRevealSecret)));
-  server.tool(SecretTools.CHECK_REVEAL_CONDITIONS.name, SecretTools.CHECK_REVEAL_CONDITIONS.description, SecretTools.CHECK_REVEAL_CONDITIONS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.CHECK_REVEAL_CONDITIONS.name, withSession(SecretTools.CHECK_REVEAL_CONDITIONS.inputSchema, handleCheckRevealConditions)));
-  server.tool(SecretTools.GET_SECRETS_FOR_CONTEXT.name, SecretTools.GET_SECRETS_FOR_CONTEXT.description, SecretTools.GET_SECRETS_FOR_CONTEXT.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.GET_SECRETS_FOR_CONTEXT.name, withSession(SecretTools.GET_SECRETS_FOR_CONTEXT.inputSchema, handleGetSecretsForContext)));
-  server.tool(SecretTools.CHECK_FOR_LEAKS.name, SecretTools.CHECK_FOR_LEAKS.description, SecretTools.CHECK_FOR_LEAKS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(SecretTools.CHECK_FOR_LEAKS.name, withSession(SecretTools.CHECK_FOR_LEAKS.inputSchema, handleCheckForLeaks)));
+  server.tool(MetaTools.SEARCH_TOOLS.name, MetaTools.SEARCH_TOOLS.description, MetaTools.SEARCH_TOOLS.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(MetaTools.SEARCH_TOOLS.name, withSession(MetaTools.SEARCH_TOOLS.inputSchema, handleSearchTools)));
+  server.tool(MetaTools.LOAD_TOOL_SCHEMA.name, MetaTools.LOAD_TOOL_SCHEMA.description, MetaTools.LOAD_TOOL_SCHEMA.inputSchema.extend({ sessionId: external_exports.string().optional() }).shape, auditLogger.wrapHandler(MetaTools.LOAD_TOOL_SCHEMA.name, withSession(MetaTools.LOAD_TOOL_SCHEMA.inputSchema, handleLoadToolSchema)));
+  const registry2 = buildToolRegistry();
+  const toolCount = Object.keys(registry2).length;
+  for (const [toolName, entry] of Object.entries(registry2)) {
+    server.tool(
+      toolName,
+      entry.metadata.description,
+      MINIMAL_SCHEMA,
+      // ← Key change: minimal schema instead of full Zod schema
+      auditLogger.wrapHandler(toolName, withSession(entry.schema, entry.handler))
+    );
+  }
+  console.error(`[Server] Registered ${toolCount} tools with minimal schemas`);
+  console.error(`[Server] Meta-tools: search_tools, load_tool_schema`);
   const args = process.argv.slice(2);
   const transportType = args.includes("--tcp") ? "tcp" : args.includes("--unix") || args.includes("--socket") ? "unix" : args.includes("--ws") || args.includes("--websocket") ? "websocket" : "stdio";
   if (transportType === "tcp") {
