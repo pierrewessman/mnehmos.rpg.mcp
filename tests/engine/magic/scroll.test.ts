@@ -338,7 +338,7 @@ describe('Spell Scroll System', () => {
         it('should auto-succeed for appropriate wizard', () => {
             inventoryRepo.addItem(wizard.id, fireballScroll.id, 1);
 
-            const result = useSpellScroll(wizard, fireballScroll, itemRepo, inventoryRepo);
+            const result = useSpellScroll(wizard, fireballScroll, inventoryRepo);
 
             expect(result.success).toBe(true);
             expect(result.consumed).toBe(true);
@@ -360,7 +360,7 @@ describe('Spell Scroll System', () => {
                 db.prepare('DELETE FROM inventory_items').run();
                 inventoryRepo.addItem(fighter.id, wishScroll.id, 1);
 
-                const result = useSpellScroll(fighter, wishScroll, itemRepo, inventoryRepo);
+                const result = useSpellScroll(fighter, wishScroll, inventoryRepo);
                 results.push(result);
 
                 // Scroll should always be consumed
@@ -377,7 +377,7 @@ describe('Spell Scroll System', () => {
         });
 
         it('should fail if character does not have scroll', () => {
-            const result = useSpellScroll(wizard, fireballScroll, itemRepo, inventoryRepo);
+            const result = useSpellScroll(wizard, fireballScroll, inventoryRepo);
 
             expect(result.success).toBe(false);
             expect(result.consumed).toBe(false);
@@ -396,7 +396,7 @@ describe('Spell Scroll System', () => {
             };
             itemRepo.create(sword);
 
-            const result = useSpellScroll(wizard, sword, itemRepo, inventoryRepo);
+            const result = useSpellScroll(wizard, sword, inventoryRepo);
 
             expect(result.success).toBe(false);
             expect(result.consumed).toBe(false);
@@ -406,7 +406,7 @@ describe('Spell Scroll System', () => {
         it('should require check for scroll above character level', () => {
             inventoryRepo.addItem(lowLevelWizard.id, fireballScroll.id, 1);
 
-            const result = useSpellScroll(lowLevelWizard, fireballScroll, itemRepo, inventoryRepo);
+            const result = useSpellScroll(lowLevelWizard, fireballScroll, inventoryRepo);
 
             expect(result.requiresCheck).toBe(true);
             expect(result.consumed).toBe(true);
@@ -513,7 +513,7 @@ describe('Spell Scroll System', () => {
         it('should follow rule: scroll consumed on use regardless of success', () => {
             inventoryRepo.addItem(fighter.id, fireballScroll.id, 1);
 
-            const result = useSpellScroll(fighter, fireballScroll, itemRepo, inventoryRepo);
+            const result = useSpellScroll(fighter, fireballScroll, inventoryRepo);
 
             // Regardless of check result, scroll should be consumed
             expect(result.consumed).toBe(true);
@@ -538,7 +538,7 @@ describe('Spell Scroll System', () => {
             itemRepo.create(badScroll);
             inventoryRepo.addItem(wizard.id, badScroll.id, 1);
 
-            const result = useSpellScroll(wizard, badScroll, itemRepo, inventoryRepo);
+            const result = useSpellScroll(wizard, badScroll, inventoryRepo);
 
             expect(result.success).toBe(false);
             expect(result.reason).toBe('invalid_scroll');
@@ -547,14 +547,14 @@ describe('Spell Scroll System', () => {
         it('should handle multiple scrolls of same type', () => {
             inventoryRepo.addItem(wizard.id, fireballScroll.id, 3);
 
-            const result1 = useSpellScroll(wizard, fireballScroll, itemRepo, inventoryRepo);
+            const result1 = useSpellScroll(wizard, fireballScroll, inventoryRepo);
             expect(result1.success).toBe(true);
 
             const inventory = inventoryRepo.getInventory(wizard.id);
             const scrollItem = inventory.items.find(i => i.itemId === fireballScroll.id);
             expect(scrollItem?.quantity).toBe(2);
 
-            const result2 = useSpellScroll(wizard, fireballScroll, itemRepo, inventoryRepo);
+            const result2 = useSpellScroll(wizard, fireballScroll, inventoryRepo);
             expect(result2.success).toBe(true);
 
             const inventory2 = inventoryRepo.getInventory(wizard.id);
@@ -573,7 +573,7 @@ describe('Spell Scroll System', () => {
             itemRepo.create(cantripScroll);
             inventoryRepo.addItem(wizard.id, cantripScroll.id, 1);
 
-            const result = useSpellScroll(wizard, cantripScroll, itemRepo, inventoryRepo);
+            const result = useSpellScroll(wizard, cantripScroll, inventoryRepo);
 
             expect(result.success).toBe(true);
             expect(result.consumed).toBe(true);

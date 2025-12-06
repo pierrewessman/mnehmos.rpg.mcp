@@ -98,7 +98,7 @@ export async function handleUseSpellScroll(args: unknown, _ctx: SessionContext) 
         throw new Error(`Scroll item ${parsed.scrollItemId} not found`);
     }
 
-    const result = useSpellScroll(character, scroll, itemRepo, inventoryRepo);
+    const result = useSpellScroll(character, scroll, inventoryRepo);
 
     return {
         content: [

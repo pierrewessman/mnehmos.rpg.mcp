@@ -14,7 +14,6 @@ import {
     getScrollRarity
 } from '../../schema/scroll.js';
 import { SpellcastingClass } from '../../schema/spell.js';
-import { ItemRepository } from '../../storage/repos/item.repo.js';
 import { InventoryRepository } from '../../storage/repos/inventory.repo.js';
 
 /**
