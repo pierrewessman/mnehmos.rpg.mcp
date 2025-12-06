@@ -8,6 +8,7 @@ import {
     HEAT_DECAY_RULES,
     compareHeatLevels
 } from '../../schema/theft.js';
+import { InventoryRepository } from './inventory.repo.js';
 
 /**
  * HIGH-008: Theft Repository
@@ -49,7 +50,11 @@ interface FenceNpcRow {
 }
 
 export class TheftRepository {
-    constructor(private db: Database.Database) { }
+    private inventoryRepo: InventoryRepository;
+
+    constructor(private db: Database.Database) {
+        this.inventoryRepo = new InventoryRepository(db);
+    }
 
     // ============================================================
     // STOLEN ITEM OPERATIONS
@@ -57,6 +62,7 @@ export class TheftRepository {
 
     /**
      * Record a theft event
+     * @param transferItem - If true, physically moves item from victim to thief inventory
      */
     recordTheft(record: {
         itemId: string;
@@ -64,7 +70,9 @@ export class TheftRepository {
         stolenBy: string;
         stolenLocation?: string | null;
         witnesses?: string[];
-    }): StolenItemRecord {
+        transferItem?: boolean;
+        quantity?: number;
+    }): StolenItemRecord & { transferred: boolean } {
         const now = new Date().toISOString();
         const id = uuid();
 
@@ -88,7 +96,18 @@ export class TheftRepository {
             now
         );
 
-        return this.getTheftRecord(record.itemId)!;
+        // Optionally transfer the item physically
+        let transferred = false;
+        if (record.transferItem) {
+            const qty = record.quantity ?? 1;
+            const removed = this.inventoryRepo.removeItem(record.stolenFrom, record.itemId, qty);
+            if (removed) {
+                this.inventoryRepo.addItem(record.stolenBy, record.itemId, qty);
+                transferred = true;
+            }
+        }
+
+        return { ...this.getTheftRecord(record.itemId)!, transferred };
     }
 
     /**

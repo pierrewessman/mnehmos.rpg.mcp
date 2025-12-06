@@ -7,6 +7,7 @@ import {
     CORPSE_DECAY_RULES,
     DEFAULT_LOOT_TABLES
 } from '../../schema/corpse.js';
+import { InventoryRepository } from './inventory.repo.js';
 
 /**
  * FAILED-004: Corpse Repository
@@ -59,7 +60,11 @@ interface LootTableRow {
 }
 
 export class CorpseRepository {
-    constructor(private db: Database.Database) { }
+    private inventoryRepo: InventoryRepository;
+
+    constructor(private db: Database.Database) {
+        this.inventoryRepo = new InventoryRepository(db);
+    }
 
     /**
      * Create a corpse when a character dies
@@ -214,31 +219,33 @@ export class CorpseRepository {
 
     /**
      * Loot an item from a corpse
+     * @param transferToLooter - If true, adds item to looter's inventory
      */
-    lootItem(corpseId: string, itemId: string, looterId: string, quantity?: number): {
+    lootItem(corpseId: string, itemId: string, looterId: string, quantity?: number, transferToLooter?: boolean): {
         success: boolean;
         itemId: string;
         quantity: number;
+        transferred: boolean;
         reason?: string;
     } {
         const corpse = this.findById(corpseId);
         if (!corpse) {
-            return { success: false, itemId, quantity: 0, reason: 'Corpse not found' };
+            return { success: false, itemId, quantity: 0, transferred: false, reason: 'Corpse not found' };
         }
 
         if (corpse.state === 'gone') {
-            return { success: false, itemId, quantity: 0, reason: 'Corpse has decayed completely' };
+            return { success: false, itemId, quantity: 0, transferred: false, reason: 'Corpse has decayed completely' };
         }
 
         const inventory = this.getAvailableLoot(corpseId);
         const item = inventory.find(i => i.itemId === itemId);
         if (!item) {
-            return { success: false, itemId, quantity: 0, reason: 'Item not on corpse or already looted' };
+            return { success: false, itemId, quantity: 0, transferred: false, reason: 'Item not on corpse or already looted' };
         }
 
         const toLoot = quantity ?? item.quantity;
         if (toLoot > item.quantity) {
-            return { success: false, itemId, quantity: 0, reason: `Only ${item.quantity} available` };
+            return { success: false, itemId, quantity: 0, transferred: false, reason: `Only ${item.quantity} available` };
         }
 
         const now = new Date().toISOString();
@@ -272,20 +279,28 @@ export class CorpseRepository {
             lootedStmt.run(now, corpseId);
         }
 
-        return { success: true, itemId, quantity: toLoot };
+        // Optionally transfer to looter's inventory
+        let transferred = false;
+        if (transferToLooter) {
+            this.inventoryRepo.addItem(looterId, itemId, toLoot);
+            transferred = true;
+        }
+
+        return { success: true, itemId, quantity: toLoot, transferred };
     }
 
     /**
      * Loot all items from a corpse
+     * @param transferToLooter - If true, adds all items to looter's inventory
      */
-    lootAll(corpseId: string, looterId: string): Array<{ itemId: string; quantity: number }> {
+    lootAll(corpseId: string, looterId: string, transferToLooter?: boolean): Array<{ itemId: string; quantity: number; transferred: boolean }> {
         const available = this.getAvailableLoot(corpseId);
-        const looted: Array<{ itemId: string; quantity: number }> = [];
+        const looted: Array<{ itemId: string; quantity: number; transferred: boolean }> = [];
 
         for (const item of available) {
-            const result = this.lootItem(corpseId, item.itemId, looterId, item.quantity);
+            const result = this.lootItem(corpseId, item.itemId, looterId, item.quantity, transferToLooter);
             if (result.success) {
-                looted.push({ itemId: result.itemId, quantity: result.quantity });
+                looted.push({ itemId: result.itemId, quantity: result.quantity, transferred: result.transferred });
             }
         }
 

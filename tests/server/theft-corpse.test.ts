@@ -1095,3 +1095,179 @@ describe('Category 10: Edge Cases', () => {
         expect(fence.specializations).toContain('jewelry');
     });
 });
+
+// ============================================================================
+// CATEGORY 11: OPTIONAL ITEM TRANSFERS
+// ============================================================================
+describe('Category 11: Optional Item Transfers', () => {
+
+    test('11.1 - theft without transfer keeps item in victim inventory', () => {
+        const merchant = createCharacter({ name: 'Merchant' });
+        const thief = createCharacter({ name: 'Thief' });
+        const itemId = createItem('Stolen Ring', 100);
+        addItemToInventory(merchant.id, itemId);
+
+        const record = theftRepo.recordTheft({
+            itemId,
+            stolenFrom: merchant.id,
+            stolenBy: thief.id,
+            transferItem: false
+        });
+
+        expect(record.transferred).toBe(false);
+
+        // Item still in merchant inventory
+        const merchantInv = invRepo.getInventory(merchant.id);
+        expect(merchantInv.items.some(i => i.itemId === itemId)).toBe(true);
+
+        // Not in thief inventory
+        const thiefInv = invRepo.getInventory(thief.id);
+        expect(thiefInv.items.some(i => i.itemId === itemId)).toBe(false);
+    });
+
+    test('11.2 - theft with transfer moves item to thief inventory', () => {
+        const merchant = createCharacter({ name: 'Victim' });
+        const thief = createCharacter({ name: 'Burglar' });
+        const itemId = createItem('Golden Chalice', 500);
+        addItemToInventory(merchant.id, itemId);
+
+        const record = theftRepo.recordTheft({
+            itemId,
+            stolenFrom: merchant.id,
+            stolenBy: thief.id,
+            transferItem: true
+        });
+
+        expect(record.transferred).toBe(true);
+
+        // Item removed from merchant inventory
+        const merchantInv = invRepo.getInventory(merchant.id);
+        expect(merchantInv.items.some(i => i.itemId === itemId)).toBe(false);
+
+        // Item now in thief inventory
+        const thiefInv = invRepo.getInventory(thief.id);
+        expect(thiefInv.items.some(i => i.itemId === itemId)).toBe(true);
+    });
+
+    test('11.3 - loot without transfer tracks but does not add to inventory', () => {
+        const enemy = createCharacter({ name: 'Goblin' });
+        const hero = createCharacter({ name: 'Hero' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const lootItem = createItem('Goblin Dagger');
+        corpseRepo.addToCorpseInventory(corpse.id, lootItem, 1);
+
+        const result = corpseRepo.lootItem(corpse.id, lootItem, hero.id, 1, false);
+
+        expect(result.success).toBe(true);
+        expect(result.transferred).toBe(false);
+
+        // Item NOT in hero inventory (narrative only)
+        const heroInv = invRepo.getInventory(hero.id);
+        expect(heroInv.items.some(i => i.itemId === lootItem)).toBe(false);
+    });
+
+    test('11.4 - loot with transfer adds item to looter inventory', () => {
+        const enemy = createCharacter({ name: 'Orc' });
+        const hero = createCharacter({ name: 'Adventurer' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const lootItem = createItem('Orc Blade');
+        corpseRepo.addToCorpseInventory(corpse.id, lootItem, 1);
+
+        const result = corpseRepo.lootItem(corpse.id, lootItem, hero.id, 1, true);
+
+        expect(result.success).toBe(true);
+        expect(result.transferred).toBe(true);
+
+        // Item IS in hero inventory
+        const heroInv = invRepo.getInventory(hero.id);
+        expect(heroInv.items.some(i => i.itemId === lootItem)).toBe(true);
+    });
+
+    test('11.5 - lootAll with transfer adds all items to looter', () => {
+        const enemy = createCharacter({ name: 'Bandit' });
+        const hero = createCharacter({ name: 'Sheriff' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const item1 = createItem('Gold Coins');
+        const item2 = createItem('Silver Ring');
+        const item3 = createItem('Dagger');
+        corpseRepo.addToCorpseInventory(corpse.id, item1, 10);
+        corpseRepo.addToCorpseInventory(corpse.id, item2, 1);
+        corpseRepo.addToCorpseInventory(corpse.id, item3, 1);
+
+        const results = corpseRepo.lootAll(corpse.id, hero.id, true);
+
+        expect(results.length).toBe(3);
+        expect(results.every(r => r.transferred)).toBe(true);
+
+        // All items in hero inventory
+        const heroInv = invRepo.getInventory(hero.id);
+        expect(heroInv.items.some(i => i.itemId === item1)).toBe(true);
+        expect(heroInv.items.some(i => i.itemId === item2)).toBe(true);
+        expect(heroInv.items.some(i => i.itemId === item3)).toBe(true);
+    });
+
+    test('11.6 - theft transfer with quantity moves correct amount', () => {
+        const merchant = createCharacter({ name: 'Coin Vendor' });
+        const thief = createCharacter({ name: 'Pickpocket' });
+        const coinId = createItem('Gold Coins', 1);
+        addItemToInventory(merchant.id, coinId, 100); // 100 coins
+
+        const record = theftRepo.recordTheft({
+            itemId: coinId,
+            stolenFrom: merchant.id,
+            stolenBy: thief.id,
+            transferItem: true,
+            quantity: 25 // Steal only 25
+        });
+
+        expect(record.transferred).toBe(true);
+
+        // Merchant has 75 left
+        const merchantInv = invRepo.getInventory(merchant.id);
+        const merchantCoins = merchantInv.items.find(i => i.itemId === coinId);
+        expect(merchantCoins?.quantity).toBe(75);
+
+        // Thief has 25
+        const thiefInv = invRepo.getInventory(thief.id);
+        const thiefCoins = thiefInv.items.find(i => i.itemId === coinId);
+        expect(thiefCoins?.quantity).toBe(25);
+    });
+
+    test('11.7 - default behavior is no transfer (backwards compatible)', () => {
+        const merchant = createCharacter();
+        const thief = createCharacter();
+        const itemId = createItem('Test Item');
+        addItemToInventory(merchant.id, itemId);
+
+        // No transferItem parameter
+        const record = theftRepo.recordTheft({
+            itemId,
+            stolenFrom: merchant.id,
+            stolenBy: thief.id
+        });
+
+        // Should default to no transfer
+        expect(record.transferred).toBe(false);
+    });
+});

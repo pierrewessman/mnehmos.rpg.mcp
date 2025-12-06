@@ -4,7 +4,8 @@
       "Skill(rpg-mcp-backend)",
       "Bash(grep:*)",
       "Bash(cat:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
