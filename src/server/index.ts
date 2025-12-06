@@ -16,6 +16,7 @@ import { NpcMemoryTools, handleGetNpcRelationship, handleUpdateNpcRelationship, 
 import { TheftTools, handleStealItem, handleCheckItemStolen, handleCheckStolenItemsOnCharacter, handleCheckItemRecognition, handleSellToFence, handleRegisterFence, handleReportTheft, handleAdvanceHeatDecay, handleGetFence, handleListFences } from './theft-tools.js';
 import { CorpseTools, handleGetCorpse, handleGetCorpseByCharacter, handleListCorpsesInEncounter, handleListCorpsesNearby, handleLootCorpse, handleHarvestCorpse, handleCreateCorpse, handleGenerateLoot, handleGetCorpseInventory, handleCreateLootTable, handleGetLootTable, handleListLootTables, handleAdvanceCorpseDecay, handleCleanupCorpses } from './corpse-tools.js';
 import { ImprovisationTools, handleResolveImprovisedStunt, handleApplyCustomEffect, handleGetCustomEffects, handleRemoveCustomEffect, handleProcessEffectTriggers, handleAdvanceEffectDurations, handleAttemptArcaneSynthesis, handleGetSynthesizedSpells } from './improvisation-tools.js';
+import { SpatialTools, handleLookAtSurroundings, handleGenerateRoomNode, handleGetRoomExits, handleMoveCharacterToRoom } from './spatial-tools.js';
 import { PubSub } from '../engine/pubsub.js';
 import { registerEventTools } from './events.js';
 import { AuditLogger } from './audit.js';
@@ -799,6 +800,35 @@ async function main() {
         NpcMemoryTools.GET_NPC_CONTEXT.description,
         NpcMemoryTools.GET_NPC_CONTEXT.inputSchema.extend({ sessionId: z.string().optional() }).shape,
         auditLogger.wrapHandler(NpcMemoryTools.GET_NPC_CONTEXT.name, withSession(NpcMemoryTools.GET_NPC_CONTEXT.inputSchema, handleGetNpcContext))
+    );
+
+    // Register Spatial Tools (PHASE-1: Spatial Graph System)
+    server.tool(
+        SpatialTools.LOOK_AT_SURROUNDINGS.name,
+        SpatialTools.LOOK_AT_SURROUNDINGS.description,
+        SpatialTools.LOOK_AT_SURROUNDINGS.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(SpatialTools.LOOK_AT_SURROUNDINGS.name, withSession(SpatialTools.LOOK_AT_SURROUNDINGS.inputSchema, handleLookAtSurroundings))
+    );
+
+    server.tool(
+        SpatialTools.GENERATE_ROOM_NODE.name,
+        SpatialTools.GENERATE_ROOM_NODE.description,
+        SpatialTools.GENERATE_ROOM_NODE.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(SpatialTools.GENERATE_ROOM_NODE.name, withSession(SpatialTools.GENERATE_ROOM_NODE.inputSchema, handleGenerateRoomNode))
+    );
+
+    server.tool(
+        SpatialTools.GET_ROOM_EXITS.name,
+        SpatialTools.GET_ROOM_EXITS.description,
+        SpatialTools.GET_ROOM_EXITS.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(SpatialTools.GET_ROOM_EXITS.name, withSession(SpatialTools.GET_ROOM_EXITS.inputSchema, handleGetRoomExits))
+    );
+
+    server.tool(
+        SpatialTools.MOVE_CHARACTER_TO_ROOM.name,
+        SpatialTools.MOVE_CHARACTER_TO_ROOM.description,
+        SpatialTools.MOVE_CHARACTER_TO_ROOM.inputSchema.extend({ sessionId: z.string().optional() }).shape,
+        auditLogger.wrapHandler(SpatialTools.MOVE_CHARACTER_TO_ROOM.name, withSession(SpatialTools.MOVE_CHARACTER_TO_ROOM.inputSchema, handleMoveCharacterToRoom))
     );
 
     // Register Theft Tools (HIGH-008: Stolen Item Tracking System)

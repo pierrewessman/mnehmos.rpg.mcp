@@ -48,6 +48,10 @@ export const CharacterSchema = z.object({
         y: z.number()
     }).optional(),
 
+    // PHASE-1: Spatial Graph System - current room for spatial awareness
+    currentRoomId: z.string().uuid().optional()
+        .describe('ID of the room the character is currently in'),
+
     // HIGH-007: Legendary creature fields
     legendaryActions: z.number().int().min(0).optional()
         .describe('Total legendary actions per round (usually 3)'),

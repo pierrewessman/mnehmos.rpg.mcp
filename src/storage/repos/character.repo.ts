@@ -16,13 +16,13 @@ export class CharacterRepository {
                               cantrips_known, max_spell_level, concentrating_on, conditions,
                               legendary_actions, legendary_actions_remaining, legendary_resistances,
                               legendary_resistances_remaining, has_lair_actions, resistances, vulnerabilities, immunities,
-                              created_at, updated_at)
+                              current_room_id, created_at, updated_at)
       VALUES (@id, @name, @stats, @hp, @maxHp, @ac, @level, @factionId, @behavior, @characterType,
               @characterClass, @spellSlots, @pactMagicSlots, @knownSpells, @preparedSpells,
               @cantripsKnown, @maxSpellLevel, @concentratingOn, @conditions,
               @legendaryActions, @legendaryActionsRemaining, @legendaryResistances,
               @legendaryResistancesRemaining, @hasLairActions, @resistances, @vulnerabilities, @immunities,
-              @createdAt, @updatedAt)
+              @currentRoomId, @createdAt, @updatedAt)
     `);
 
         stmt.run({
@@ -55,6 +55,8 @@ export class CharacterRepository {
             resistances: JSON.stringify(validChar.resistances || []),
             vulnerabilities: JSON.stringify(validChar.vulnerabilities || []),
             immunities: JSON.stringify(validChar.immunities || []),
+            // PHASE-1: Spatial awareness
+            currentRoomId: validChar.currentRoomId || null,
             createdAt: validChar.createdAt,
             updatedAt: validChar.updatedAt,
         });
@@ -112,7 +114,7 @@ export class CharacterRepository {
                 legendary_actions = ?, legendary_actions_remaining = ?,
                 legendary_resistances = ?, legendary_resistances_remaining = ?,
                 has_lair_actions = ?, resistances = ?, vulnerabilities = ?, immunities = ?,
-                updated_at = ?
+                current_room_id = ?, updated_at = ?
             WHERE id = ?
         `);
 
@@ -145,6 +147,8 @@ export class CharacterRepository {
             JSON.stringify(validChar.resistances || []),
             JSON.stringify(validChar.vulnerabilities || []),
             JSON.stringify(validChar.immunities || []),
+            // PHASE-1: Spatial awareness
+            validChar.currentRoomId || null,
             validChar.updatedAt,
             id
         );
@@ -187,6 +191,8 @@ export class CharacterRepository {
             resistances: row.resistances ? JSON.parse(row.resistances) : [],
             vulnerabilities: row.vulnerabilities ? JSON.parse(row.vulnerabilities) : [],
             immunities: row.immunities ? JSON.parse(row.immunities) : [],
+            // PHASE-1: Spatial awareness
+            currentRoomId: row.current_room_id || undefined,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
         };
@@ -233,6 +239,8 @@ interface CharacterRow {
     resistances: string | null;
     vulnerabilities: string | null;
     immunities: string | null;
+    // PHASE-1: Spatial awareness
+    current_room_id: string | null;
     created_at: string;
     updated_at: string;
 }

@@ -516,6 +516,26 @@ export function migrate(db: Database.Database) {
 
   CREATE INDEX IF NOT EXISTS idx_synthesized_spells_character ON synthesized_spells(character_id);
   CREATE INDEX IF NOT EXISTS idx_synthesized_spells_school ON synthesized_spells(school);
+
+  -- PHASE-1: Spatial Graph System - Room Nodes
+  CREATE TABLE IF NOT EXISTS room_nodes(
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL CHECK(length(trim(name)) > 0 AND length(name) <= 100),
+    base_description TEXT NOT NULL CHECK(length(trim(base_description)) >= 10 AND length(base_description) <= 2000),
+    biome_context TEXT NOT NULL CHECK(biome_context IN (
+      'forest', 'mountain', 'urban', 'dungeon', 'coastal', 'cavern', 'divine', 'arcane'
+    )),
+    atmospherics TEXT NOT NULL DEFAULT '[]', -- JSON array of atmospheric effects
+    exits TEXT NOT NULL DEFAULT '[]', -- JSON array of exit objects {direction, targetNodeId, type, dc?, description?}
+    entity_ids TEXT NOT NULL DEFAULT '[]', -- JSON array of UUID strings
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    visited_count INTEGER NOT NULL DEFAULT 0,
+    last_visited_at TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_room_nodes_biome ON room_nodes(biome_context);
+  CREATE INDEX IF NOT EXISTS idx_room_nodes_visited ON room_nodes(last_visited_at DESC);
   `);
 
   // Run migrations for existing databases that don't have the new columns
@@ -690,6 +710,13 @@ function runMigrations(db: Database.Database) {
   if (!hasCorpseCurrencyLooted) {
     console.error('[Migration] Adding currency_looted column to corpses table');
     db.exec(`ALTER TABLE corpses ADD COLUMN currency_looted INTEGER NOT NULL DEFAULT 0;`);
+  }
+
+  // PHASE-1: Add current_room_id to characters table for spatial awareness
+  const hasCurrentRoomId = charColumns.some(col => col.name === 'current_room_id');
+  if (!hasCurrentRoomId) {
+    console.error('[Migration] Adding current_room_id column to characters table');
+    db.exec(`ALTER TABLE characters ADD COLUMN current_room_id TEXT REFERENCES room_nodes(id) ON DELETE SET NULL;`);
   }
 }
 
