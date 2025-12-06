@@ -446,18 +446,7 @@ Examples:
     },
     ROLL_DEATH_SAVE: {
         name: 'roll_death_save',
-        description: `Roll a death saving throw for a character at 0 HP.
-
-D&D 5e Death Saving Throw Rules:
-- Roll d20 at the start of each turn when at 0 HP
-- 10+ = success
-- 9 or less = failure
-- Natural 20 = regain 1 HP and become conscious
-- Natural 1 = counts as 2 failures
-- 3 successes = stabilized (unconscious but won't die)
-- 3 failures = dead
-
-Only valid for characters at 0 HP who are not stabilized or dead.`,
+        description: 'Roll a d20 death saving throw for a character at 0 HP. 10+ success, nat 20 regains 1 HP, nat 1 counts as 2 failures.',
         inputSchema: z.object({
             encounterId: z.string().describe('The ID of the encounter'),
             characterId: z.string().describe('The ID of the character at 0 HP')
@@ -465,17 +454,7 @@ Only valid for characters at 0 HP who are not stabilized or dead.`,
     },
     EXECUTE_LAIR_ACTION: {
         name: 'execute_lair_action',
-        description: `Execute a lair action when it's initiative 20 (the lair's turn).
-
-Lair actions are special environmental effects that legendary creatures can trigger in their lair.
-Examples:
-- Magma geysers erupt
-- Ceiling collapses
-- Shadow tentacles emerge
-- Poison gas vents open
-
-This tool should only be called when isLairActionPending is true in the encounter state.
-The effect and targets are provided by the caller (DM/LLM) - the engine validates timing and applies damage.`,
+        description: 'Execute a lair action at initiative 20 when isLairActionPending is true. Apply environmental effects to targets.',
         inputSchema: z.object({
             encounterId: z.string().describe('The ID of the encounter'),
             actionDescription: z.string().describe('Description of the lair action'),

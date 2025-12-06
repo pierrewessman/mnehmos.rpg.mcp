@@ -19,15 +19,7 @@ function ensureDb() {
 export const SecretTools = {
     CREATE_SECRET: {
         name: 'create_secret',
-        description: `Create a new secret that the AI DM knows but should not reveal to players.
-        
-Examples:
-- NPC secret: "The innkeeper is actually a vampire"
-- Location secret: "There's a trap at the entrance"
-- Item secret: "The sword is cursed"
-- Plot secret: "The king is the true villain"
-
-The AI will use this secret to inform narration without revealing it directly.`,
+        description: 'Create a DM-only secret (NPC, location, item, plot). AI narrates around it without revealing.',
         inputSchema: z.object({
             worldId: z.string().describe('The world this secret belongs to'),
             type: z.enum(['npc', 'location', 'item', 'quest', 'plot', 'mechanic', 'custom'])
@@ -91,19 +83,7 @@ The AI will use this secret to inform narration without revealing it directly.`,
 
     REVEAL_SECRET: {
         name: 'reveal_secret',
-        description: `Reveal a secret to the player. Call this when reveal conditions are met.
-
-IMPORTANT: When presenting the reveal to the player, you MUST include the 'spoilerMarkdown' field 
-from the response in your message. This creates a clickable spoiler that the player can choose to reveal.
-
-Example response format:
-"The moment of truth arrives..."
-
-:::spoiler[🔮 Secret Name - Click to Reveal]
-The dramatic revelation text goes here...
-:::
-
-The spoiler syntax (:::spoiler[Title]...:::) renders as a clickable reveal in the chat.`,
+        description: 'Reveal a secret to the player. Include the spoilerMarkdown field in your response for clickable reveal.',
         inputSchema: z.object({
             secretId: z.string(),
             triggeredBy: z.string().describe('What triggered the reveal, e.g. "Insight check DC 15"'),
@@ -122,9 +102,7 @@ The spoiler syntax (:::spoiler[Title]...:::) renders as a clickable reveal in th
 
     GET_SECRETS_FOR_CONTEXT: {
         name: 'get_secrets_for_context',
-        description: `Get all active (unrevealed) secrets formatted for LLM context injection.
-        
-Returns formatted text with DO NOT REVEAL instructions for the AI DM.`,
+        description: 'Get active secrets formatted for LLM context injection with DO NOT REVEAL instructions.',
         inputSchema: z.object({
             worldId: z.string()
         })

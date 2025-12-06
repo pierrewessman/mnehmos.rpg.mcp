@@ -25,9 +25,7 @@ import {
     ArcaneSynthesisResult,
     CustomEffect,
     SynthesisOutcome,
-    WildSurgeEffect,
     SkillName,
-    AbilityName,
     TriggerEvent,
     ActorType
 } from '../schema/improvisation.js';
@@ -236,20 +234,7 @@ Example:
 
     PROCESS_EFFECT_TRIGGERS: {
         name: 'process_effect_triggers',
-        description: `Fire effect triggers at specific events. Returns effects that should activate.
-
-Trigger Events:
-- always_active: Effect is always on
-- start_of_turn: Fire at the start of a turn
-- end_of_turn: Fire at the end of a turn
-- on_attack: Fire when making an attack
-- on_hit: Fire when landing a hit
-- on_miss: Fire when missing an attack
-- on_damage_taken: Fire when taking damage
-- on_heal: Fire when receiving healing
-- on_rest: Fire when taking a rest
-- on_spell_cast: Fire when casting a spell
-- on_death: Fire when reduced to 0 HP`,
+        description: 'Fire effect triggers at specific events (start_of_turn, on_attack, on_damage_taken, etc). Returns activated effects.',
         inputSchema: z.object({
             target_id: z.string(),
             target_type: z.enum(['character', 'npc']),

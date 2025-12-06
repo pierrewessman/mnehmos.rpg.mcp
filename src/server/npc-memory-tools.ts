@@ -20,9 +20,7 @@ import { VolumeLevel } from '../engine/social/hearing.js';
 export const NpcMemoryTools = {
     GET_NPC_RELATIONSHIP: {
         name: 'get_npc_relationship',
-        description: `Get the relationship status between a PC and NPC.
-Returns familiarity level, disposition, notes, and interaction history.
-If no relationship exists, returns default "stranger/neutral" status.`,
+        description: 'Get relationship status (familiarity, disposition) between a PC and NPC.',
         inputSchema: z.object({
             characterId: z.string().describe('ID of the player character'),
             npcId: z.string().describe('ID of the NPC')
@@ -31,22 +29,7 @@ If no relationship exists, returns default "stranger/neutral" status.`,
 
     UPDATE_NPC_RELATIONSHIP: {
         name: 'update_npc_relationship',
-        description: `Update or create a relationship between PC and NPC.
-
-Familiarity levels (in order):
-- stranger: Never met before
-- acquaintance: Met briefly, know name
-- friend: Multiple positive interactions
-- close_friend: Deep trust and history
-- rival: Competitive relationship
-- enemy: Hostile relationship
-
-Disposition levels:
-- hostile: Actively antagonistic
-- unfriendly: Cold, dismissive
-- neutral: Indifferent
-- friendly: Warm, helpful
-- helpful: Goes out of their way to assist`,
+        description: 'Update or create a PC-NPC relationship. Familiarity: stranger→acquaintance→friend→close_friend/rival/enemy.',
         inputSchema: z.object({
             characterId: z.string().describe('ID of the player character'),
             npcId: z.string().describe('ID of the NPC'),
@@ -60,14 +43,7 @@ Disposition levels:
 
     RECORD_CONVERSATION_MEMORY: {
         name: 'record_conversation_memory',
-        description: `Record a significant conversation or interaction with an NPC.
-Use this to remember important plot points, promises, secrets shared, etc.
-
-Importance levels:
-- low: Casual conversation, small talk
-- medium: Useful information, minor agreements
-- high: Important plot points, significant promises
-- critical: Life-changing revelations, major story beats`,
+        description: 'Record a significant conversation/interaction. Importance: low (chat), medium, high (plot), critical.',
         inputSchema: z.object({
             characterId: z.string().describe('ID of the player character'),
             npcId: z.string().describe('ID of the NPC'),
@@ -81,8 +57,7 @@ Importance levels:
 
     GET_CONVERSATION_HISTORY: {
         name: 'get_conversation_history',
-        description: `Get conversation history between PC and specific NPC.
-Can filter by importance level to only get significant memories.`,
+        description: 'Get conversation history between PC and NPC. Filter by minimum importance level.',
         inputSchema: z.object({
             characterId: z.string().describe('ID of the player character'),
             npcId: z.string().describe('ID of the NPC'),
@@ -95,8 +70,7 @@ Can filter by importance level to only get significant memories.`,
 
     GET_RECENT_INTERACTIONS: {
         name: 'get_recent_interactions',
-        description: `Get recent conversation memories across all NPCs.
-Useful for building context about what the character has been doing.`,
+        description: 'Get recent conversation memories across all NPCs for context building.',
         inputSchema: z.object({
             characterId: z.string().describe('ID of the player character'),
             limit: z.number().int().positive().default(10)
@@ -106,9 +80,7 @@ Useful for building context about what the character has been doing.`,
 
     GET_NPC_CONTEXT: {
         name: 'get_npc_context',
-        description: `Get full context for an NPC interaction.
-Returns both relationship data AND relevant conversation history.
-Use this to inject context into LLM prompts for NPC dialogue.`,
+        description: 'Get relationship + conversation history for LLM NPC dialogue prompts.',
         inputSchema: z.object({
             characterId: z.string().describe('ID of the player character'),
             npcId: z.string().describe('ID of the NPC'),
@@ -120,19 +92,7 @@ Use this to inject context into LLM prompts for NPC dialogue.`,
     // PHASE-2: Social Hearing Mechanics
     INTERACT_SOCIALLY: {
         name: 'interact_socially',
-        description: `Record a social interaction (conversation, whisper, shout) with spatial awareness.
-Automatically handles:
-- Hearing range calculations based on volume and environment
-- Stealth vs Perception rolls for eavesdropping detection
-- Conversation memory recording for all who can hear
-
-Volume levels:
-- WHISPER: Short range, intimate conversations (5-15 feet depending on environment)
-- TALK: Normal conversation range (15-100 feet depending on environment)
-- SHOUT: Long range, alerts everyone nearby (40-500 feet depending on environment)
-
-The speaker's stealth check is opposed by each listener's perception check.
-If listener wins, they overhear the conversation. Target always hears full content.`,
+        description: 'Social interaction with spatial awareness. Handles hearing range, stealth vs perception, and memory recording.',
         inputSchema: z.object({
             speakerId: z.string().describe('ID of the character speaking'),
             targetId: z.string().optional().describe('ID of the intended recipient (optional for broadcasts)'),

@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { WorldRepository } from '../storage/repos/world.repo.js';
 import { CharacterRepository } from '../storage/repos/character.repo.js';
 import { World, WorldSchema } from '../schema/world.js';
-import { Character, NPC, NPCSchema } from '../schema/character.js';
+import { Character, NPC } from '../schema/character.js';
 import { CharacterTypeSchema } from '../schema/party.js';
 import { z } from 'zod';
 
@@ -26,15 +26,7 @@ export const CRUDTools = {
     // World tools
     CREATE_WORLD: {
         name: 'create_world',
-        description: `Create a new world in the database.
-
-Example:
-{
-  "name": "My Campaign World",
-  "seed": "campaign-1",
-  "width": 100,
-  "height": 100
-}`,
+        description: 'Create a new world in the database with name, seed, and dimensions.',
         inputSchema: WorldSchema.omit({ id: true, createdAt: true, updatedAt: true })
     },
     GET_WORLD: {
@@ -159,15 +151,7 @@ Example (custom class/race):
     },
     UPDATE_CHARACTER: {
         name: 'update_character',
-        description: `Update character properties.
-
-Example:
-{
-  "id": "char-123",
-  "hp": 15,
-  "level": 2,
-  "characterType": "npc"
-}`,
+        description: 'Update character properties like HP, level, or type.',
         inputSchema: z.object({
             id: z.string(),
             hp: z.number().int().min(0).optional(),
@@ -177,9 +161,7 @@ Example:
     },
     LIST_CHARACTERS: {
         name: 'list_characters',
-        description: `List all characters, optionally filtered by type.
-
-Character types: pc, npc, enemy, neutral`,
+        description: 'List all characters, optionally filtered by type (pc, npc, enemy, neutral).',
         inputSchema: z.object({
             characterType: CharacterTypeSchema.optional(),
         })
@@ -307,7 +289,7 @@ export async function handleCreateCharacter(args: unknown, _ctx: SessionContext)
         characterClass: parsed.characterClass || parsed.class || 'Adventurer',
         createdAt: now,
         updatedAt: now
-    } as Character | NPC;
+    } as unknown as Character | NPC;
 
     charRepo.create(character);
 

@@ -6,10 +6,7 @@ import { withSession } from './types.js';
 export const EventTools = {
     SUBSCRIBE: {
         name: 'subscribe_to_events',
-        description: `Subscribe to real-time events.
-        
-Events will be sent as JSON-RPC notifications with method 'notifications/rpg/event'.
-Supported topics: 'world', 'combat'.`,
+        description: 'Subscribe to real-time events on world or combat topics. Events sent as JSON-RPC notifications.',
         inputSchema: z.object({
             topics: z.array(z.enum(['world', 'combat'])).min(1)
         })

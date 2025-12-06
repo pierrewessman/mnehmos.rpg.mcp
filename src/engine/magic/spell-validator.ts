@@ -204,7 +204,7 @@ export function getInitialSpellSlots(characterClass: CharacterClass, level: numb
  * DC = 8 + proficiency bonus + spellcasting ability modifier
  */
 export function calculateSpellSaveDC(character: Character): number {
-    const config = SPELLCASTING_CONFIG[character.characterClass || 'fighter'];
+    const config = SPELLCASTING_CONFIG[(character.characterClass || 'fighter') as CharacterClass];
     if (!config.canCast) return 0;
 
     const profBonus = Math.floor((character.level - 1) / 4) + 2;
@@ -218,7 +218,7 @@ export function calculateSpellSaveDC(character: Character): number {
  * Attack = proficiency bonus + spellcasting ability modifier
  */
 export function calculateSpellAttackBonus(character: Character): number {
-    const config = SPELLCASTING_CONFIG[character.characterClass || 'fighter'];
+    const config = SPELLCASTING_CONFIG[(character.characterClass || 'fighter') as CharacterClass];
     if (!config.canCast) return 0;
 
     const profBonus = Math.floor((character.level - 1) / 4) + 2;
@@ -245,7 +245,7 @@ function getAbilityModifier(character: Character, ability: SpellcastingAbility):
  * Check if character can cast spells at all
  */
 export function canCastSpells(character: Character): { canCast: boolean; reason?: string } {
-    const charClass = character.characterClass || 'fighter';
+    const charClass = (character.characterClass || 'fighter') as CharacterClass;
     const config = SPELLCASTING_CONFIG[charClass];
 
     if (!config.canCast) {
@@ -283,7 +283,7 @@ export function characterKnowsSpell(character: Character, spellName: string): { 
         return { knows: false, reason: `Unknown spell: ${spellName}` };
     }
 
-    const charClass = character.characterClass || 'fighter';
+    const charClass = (character.characterClass || 'fighter') as CharacterClass;
     const config = SPELLCASTING_CONFIG[charClass];
 
     // Check if spell is available to class
@@ -341,7 +341,7 @@ export function characterKnowsSpell(character: Character, spellName: string): { 
  * Check if character has spell slot available at the given level
  */
 export function hasSpellSlotAvailable(character: Character, minLevel: number): { available: boolean; availableLevel?: number; reason?: string } {
-    const charClass = character.characterClass || 'fighter';
+    const charClass = (character.characterClass || 'fighter') as CharacterClass;
     const config = SPELLCASTING_CONFIG[charClass];
 
     if (config.pactMagic) {
@@ -439,7 +439,7 @@ export function validateSpellCast(
     }
 
     // Check max spell level
-    const maxLevel = getMaxSpellLevel(character.characterClass || 'fighter', character.level);
+    const maxLevel = getMaxSpellLevel((character.characterClass || 'fighter') as CharacterClass, character.level);
     const spellLevel = spell.level;
 
     if (spellLevel > maxLevel) {
@@ -487,7 +487,7 @@ export function validateSpellCast(
     }
 
     // For Warlock, always use pact slot level
-    const config = SPELLCASTING_CONFIG[character.characterClass || 'fighter'];
+    const config = SPELLCASTING_CONFIG[(character.characterClass || 'fighter') as CharacterClass];
     if (config.pactMagic) {
         targetSlotLevel = slotCheck.availableLevel!;
     }
@@ -503,7 +503,7 @@ export function validateSpellCast(
  * Consume a spell slot after successful cast
  */
 export function consumeSpellSlot(character: Character, slotLevel: number): Character {
-    const charClass = character.characterClass || 'fighter';
+    const charClass = (character.characterClass || 'fighter') as CharacterClass;
     const config = SPELLCASTING_CONFIG[charClass];
 
     if (config.pactMagic) {
@@ -546,7 +546,7 @@ export function consumeSpellSlot(character: Character, slotLevel: number): Chara
  * Restore all spell slots (for long rest)
  */
 export function restoreAllSpellSlots(character: Character): Character {
-    const charClass = character.characterClass || 'fighter';
+    const charClass = (character.characterClass || 'fighter') as CharacterClass;
     const config = SPELLCASTING_CONFIG[charClass];
 
     if (!config.canCast || character.level < config.startLevel) {
@@ -567,7 +567,7 @@ export function restoreAllSpellSlots(character: Character): Character {
     }
 
     // Standard spellcasting
-    const slots = getInitialSpellSlots(charClass, character.level);
+    const slots = getInitialSpellSlots(charClass as CharacterClass, character.level);
     return {
         ...character,
         spellSlots: slots
@@ -578,7 +578,7 @@ export function restoreAllSpellSlots(character: Character): Character {
  * Restore warlock pact slots (for short rest)
  */
 export function restorePactSlots(character: Character): Character {
-    const charClass = character.characterClass || 'fighter';
+    const charClass = (character.characterClass || 'fighter') as CharacterClass;
     const config = SPELLCASTING_CONFIG[charClass];
 
     if (!config.pactMagic) {

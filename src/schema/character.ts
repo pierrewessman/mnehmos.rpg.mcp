@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { CharacterTypeSchema } from './party.js';
 import {
-    CharacterClassSchema,
     SubclassSchema,
     SpellSlotsSchema,
     PactMagicSlotsSchema,

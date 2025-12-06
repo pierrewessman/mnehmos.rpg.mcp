@@ -17,14 +17,7 @@ import { SessionContext } from './types.js';
 export const SpatialTools = {
     LOOK_AT_SURROUNDINGS: {
         name: 'look_at_surroundings',
-        description: `Get a filtered description of the room the character is currently in.
-Accounts for:
-- Darkness (requires darkvision or light source)
-- Fog (reduces visibility)
-- Perception checks for hidden exits
-- Atmospheric effects (SILENCE, ANTIMAGIC, etc.)
-
-Returns the room description, visible exits, entities present, and atmospheric conditions.`,
+        description: 'Get filtered room description accounting for darkness, fog, and perception. Returns exits and entities.',
         inputSchema: z.object({
             observerId: z.string().uuid().describe('ID of the character observing their surroundings')
         })
@@ -32,11 +25,7 @@ Returns the room description, visible exits, entities present, and atmospheric c
 
     GENERATE_ROOM_NODE: {
         name: 'generate_room_node',
-        description: `Create a new persistent room/location in the world.
-The room's description is locked upon creation and cannot be changed later (maintains world consistency).
-
-Optionally links the new room to a previous room via an exit.
-Biome determines atmospheric effects and description themes.`,
+        description: 'Create a persistent room with immutable description. Optionally links to previous room.',
         inputSchema: z.object({
             name: z.string().min(1).max(100).describe('Name of the room (e.g., "The Dragon\'s Rest Tavern")'),
             baseDescription: z.string().min(10).max(2000).describe('Detailed description of the room (immutable once created)'),
@@ -55,8 +44,7 @@ Biome determines atmospheric effects and description themes.`,
 
     GET_ROOM_EXITS: {
         name: 'get_room_exits',
-        description: `Get the list of exits (doors, passages, stairs) from a specific room.
-Returns all exits regardless of visibility - use look_at_surroundings for perception-filtered exits.`,
+        description: 'Get all exits from a room. Use look_at_surroundings for perception-filtered exits.',
         inputSchema: z.object({
             roomId: z.string().uuid().describe('ID of the room to get exits for')
         })
@@ -64,8 +52,7 @@ Returns all exits regardless of visibility - use look_at_surroundings for percep
 
     MOVE_CHARACTER_TO_ROOM: {
         name: 'move_character_to_room',
-        description: `Move a character to a specific room.
-Updates the character's current_room_id and increments the room's visit count.`,
+        description: 'Move a character to a room and increment its visit count.',
         inputSchema: z.object({
             characterId: z.string().uuid().describe('ID of the character to move'),
             roomId: z.string().uuid().describe('ID of the destination room')

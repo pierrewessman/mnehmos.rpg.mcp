@@ -51,22 +51,7 @@ export const CorpseTools = {
 
     LOOT_CORPSE: {
         name: 'loot_corpse',
-        description: `Loot items from a corpse. Can loot specific items or all at once.
-
-Example (loot specific):
-{
-  "characterId": "hero-1",
-  "corpseId": "corpse-goblin-1",
-  "itemId": "rusty-sword",
-  "quantity": 1
-}
-
-Example (loot all):
-{
-  "characterId": "hero-1",
-  "corpseId": "corpse-goblin-1",
-  "lootAll": true
-}`,
+        description: 'Loot items from a corpse. Specify itemId for specific item, or use lootAll for everything.',
         inputSchema: z.object({
             characterId: z.string().describe('Character doing the looting'),
             corpseId: z.string(),
@@ -78,8 +63,7 @@ Example (loot all):
 
     HARVEST_CORPSE: {
         name: 'harvest_corpse',
-        description: `Harvest resources from a corpse (e.g., dragon scales, wolf pelts).
-May require a skill check depending on the resource.`,
+        description: 'Harvest resources from a corpse (scales, pelts). May require skill check.',
         inputSchema: z.object({
             characterId: z.string(),
             corpseId: z.string(),
@@ -350,7 +334,7 @@ export async function handleHarvestCorpse(args: unknown, _ctx: SessionContext) {
         parsed.corpseId,
         parsed.resourceType,
         parsed.characterId,
-        skillCheck
+        { skillCheck }
     );
 
     return {

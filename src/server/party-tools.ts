@@ -56,13 +56,7 @@ Example:
 
     GET_PARTY: {
         name: 'get_party',
-        description: `Get a party with all member details embedded.
-
-Returns the full party object including:
-- Party metadata (name, location, formation)
-- All members with their character stats
-- Leader and active character highlighted
-- Member count`,
+        description: 'Get a party with all member details, leader, and active character info.',
         inputSchema: z.object({
             partyId: z.string(),
         }),
@@ -101,15 +95,7 @@ Returns the full party object including:
     // Member management
     ADD_PARTY_MEMBER: {
         name: 'add_party_member',
-        description: `Add a character to a party.
-
-Roles:
-- leader: Party leader (only one per party)
-- member: Full party member
-- companion: NPC ally traveling with party
-- hireling: Paid NPC service
-- prisoner: Captured enemy/NPC
-- mount: Animal companion`,
+        description: 'Add a character to a party with role (leader, member, companion, hireling, prisoner, mount).',
         inputSchema: z.object({
             partyId: z.string(),
             characterId: z.string(),
@@ -170,12 +156,7 @@ Roles:
     // Context for LLM
     GET_PARTY_CONTEXT: {
         name: 'get_party_context',
-        description: `Get focused party context optimized for LLM system prompts.
-
-Verbosity levels:
-- minimal: ~150 tokens (party name, member names, active character)
-- standard: ~400 tokens (above + HP, roles, location, quest)
-- detailed: ~800 tokens (above + full stats, recent events)`,
+        description: 'Get party context for LLM prompts. Verbosity: minimal (~150 tokens), standard (~400), or detailed (~800).',
         inputSchema: z.object({
             partyId: z.string(),
             verbosity: z.enum(['minimal', 'standard', 'detailed']).optional().default('standard'),
@@ -194,16 +175,7 @@ Verbosity levels:
     // Party Position & Movement
     MOVE_PARTY: {
         name: 'move_party',
-        description: `Move a party to a new location on the world map. Supports moving to coordinates or to a POI (structure).
-
-Example:
-{
-  "partyId": "party-uuid",
-  "targetX": 60,
-  "targetY": 70,
-  "locationName": "Rivendell",
-  "poiId": "structure-uuid"
-}`,
+        description: 'Move a party to world map coordinates or POI. Updates location name and optional POI reference.',
         inputSchema: z.object({
             partyId: z.string(),
             targetX: z.number().int().nonnegative(),

@@ -8,7 +8,7 @@
 
 import { ToolRegistry, ToolMetadata, ToolCategory } from './tool-metadata.js';
 
-// Import all tool definitions
+// Import all tool definitions (minimal schemas for token efficiency)
 import { Tools, handleGenerateWorld, handleGetWorldState, handleApplyMapPatch, handleGetWorldMapOverview, handleGetRegionMap, handleGetWorldTiles, handlePreviewMapPatch, handleFindValidPoiLocation, handleSuggestPoiLocations } from './tools.js';
 import { CombatTools, handleCreateEncounter, handleGetEncounterState, handleExecuteCombatAction, handleAdvanceTurn, handleEndEncounter, handleLoadEncounter, handleRollDeathSave, handleExecuteLairAction } from './combat-tools.js';
 import { CRUDTools, handleCreateWorld, handleGetWorld, handleListWorlds, handleDeleteWorld, handleCreateCharacter, handleGetCharacter, handleUpdateCharacter, handleListCharacters, handleDeleteCharacter, handleUpdateWorldEnvironment } from './crud-tools.js';
@@ -1166,6 +1166,7 @@ export function buildToolRegistry(): ToolRegistry {
       schema: ImprovisationTools.GET_SYNTHESIZED_SPELLS.inputSchema,
       handler: handleGetSynthesizedSpells
     }
+    // Note: search_tools and load_tool_schema are registered separately in index.ts with full handlers
   };
 
   return cachedRegistry;

@@ -23,14 +23,7 @@ export function setWorldPubSub(instance: PubSub) {
 export const Tools = {
     GENERATE_WORLD: {
         name: 'generate_world',
-        description: `Generates a new RPG world with the specified parameters.
-        
-Examples:
-{
-  "seed": "campaign-2024",
-  "width": 50,
-  "height": 50
-}`,
+        description: 'Generate a new procedural RPG world with seed, width, and height parameters.',
         inputSchema: z.object({
             seed: z.string().describe('Seed for random number generation'),
             width: z.number().int().min(10).max(1000).describe('Width of the world grid'),
@@ -46,18 +39,7 @@ Examples:
     },
     APPLY_MAP_PATCH: {
         name: 'apply_map_patch',
-        description: `Applies a DSL patch script to the current world.
-
-IMPORTANT: Structure placements are validated against terrain. Cities, towns, villages cannot be placed in water (ocean, lake) or on glaciers. Use find_valid_poi_location to get suitable coordinates first.
-
-Supported Commands:
-- ADD_STRUCTURE type x y (e.g., "ADD_STRUCTURE town 12 15")
-- SET_BIOME type x y (e.g., "SET_BIOME forest 10 10")
-- EDIT_TILE x y elevation (e.g., "EDIT_TILE 5 5 0.8")
-
-Example Script:
-ADD_STRUCTURE city 25 25
-SET_BIOME mountain 26 25`,
+        description: 'Apply DSL commands to modify the world map. Use find_valid_poi_location first for structure placement.',
         inputSchema: z.object({
             worldId: z.string().describe('The ID of the world to patch'),
             script: z.string().describe('The DSL script containing patch commands.')
@@ -95,14 +77,7 @@ SET_BIOME mountain 26 25`,
     },
     FIND_VALID_POI_LOCATION: {
         name: 'find_valid_poi_location',
-        description: `Finds valid locations for placing a POI/structure based on terrain and preferences.
-
-Use this BEFORE calling apply_map_patch to get coordinates that are actually valid for the structure type. Returns multiple candidate locations ranked by suitability score.
-
-Examples:
-- Find location for a city near water: { "worldId": "...", "poiType": "city", "nearWater": true }
-- Find location for a dungeon in mountains: { "worldId": "...", "poiType": "dungeon", "preferredBiomes": ["taiga", "tundra"] }
-- Find 5 possible town locations: { "worldId": "...", "poiType": "town", "count": 5 }`,
+        description: 'Find terrain-valid locations for placing a POI/structure. Returns ranked candidates by suitability.',
         inputSchema: z.object({
             worldId: z.string().describe('The ID of the world'),
             poiType: z.enum(['city', 'town', 'village', 'castle', 'ruins', 'dungeon', 'temple']).describe('Type of POI to place'),
@@ -116,16 +91,7 @@ Examples:
     },
     SUGGEST_POI_LOCATIONS: {
         name: 'suggest_poi_locations',
-        description: `Returns a batch of suggested locations for multiple POI types at once. Useful for initial world setup.
-
-Example: Get suggestions for 3 cities and 5 towns:
-{
-  "worldId": "...",
-  "requests": [
-    { "poiType": "city", "count": 3, "nearWater": true },
-    { "poiType": "town", "count": 5 }
-  ]
-}`,
+        description: 'Batch suggest locations for multiple POI types at once. Returns DSL script for easy application.',
         inputSchema: z.object({
             worldId: z.string().describe('The ID of the world'),
             requests: z.array(z.object({

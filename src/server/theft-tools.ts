@@ -51,8 +51,7 @@ Example:
 
     CHECK_STOLEN_ITEMS_ON_CHARACTER: {
         name: 'check_stolen_items_on_character',
-        description: `Check if a character is carrying any stolen items.
-Useful for guard searches, merchant inspections, etc.`,
+        description: 'Check if a character carries stolen items. Useful for guard searches.',
         inputSchema: z.object({
             characterId: z.string(),
             checkerId: z.string().optional().describe('The NPC/guard doing the checking')
@@ -61,10 +60,7 @@ Useful for guard searches, merchant inspections, etc.`,
 
     CHECK_ITEM_RECOGNITION: {
         name: 'check_item_recognition',
-        description: `Check if an NPC recognizes a stolen item.
-- Original owner ALWAYS recognizes their items
-- Guards have chance based on bounty/heat level
-- Other NPCs rarely recognize unless item is famous`,
+        description: 'Check if NPC recognizes stolen item. Owner always recognizes; guards check vs heat/bounty.',
         inputSchema: z.object({
             npcId: z.string().describe('NPC who might recognize the item'),
             characterId: z.string().describe('Character carrying the item'),
@@ -74,9 +70,7 @@ Useful for guard searches, merchant inspections, etc.`,
 
     SELL_TO_FENCE: {
         name: 'sell_to_fence',
-        description: `Sell a stolen item to a fence NPC.
-Fences pay reduced prices but don't ask questions.
-After cooldown period, the stolen flag is removed.`,
+        description: 'Sell stolen item to a fence NPC for reduced price. Clears stolen flag after cooldown.',
         inputSchema: z.object({
             sellerId: z.string(),
             fenceId: z.string(),

@@ -15,6 +15,7 @@ import {
 } from '../engine/magic/aura.js';
 import { startConcentration, breakConcentration } from '../engine/magic/concentration.js';
 import { CreateAuraRequestSchema, AuraTriggerSchema, AuraState, AuraEffectResult } from '../schema/aura.js';
+import { Token } from '../schema/encounter.js';
 
 /**
  * Aura Management Tools
@@ -148,7 +149,7 @@ export async function handleCreateAura(args: unknown, _ctx: SessionContext) {
 /**
  * Handle get active auras
  */
-export async function handleGetActiveAuras(args: unknown, _ctx: SessionContext) {
+export async function handleGetActiveAuras(_args: unknown, _ctx: SessionContext) {
     const { auraRepo } = ensureDb();
     const auras = getActiveAuras(auraRepo);
 
@@ -185,7 +186,12 @@ export async function handleGetAurasAffectingCharacter(args: unknown, _ctx: Sess
         throw new Error(`Encounter ${parsed.encounterId} not found`);
     }
 
-    const target = encounter.tokens.find(t => t.id === parsed.characterId);
+    // Parse tokens from JSON string (EncounterRow stores as string)
+    const tokens: Token[] = typeof encounter.tokens === 'string' 
+        ? JSON.parse(encounter.tokens) 
+        : encounter.tokens;
+
+    const target = tokens.find(t => t.id === parsed.characterId);
     if (!target) {
         throw new Error(`Character ${parsed.characterId} not found in encounter`);
     }
@@ -203,7 +209,7 @@ export async function handleGetAurasAffectingCharacter(args: unknown, _ctx: Sess
 
     // Get auras at the target's position
     const { getAurasAtPosition } = await import('../engine/magic/aura.js');
-    const affectingAuras = getAurasAtPosition(encounter.tokens, target.position, auraRepo);
+    const affectingAuras = getAurasAtPosition(tokens, target.position, auraRepo);
 
     if (affectingAuras.length === 0) {
         return {
@@ -220,7 +226,7 @@ export async function handleGetAurasAffectingCharacter(args: unknown, _ctx: Sess
         content: [
             {
                 type: 'text' as const,
-                text: formatAffectingAuras(target.name || parsed.characterId, affectingAuras, encounter.tokens),
+                text: formatAffectingAuras(target.name || parsed.characterId, affectingAuras, tokens),
             },
         ],
     };
@@ -238,8 +244,13 @@ export async function handleProcessAuraEffects(args: unknown, _ctx: SessionConte
         throw new Error(`Encounter ${parsed.encounterId} not found`);
     }
 
+    // Parse tokens from JSON string (EncounterRow stores as string)
+    const tokens: Token[] = typeof encounter.tokens === 'string' 
+        ? JSON.parse(encounter.tokens) 
+        : encounter.tokens;
+
     const results = checkAuraEffectsForTarget(
-        encounter.tokens,
+        tokens,
         parsed.targetId,
         parsed.trigger,
         auraRepo
@@ -260,7 +271,7 @@ export async function handleProcessAuraEffects(args: unknown, _ctx: SessionConte
         content: [
             {
                 type: 'text' as const,
-                text: formatAuraEffectResults(results, encounter.tokens),
+                text: formatAuraEffectResults(results, tokens),
             },
         ],
     };
