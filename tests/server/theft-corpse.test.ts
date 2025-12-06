@@ -1757,3 +1757,168 @@ describe('Category 14: Corpse Currency Looting', () => {
         expect(found?.currencyLooted).toBe(true);
     });
 });
+
+// ============================================================================
+// CATEGORY 15: HARVEST WITH ITEM CREATION
+// ============================================================================
+describe('Category 15: Harvest With Item Creation', () => {
+
+    test('15.1 - harvest without createItem (narrative only)', () => {
+        const enemy = createCharacter({ name: 'Wolf Corpse' });
+        const hunter = createCharacter({ name: 'Hunter' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        // Set harvestable resources
+        const resources = [{ resourceType: 'wolf pelt', quantity: 1, harvested: false }];
+        db.prepare('UPDATE corpses SET harvestable = 1, harvestable_resources = ? WHERE id = ?')
+            .run(JSON.stringify(resources), corpse.id);
+
+        const result = corpseRepo.harvestResource(corpse.id, 'wolf pelt', hunter.id);
+
+        expect(result.success).toBe(true);
+        expect(result.quantity).toBe(1);
+        expect(result.transferred).toBe(false);
+        expect(result.itemId).toBeUndefined();
+
+        // Hunter should NOT have the item in inventory
+        const inventory = invRepo.getInventory(hunter.id);
+        expect(inventory.items.length).toBe(0);
+    });
+
+    test('15.2 - harvest with createItem adds to harvester inventory', () => {
+        const enemy = createCharacter({ name: 'Harvest Wolf' });
+        const hunter = createCharacter({ name: 'Item Hunter' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const resources = [{ resourceType: 'wolf fang', quantity: 3, harvested: false }];
+        db.prepare('UPDATE corpses SET harvestable = 1, harvestable_resources = ? WHERE id = ?')
+            .run(JSON.stringify(resources), corpse.id);
+
+        const result = corpseRepo.harvestResource(corpse.id, 'wolf fang', hunter.id, { createItem: true });
+
+        expect(result.success).toBe(true);
+        expect(result.quantity).toBe(3);
+        expect(result.transferred).toBe(true);
+        expect(result.itemId).toBeDefined();
+
+        // Hunter should have the item in inventory
+        const inventory = invRepo.getInventory(hunter.id);
+        expect(inventory.items.length).toBe(1);
+        expect(inventory.items[0].itemId).toBe(result.itemId);
+        expect(inventory.items[0].quantity).toBe(3);
+    });
+
+    test('15.3 - harvest with createItem creates item in items table', () => {
+        const enemy = createCharacter({ name: 'Dragon Corpse' });
+        const crafter = createCharacter({ name: 'Crafter' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const resources = [{ resourceType: 'dragon scale', quantity: 5, harvested: false }];
+        db.prepare('UPDATE corpses SET harvestable = 1, harvestable_resources = ? WHERE id = ?')
+            .run(JSON.stringify(resources), corpse.id);
+
+        const result = corpseRepo.harvestResource(corpse.id, 'dragon scale', crafter.id, { createItem: true });
+
+        expect(result.success).toBe(true);
+
+        // Verify item exists in items table
+        const itemRow = db.prepare('SELECT * FROM items WHERE id = ?').get(result.itemId);
+        expect(itemRow).toBeDefined();
+        expect((itemRow as any).name).toBe('dragon scale');
+        expect((itemRow as any).type).toBe('misc');
+    });
+
+    test('15.4 - harvest with skill check passes', () => {
+        const enemy = createCharacter({ name: 'Skill Wolf' });
+        const skilled = createCharacter({ name: 'Skilled Hunter' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const resources = [{ resourceType: 'pristine hide', quantity: 1, harvested: false }];
+        db.prepare('UPDATE corpses SET harvestable = 1, harvestable_resources = ? WHERE id = ?')
+            .run(JSON.stringify(resources), corpse.id);
+
+        const result = corpseRepo.harvestResource(corpse.id, 'pristine hide', skilled.id, {
+            skillCheck: { roll: 18, dc: 15 },
+            createItem: true
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.transferred).toBe(true);
+    });
+
+    test('15.5 - harvest with skill check fails', () => {
+        const enemy = createCharacter({ name: 'Failed Wolf' });
+        const unskilled = createCharacter({ name: 'Unskilled Hunter' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const resources = [{ resourceType: 'delicate organ', quantity: 1, harvested: false }];
+        db.prepare('UPDATE corpses SET harvestable = 1, harvestable_resources = ? WHERE id = ?')
+            .run(JSON.stringify(resources), corpse.id);
+
+        const result = corpseRepo.harvestResource(corpse.id, 'delicate organ', unskilled.id, {
+            skillCheck: { roll: 8, dc: 15 }
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.reason).toContain('Failed skill check');
+        expect(result.transferred).toBe(false);
+
+        // Resource should NOT be marked as harvested
+        const updated = corpseRepo.findById(corpse.id);
+        const resource = updated?.harvestableResources.find(r => r.resourceType === 'delicate organ');
+        expect(resource?.harvested).toBe(false);
+    });
+
+    test('15.6 - default harvest behavior is no transfer (backwards compatible)', () => {
+        const enemy = createCharacter({ name: 'Compat Wolf' });
+        const compat = createCharacter({ name: 'Compat Hunter' });
+
+        const corpse = corpseRepo.createFromDeath(
+            enemy.id,
+            enemy.name,
+            'enemy',
+            { worldId: 'test-world' }
+        );
+
+        const resources = [{ resourceType: 'generic hide', quantity: 1, harvested: false }];
+        db.prepare('UPDATE corpses SET harvestable = 1, harvestable_resources = ? WHERE id = ?')
+            .run(JSON.stringify(resources), corpse.id);
+
+        // Call without options (backwards compatible)
+        const result = corpseRepo.harvestResource(corpse.id, 'generic hide', compat.id);
+
+        expect(result.success).toBe(true);
+        expect(result.transferred).toBe(false);
+        expect(result.itemId).toBeUndefined();
+    });
+});

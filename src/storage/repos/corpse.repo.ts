@@ -437,36 +437,42 @@ export class CorpseRepository {
 
     /**
      * Harvest a resource from a corpse
+     * @param createItem - If true, creates an item in the items table and adds to harvester inventory
      */
-    harvestResource(corpseId: string, resourceType: string, _harvesterId: string, skillCheck?: { roll: number; dc: number }): {
+    harvestResource(corpseId: string, resourceType: string, harvesterId: string, options?: {
+        skillCheck?: { roll: number; dc: number };
+        createItem?: boolean;
+    }): {
         success: boolean;
         quantity: number;
         resourceType: string;
+        itemId?: string;
+        transferred: boolean;
         reason?: string;
     } {
         const corpse = this.findById(corpseId);
         if (!corpse) {
-            return { success: false, quantity: 0, resourceType, reason: 'Corpse not found' };
+            return { success: false, quantity: 0, resourceType, transferred: false, reason: 'Corpse not found' };
         }
 
         if (!corpse.harvestable) {
-            return { success: false, quantity: 0, resourceType, reason: 'Corpse has no harvestable resources' };
+            return { success: false, quantity: 0, resourceType, transferred: false, reason: 'Corpse has no harvestable resources' };
         }
 
         if (corpse.state === 'skeletal' || corpse.state === 'gone') {
-            return { success: false, quantity: 0, resourceType, reason: 'Corpse too decayed to harvest' };
+            return { success: false, quantity: 0, resourceType, transferred: false, reason: 'Corpse too decayed to harvest' };
         }
 
         const resources = corpse.harvestableResources;
         const resource = resources.find(r => r.resourceType === resourceType && !r.harvested);
         if (!resource) {
-            return { success: false, quantity: 0, resourceType, reason: 'Resource not available or already harvested' };
+            return { success: false, quantity: 0, resourceType, transferred: false, reason: 'Resource not available or already harvested' };
         }
 
         // Check DC if required
-        if (skillCheck) {
-            if (skillCheck.roll < skillCheck.dc) {
-                return { success: false, quantity: 0, resourceType, reason: `Failed skill check (${skillCheck.roll} vs DC ${skillCheck.dc})` };
+        if (options?.skillCheck) {
+            if (options.skillCheck.roll < options.skillCheck.dc) {
+                return { success: false, quantity: 0, resourceType, transferred: false, reason: `Failed skill check (${options.skillCheck.roll} vs DC ${options.skillCheck.dc})` };
             }
         }
 
@@ -480,7 +486,33 @@ export class CorpseRepository {
         `);
         stmt.run(JSON.stringify(resources), now, corpseId);
 
-        return { success: true, quantity: resource.quantity, resourceType };
+        // Optionally create item and add to harvester inventory
+        let itemId: string | undefined;
+        let transferred = false;
+        if (options?.createItem) {
+            // Create the item in items table
+            itemId = uuid();
+            const createStmt = this.db.prepare(`
+                INSERT INTO items (id, name, description, type, weight, value, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `);
+            createStmt.run(
+                itemId,
+                resourceType, // Use resource type as item name (e.g., "wolf pelt")
+                `Harvested ${resourceType} from a corpse`,
+                'misc',
+                1,
+                10, // Default value, could be parameterized
+                now,
+                now
+            );
+
+            // Add to harvester inventory
+            this.inventoryRepo.addItem(harvesterId, itemId, resource.quantity);
+            transferred = true;
+        }
+
+        return { success: true, quantity: resource.quantity, resourceType, itemId, transferred };
     }
 
     /**
