@@ -28,6 +28,8 @@ import { TheftTools, handleStealItem, handleCheckItemStolen, handleCheckStolenIt
 import { CorpseTools, handleGetCorpse, handleGetCorpseByCharacter, handleListCorpsesInEncounter, handleListCorpsesNearby, handleLootCorpse, handleHarvestCorpse, handleCreateCorpse, handleGenerateLoot, handleGetCorpseInventory, handleCreateLootTable, handleGetLootTable, handleListLootTables, handleAdvanceCorpseDecay, handleCleanupCorpses } from './corpse-tools.js';
 import { ImprovisationTools, handleResolveImprovisedStunt, handleApplyCustomEffect, handleGetCustomEffects, handleRemoveCustomEffect, handleProcessEffectTriggers, handleAdvanceEffectDurations, handleAttemptArcaneSynthesis, handleGetSynthesizedSpells } from './improvisation-tools.js';
 import { SpatialTools, handleLookAtSurroundings, handleGenerateRoomNode, handleGetRoomExits, handleMoveCharacterToRoom } from './spatial-tools.js';
+import { BatchTools, handleBatchCreateCharacters, handleBatchCreateNpcs, handleBatchDistributeItems } from './batch-tools.js';
+import { WorkflowTools, handleExecuteWorkflow, handleListTemplates, handleGetTemplate } from './workflow-tools.js';
 
 // Helper to create metadata
 // deferLoading defaults to true (most tools should be deferred)
@@ -1218,6 +1220,52 @@ export function buildToolRegistry(): ToolRegistry {
         ['Learned synthesized spells listing'], false, 'medium'),
       schema: ImprovisationTools.GET_SYNTHESIZED_SPELLS.inputSchema,
       handler: handleGetSynthesizedSpells
+    },
+
+    // === BATCH TOOLS ===
+    [BatchTools.BATCH_CREATE_CHARACTERS.name]: {
+      metadata: meta(BatchTools.BATCH_CREATE_CHARACTERS.name, BatchTools.BATCH_CREATE_CHARACTERS.description, 'batch',
+        ['batch', 'character', 'create', 'multiple', 'party', 'squad'],
+        ['Batch character creation', 'Party generation'], false, 'medium'),
+      schema: BatchTools.BATCH_CREATE_CHARACTERS.inputSchema,
+      handler: handleBatchCreateCharacters
+    },
+    [BatchTools.BATCH_CREATE_NPCS.name]: {
+      metadata: meta(BatchTools.BATCH_CREATE_NPCS.name, BatchTools.BATCH_CREATE_NPCS.description, 'batch',
+        ['batch', 'npc', 'create', 'multiple', 'settlement', 'population'],
+        ['Batch NPC generation', 'Settlement population'], false, 'medium'),
+      schema: BatchTools.BATCH_CREATE_NPCS.inputSchema,
+      handler: handleBatchCreateNpcs
+    },
+    [BatchTools.BATCH_DISTRIBUTE_ITEMS.name]: {
+      metadata: meta(BatchTools.BATCH_DISTRIBUTE_ITEMS.name, BatchTools.BATCH_DISTRIBUTE_ITEMS.description, 'batch',
+        ['batch', 'item', 'distribute', 'loot', 'equipment', 'give'],
+        ['Batch item distribution', 'Loot sharing'], false, 'medium'),
+      schema: BatchTools.BATCH_DISTRIBUTE_ITEMS.inputSchema,
+      handler: handleBatchDistributeItems
+    },
+
+    // === WORKFLOW TOOLS ===
+    [WorkflowTools.EXECUTE_WORKFLOW.name]: {
+      metadata: meta(WorkflowTools.EXECUTE_WORKFLOW.name, WorkflowTools.EXECUTE_WORKFLOW.description, 'batch',
+        ['workflow', 'execute', 'automation', 'template', 'batch'],
+        ['Workflow execution', 'Multi-step automation'], false, 'high'),
+      schema: WorkflowTools.EXECUTE_WORKFLOW.inputSchema,
+      handler: handleExecuteWorkflow
+    },
+    [WorkflowTools.LIST_TEMPLATES.name]: {
+      metadata: meta(WorkflowTools.LIST_TEMPLATES.name, WorkflowTools.LIST_TEMPLATES.description, 'batch',
+        ['workflow', 'template', 'list', 'available'],
+        ['Template listing'], false, 'low'),
+      schema: WorkflowTools.LIST_TEMPLATES.inputSchema,
+      handler: handleListTemplates
+    },
+    [WorkflowTools.GET_TEMPLATE.name]: {
+      metadata: meta(WorkflowTools.GET_TEMPLATE.name, WorkflowTools.GET_TEMPLATE.description, 'batch',
+        ['workflow', 'template', 'get', 'details'],
+        ['Template details'], false, 'low'),
+      schema: WorkflowTools.GET_TEMPLATE.inputSchema,
+      handler: handleGetTemplate
     }
     // Note: search_tools and load_tool_schema are registered separately in index.ts with full handlers
   };
