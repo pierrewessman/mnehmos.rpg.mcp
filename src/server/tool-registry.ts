@@ -10,7 +10,7 @@ import { ToolRegistry, ToolMetadata, ToolCategory } from './tool-metadata.js';
 
 // Import all tool definitions (minimal schemas for token efficiency)
 import { Tools, handleGenerateWorld, handleGetWorldState, handleApplyMapPatch, handleGetWorldMapOverview, handleGetRegionMap, handleGetWorldTiles, handlePreviewMapPatch, handleFindValidPoiLocation, handleSuggestPoiLocations } from './tools.js';
-import { CombatTools, handleCreateEncounter, handleGetEncounterState, handleExecuteCombatAction, handleAdvanceTurn, handleEndEncounter, handleLoadEncounter, handleRollDeathSave, handleExecuteLairAction, handleRenderMap, handleCalculateAoe, handleUpdateTerrain, handlePlaceProp, handleMeasureDistance, handleGenerateTerrainPatch } from './combat-tools.js';
+import { CombatTools, handleCreateEncounter, handleGetEncounterState, handleExecuteCombatAction, handleAdvanceTurn, handleEndEncounter, handleLoadEncounter, handleRollDeathSave, handleExecuteLairAction, handleRenderMap, handleCalculateAoe, handleUpdateTerrain, handlePlaceProp, handleMeasureDistance, handleGenerateTerrainPatch, handleGenerateTerrainPattern } from './combat-tools.js';
 import { CRUDTools, handleCreateWorld, handleGetWorld, handleListWorlds, handleDeleteWorld, handleCreateCharacter, handleGetCharacter, handleUpdateCharacter, handleListCharacters, handleDeleteCharacter, handleUpdateWorldEnvironment } from './crud-tools.js';
 import { InventoryTools, handleCreateItemTemplate, handleGiveItem, handleRemoveItem, handleEquipItem, handleUnequipItem, handleGetInventory, handleGetItem, handleListItems, handleSearchItems, handleUpdateItem, handleDeleteItem, handleTransferItem, handleUseItem, handleGetInventoryDetailed } from './inventory-tools.js';
 import { QuestTools, handleCreateQuest, handleGetQuest, handleListQuests, handleAssignQuest, handleUpdateObjective, handleCompleteObjective, handleCompleteQuest, handleGetQuestLog } from './quest-tools.js';
@@ -222,6 +222,13 @@ export function buildToolRegistry(): ToolRegistry {
         ['Procedural terrain generation', 'Biome presets', 'Mass terrain placement'], false, 'medium'),
       schema: CombatTools.GENERATE_TERRAIN_PATCH.inputSchema,
       handler: handleGenerateTerrainPatch
+    },
+    [CombatTools.GENERATE_TERRAIN_PATTERN.name]: {
+      metadata: meta(CombatTools.GENERATE_TERRAIN_PATTERN.name, CombatTools.GENERATE_TERRAIN_PATTERN.description, 'combat',
+        ['terrain', 'pattern', 'generate', 'river', 'canyon', 'arena', 'valley', 'geometric', 'layout'],
+        ['Geometric terrain patterns', 'Consistent layouts', 'River valleys, canyons, arenas'], false, 'medium'),
+      schema: CombatTools.GENERATE_TERRAIN_PATTERN.inputSchema,
+      handler: handleGenerateTerrainPattern
     },
 
     // === CHARACTER/CRUD TOOLS ===

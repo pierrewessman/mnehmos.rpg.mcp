@@ -16,6 +16,7 @@ import { CharacterRepository } from '../storage/repos/character.repo.js';
 import { ConcentrationRepository } from '../storage/repos/concentration.repo.js';
 import { startConcentration, checkConcentration, breakConcentration } from '../engine/magic/concentration.js';
 import type { Character } from '../schema/character.js';
+import { getPatternGenerator, PATTERN_DESCRIPTIONS } from './terrain-patterns.js';
 
 // Global combat state (in-memory for MVP)
 let pubsub: PubSub | null = null;
@@ -876,7 +877,45 @@ Example - Dungeon room:
                 .describe('How densely packed (0.1=sparse, 1.0=very dense)'),
             seed: z.string().optional().describe('Seed for reproducible generation'),
             clearCenter: z.boolean().optional().default(false)
-                .describe('Keep the center area clear (for player spawn)')
+                .describe('Keep the center area clear (for player spawn)'),
+            pattern: z.enum(['river_valley', 'canyon', 'arena', 'mountain_pass']).optional()
+                .describe('Use a terrain pattern template instead of biome generation')
+        })
+    },
+    
+    /**
+     * Generate terrain with a specific geometric pattern
+     */
+    GENERATE_TERRAIN_PATTERN: {
+        name: 'generate_terrain_pattern',
+        description: `Generate terrain using a geometric pattern template for consistent layouts.
+
+PATTERNS:
+- river_valley: Parallel cliff walls on east/west edges, 3-wide river in center
+- canyon: Two parallel walls running east-west with open pass between
+- arena: Circular wall perimeter enclosing fighting area
+- mountain_pass: Narrowing corridor toward center, wider at edges
+
+This tool generates consistent terrain layouts every time, unlike biome-based generation.
+
+Example:
+{
+  "encounterId": "enc-1",
+  "pattern": "river_valley",
+  "origin": { "x": 0, "y": 0 },
+  "width": 25,
+  "height": 40
+}`,
+        inputSchema: z.object({
+            encounterId: z.string().describe('The ID of the encounter'),
+            pattern: z.enum(['river_valley', 'canyon', 'arena', 'mountain_pass'])
+                .describe('Terrain pattern to generate'),
+            origin: z.object({
+                x: z.number().int(),
+                y: z.number().int()
+            }).describe('Top-left corner of the pattern'),
+            width: z.number().int().min(10).max(100).describe('Width of the pattern area'),
+            height: z.number().int().min(10).max(100).describe('Height of the pattern area')
         })
     }
 } as const;
@@ -2178,6 +2217,49 @@ export async function handleGenerateTerrainPatch(args: unknown, ctx: SessionCont
         state.props = [];
     }
 
+    // If pattern is specified, use pattern generator instead of biome
+    if (parsed.pattern) {
+        const patternGen = getPatternGenerator(parsed.pattern);
+        const result = patternGen(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height);
+        
+        // Add generated terrain to state
+        state.terrain!.obstacles.push(...result.obstacles);
+        if (!state.terrain!.water) state.terrain!.water = [];
+        state.terrain!.water.push(...result.water);
+        state.terrain!.difficultTerrain!.push(...result.difficultTerrain);
+        
+        // Add props
+        for (const prop of result.props) {
+            state.props!.push({
+                id: `prop-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                label: prop.label,
+                position: prop.position,
+                heightFeet: prop.heightFeet,
+                propType: prop.propType as any,
+                cover: prop.cover as any,
+                description: PATTERN_DESCRIPTIONS[parsed.pattern]
+            });
+        }
+        
+        // Persist state
+        const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');
+        const repo = new EncounterRepository(db);
+        repo.saveState(parsed.encounterId, state);
+        
+        const stateJson = buildStateJson(state, parsed.encounterId);
+        const output = `🏔️ TERRAIN PATTERN GENERATED: ${parsed.pattern.toUpperCase()}\n` +
+            `📐 Area: (${parsed.origin.x},${parsed.origin.y}) to (${parsed.origin.x + parsed.width},${parsed.origin.y + parsed.height})\n` +
+            `🧱 Obstacles: ${result.obstacles.length}\n` +
+            `💧 Water: ${result.water.length}\n` +
+            `🌿 Difficult terrain: ${result.difficultTerrain.length}\n` +
+            `🏗️ Props: ${result.props.length}\n\n` +
+            `<!-- STATE_JSON\n${JSON.stringify(stateJson)}\nSTATE_JSON -->`;
+        
+        return {
+            content: [{ type: 'text' as const, text: output }]
+        };
+    }
+
     // Simple noise function (seeded)
     const seedStr = parsed.seed || `${parsed.biome}-${Date.now()}`;
     let seedNum = 0;
@@ -2375,5 +2457,84 @@ export async function handleGenerateTerrainPatch(args: unknown, ctx: SessionCont
             type: 'text' as const,
             text: output
         }]
+    };
+}
+
+/**
+ * Handle generating terrain with a specific pattern template
+ */
+export async function handleGenerateTerrainPattern(args: unknown, ctx: SessionContext) {
+    const parsed = CombatTools.GENERATE_TERRAIN_PATTERN.inputSchema.parse(args);
+    let engine = getCombatManager().get(`${ctx.sessionId}:${parsed.encounterId}`);
+
+    // Auto-load from database if not in memory
+    if (!engine) {
+        const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');
+        const repo = new EncounterRepository(db);
+        const state = repo.loadState(parsed.encounterId);
+
+        if (!state) {
+            throw new Error(`Encounter ${parsed.encounterId} not found.`);
+        }
+
+        engine = new CombatEngine(parsed.encounterId, pubsub || undefined);
+        engine.loadState(state);
+        getCombatManager().create(`${ctx.sessionId}:${parsed.encounterId}`, engine);
+    }
+
+    const state = engine.getState();
+    if (!state) {
+        throw new Error('No active encounter');
+    }
+
+    // Initialize terrain and props if needed
+    if (!state.terrain) {
+        state.terrain = { obstacles: [], difficultTerrain: [], water: [] };
+    }
+    if (!state.props) {
+        state.props = [];
+    }
+
+    // Generate pattern
+    const patternGen = getPatternGenerator(parsed.pattern);
+    const result = patternGen(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height);
+    
+    // Add generated terrain to state
+    state.terrain.obstacles.push(...result.obstacles);
+    if (!state.terrain.water) state.terrain.water = [];
+    state.terrain.water.push(...result.water);
+    if (!state.terrain.difficultTerrain) state.terrain.difficultTerrain = [];
+    state.terrain.difficultTerrain.push(...result.difficultTerrain);
+    
+    // Add props
+    for (const prop of result.props) {
+        state.props.push({
+            id: `prop-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            label: prop.label,
+            position: prop.position,
+            heightFeet: prop.heightFeet,
+            propType: prop.propType as any,
+            cover: prop.cover as any,
+            description: PATTERN_DESCRIPTIONS[parsed.pattern]
+        });
+    }
+    
+    // Persist state
+    const db = getDb(process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db');
+    const repo = new EncounterRepository(db);
+    repo.saveState(parsed.encounterId, state);
+    
+    const stateJson = buildStateJson(state, parsed.encounterId);
+    const output = `🏔️ TERRAIN PATTERN GENERATED: ${parsed.pattern.toUpperCase()}\n` +
+        `📐 Area: (${parsed.origin.x},${parsed.origin.y}) to (${parsed.origin.x + parsed.width},${parsed.origin.y + parsed.height})\n` +
+        `🧱 Obstacles: ${result.obstacles.length}\n` +
+        `💧 Water: ${result.water.length}\n` +
+        `🌿 Difficult terrain: ${result.difficultTerrain.length}\n` +
+        `🏗️ Props: ${result.props.length}\n\n` +
+        PATTERN_DESCRIPTIONS[parsed.pattern] + `\n\n` +
+        `<!-- STATE_JSON\n${JSON.stringify(stateJson)}\nSTATE_JSON -->`;
+    
+    return {
+        content: [{ type: 'text' as const, text: output }]
     };
 }

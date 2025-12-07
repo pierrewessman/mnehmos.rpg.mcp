@@ -50746,6 +50746,111 @@ function checkAutomaticConcentrationBreak(character, concentrationRepo, characte
   return null;
 }
 
+// dist/server/terrain-patterns.js
+function generateRiverValley(originX, originY, width, height) {
+  const obstacles = [];
+  const water = [];
+  const westWallX = originX + 2;
+  const eastWallX = originX + width - 3;
+  const riverStartX = originX + Math.floor(width / 2) - 1;
+  const riverWidth = 3;
+  for (let y = originY; y < originY + height; y++) {
+    obstacles.push(`${westWallX},${y}`);
+    obstacles.push(`${westWallX + 1},${y}`);
+  }
+  for (let y = originY; y < originY + height; y++) {
+    obstacles.push(`${eastWallX},${y}`);
+    obstacles.push(`${eastWallX - 1},${y}`);
+  }
+  for (let y = originY; y < originY + height; y++) {
+    for (let dx = 0; dx < riverWidth; dx++) {
+      water.push(`${riverStartX + dx},${y}`);
+    }
+  }
+  const props = [
+    { position: `${westWallX},${originY + 2}`, label: "West Cliff", heightFeet: 30, propType: "structure", cover: "full" },
+    { position: `${eastWallX},${originY + 2}`, label: "East Cliff", heightFeet: 30, propType: "structure", cover: "full" }
+  ];
+  return { obstacles, water, difficultTerrain: [], props };
+}
+function generateCanyon(originX, originY, width, height) {
+  const obstacles = [];
+  const northWallY = originY + 3;
+  const southWallY = originY + height - 4;
+  for (let x = originX; x < originX + width; x++) {
+    obstacles.push(`${x},${northWallY}`);
+    obstacles.push(`${x},${northWallY - 1}`);
+  }
+  for (let x = originX; x < originX + width; x++) {
+    obstacles.push(`${x},${southWallY}`);
+    obstacles.push(`${x},${southWallY + 1}`);
+  }
+  const props = [
+    { position: `${originX + Math.floor(width / 2)},${northWallY}`, label: "North Canyon Wall", heightFeet: 25, propType: "structure", cover: "full" },
+    { position: `${originX + Math.floor(width / 2)},${southWallY}`, label: "South Canyon Wall", heightFeet: 25, propType: "structure", cover: "full" }
+  ];
+  return { obstacles, water: [], difficultTerrain: [], props };
+}
+function generateArena(originX, originY, width, height) {
+  const obstacles = [];
+  const centerX = originX + Math.floor(width / 2);
+  const centerY = originY + Math.floor(height / 2);
+  const radius = Math.min(width, height) / 2 - 2;
+  for (let angle = 0; angle < 360; angle += 5) {
+    const rad = angle * Math.PI / 180;
+    const x = Math.round(centerX + radius * Math.cos(rad));
+    const y = Math.round(centerY + radius * Math.sin(rad));
+    const key = `${x},${y}`;
+    if (!obstacles.includes(key)) {
+      obstacles.push(key);
+    }
+  }
+  const props = [
+    { position: `${centerX},${originY + 1}`, label: "Arena North Gate", heightFeet: 15, propType: "structure", cover: "three-quarter" },
+    { position: `${centerX},${originY + height - 2}`, label: "Arena South Gate", heightFeet: 15, propType: "structure", cover: "three-quarter" }
+  ];
+  return { obstacles, water: [], difficultTerrain: [], props };
+}
+function generateMountainPass(originX, originY, width, height) {
+  const obstacles = [];
+  const difficultTerrain = [];
+  const centerY = originY + Math.floor(height / 2);
+  for (let y = originY; y < originY + height; y++) {
+    const distFromCenter = Math.abs(y - centerY);
+    const wallOffset = Math.floor(distFromCenter / 3) + 3;
+    obstacles.push(`${originX + wallOffset},${y}`);
+    obstacles.push(`${originX + width - wallOffset - 1},${y}`);
+    if (distFromCenter > 2) {
+      difficultTerrain.push(`${originX + wallOffset + 1},${y}`);
+      difficultTerrain.push(`${originX + width - wallOffset - 2},${y}`);
+    }
+  }
+  const props = [
+    { position: `${originX + Math.floor(width / 2)},${centerY}`, label: "Pass Chokepoint", heightFeet: 5, propType: "cover", cover: "half" }
+  ];
+  return { obstacles, water: [], difficultTerrain, props };
+}
+function getPatternGenerator(pattern) {
+  switch (pattern) {
+    case "river_valley":
+      return generateRiverValley;
+    case "canyon":
+      return generateCanyon;
+    case "arena":
+      return generateArena;
+    case "mountain_pass":
+      return generateMountainPass;
+    default:
+      return generateCanyon;
+  }
+}
+var PATTERN_DESCRIPTIONS = {
+  river_valley: "Parallel cliff walls on east/west edges with 3-wide river in center",
+  canyon: "Two parallel walls running east-west with open pass between",
+  arena: "Circular wall perimeter enclosing an open fighting area",
+  mountain_pass: "Narrowing corridor toward center, wider at edges"
+};
+
 // dist/server/combat-tools.js
 var pubsub2 = null;
 function setCombatPubSub(instance3) {
@@ -51100,30 +51205,52 @@ function calculateAoE(state, shape, origin, params) {
 var CombatTools = {
   CREATE_ENCOUNTER: {
     name: "create_encounter",
-    description: `Create a new combat encounter with the specified participants.
-Initiative is rolled automatically (1d20 + initiativeBonus).
-Enemy detection is automatic based on ID/name patterns, but you can override with isEnemy.
+    description: `Create a combat encounter with positioned combatants and terrain.
+
+\u{1F4CB} WORKFLOW:
+1. Generate terrain (obstacles, water, difficult)
+2. Add props (buildings, trees, cover)
+3. Place party (safe starting positions)
+4. Place enemies (tactical positions)
+
+\u26A0\uFE0F CRITICAL VERTICALITY RULES:
+- z=0 means "standing on surface at (x,y)" - EVEN ON TOP OF OBSTACLES
+- If obstacles exist at (15,3), placing a unit at {x:15,y:3,z:0} = STANDING ON the obstacle
+- z>0 = FLYING/LEVITATING only. Creatures without flight condition WILL FALL!
+- Do NOT use z values to represent "standing on high ground"
+
+\u2705 CORRECT: Goblin on rock at (15,3) \u2192 position: {x:15, y:3, z:0}
+\u274C WRONG: Goblin on rock \u2192 position: {x:15, y:3, z:25} (will fall!)
+
+\u{1F3D4}\uFE0F TERRAIN GENERATION RULES:
+- Obstacles should CLUSTER to form hills/mountains/caverns
+- Include SLOPES: Adjacent tiles stepping down to ground level
+- Isolated cliffs only if intentionally inaccessible
+- Water must CONNECT (rivers/streams/pools), never isolated tiles
+
+\u{1F4D0} PATTERN TEMPLATES (USE THESE!):
+
+RIVER VALLEY (cliffs on sides, river in middle):
+obstacles: ["5,0","5,1","5,2",...,"5,19"] (west cliff),
+           ["13,0","13,1","13,2",...,"13,19"] (east cliff)
+water: ["8,0","9,0","10,0","8,1","9,1","10,1",...] (3-wide river at x=8,9,10)
+
+CANYON (two parallel walls):
+obstacles: ["0,5","1,5","2,5",...,"9,5"] (north wall),
+           ["0,15","1,15","2,15",...,"9,15"] (south wall)
 
 Example:
 {
   "seed": "battle-1",
+  "terrain": {
+    "obstacles": ["10,5", "11,5", "10,6"],
+    "water": ["5,10", "5,11", "6,11"]
+  },
   "participants": [
-    {
-      "id": "hero-1",
-      "name": "Valeros",
-      "initiativeBonus": 2,
-      "hp": 20,
-      "maxHp": 20,
-      "isEnemy": false
-    },
-    {
-      "id": "goblin-1",
-      "name": "Goblin",
-      "initiativeBonus": 1,
-      "hp": 7,
-      "maxHp": 7,
-      "isEnemy": true
-    }
+    {"id": "hero-1", "name": "Valeros", "hp": 20, "maxHp": 20, "initiativeBonus": 2, 
+     "position": {"x": 15, "y": 15, "z": 0}},
+    {"id": "goblin-1", "name": "Goblin Archer", "hp": 7, "maxHp": 7, "initiativeBonus": 1,
+     "position": {"x": 10, "y": 5, "z": 0}, "isEnemy": true}
   ]
 }`,
     inputSchema: external_exports.object({
@@ -51365,45 +51492,38 @@ Example - Remove obstacles:
     description: `Place an improvised prop/object on the battlefield during combat.
 
 Props are free-form terrain features with rich description that can be interacted with.
-Think: ladders, buggies, train tracks, trees, buildings, towers, cliffs, chandeliers, etc.
+Think: ladders, wagons, trees, buildings, towers, cliffs, chandeliers, etc.
+
+\u26A0\uFE0F HEIGHT SEMANTICS (CRITICAL):
+- heightFeet describes the PROP'S visual/physical height, NOT entity position
+- A 30ft cliff at (5,5) is visually tall 
+- Entities standing ON such a prop use position (5,5, z=0), NOT z=30!
+- The terrain height is implicit in the visualization
+
+\u{1F3D7}\uFE0F PROP TYPES:
+- cliff: Stacked rocky terrain with slopes
+- wall: Stone/brick barriers  
+- bridge: Spanning structures over gaps
+- tree: Vegetation cover
+- stairs: Stepped access to elevation
+- pit: Below-ground areas (negative Y)
 
 Cover Types (D&D 5e):
 - half: +2 AC (waist-high wall, thick furniture)
 - three_quarter: +5 AC (arrow slit, portcullis)
 - full: Total cover (complete obstruction)
 
-Example - Place a climbable tree:
+Example - Climbable cliff with slopes adjacent:
 {
   "encounterId": "encounter-1",
   "position": "15,20",
-  "label": "Large Oak Tree",
+  "label": "Rocky Cliff",
   "propType": "structure",
-  "heightFeet": 30,
+  "heightFeet": 25,
   "cover": "half",
   "climbable": true,
-  "climbDC": 10,
-  "description": "A gnarled oak with thick branches, perfect for climbing or hiding behind"
-}
-
-Example - Place a ladder:
-{
-  "encounterId": "encounter-1",
-  "position": "8,12",
-  "label": "Wooden Ladder",
-  "propType": "climbable",
-  "heightFeet": 15,
-  "climbable": true,
-  "description": "A rickety ladder leading to the upper platform"
-}
-
-Example - Place a wagon for cover:
-{
-  "encounterId": "encounter-1",
-  "position": "25,30",
-  "label": "Overturned Wagon",
-  "propType": "cover",
-  "cover": "three_quarter",
-  "description": "A merchant's wagon flipped on its side, goods scattered around"
+  "climbDC": 12,
+  "description": "A 25ft rocky outcrop. Adjacent tiles (14,20), (16,20) slope down."
 }`,
     inputSchema: external_exports.object({
       encounterId: external_exports.string().describe("The ID of the encounter"),
@@ -51504,7 +51624,42 @@ Example - Dungeon room:
       height: external_exports.number().int().min(5).max(100).describe("Height of the patch in tiles"),
       density: external_exports.number().min(0.1).max(1).default(0.5).describe("How densely packed (0.1=sparse, 1.0=very dense)"),
       seed: external_exports.string().optional().describe("Seed for reproducible generation"),
-      clearCenter: external_exports.boolean().optional().default(false).describe("Keep the center area clear (for player spawn)")
+      clearCenter: external_exports.boolean().optional().default(false).describe("Keep the center area clear (for player spawn)"),
+      pattern: external_exports.enum(["river_valley", "canyon", "arena", "mountain_pass"]).optional().describe("Use a terrain pattern template instead of biome generation")
+    })
+  },
+  /**
+   * Generate terrain with a specific geometric pattern
+   */
+  GENERATE_TERRAIN_PATTERN: {
+    name: "generate_terrain_pattern",
+    description: `Generate terrain using a geometric pattern template for consistent layouts.
+
+PATTERNS:
+- river_valley: Parallel cliff walls on east/west edges, 3-wide river in center
+- canyon: Two parallel walls running east-west with open pass between
+- arena: Circular wall perimeter enclosing fighting area
+- mountain_pass: Narrowing corridor toward center, wider at edges
+
+This tool generates consistent terrain layouts every time, unlike biome-based generation.
+
+Example:
+{
+  "encounterId": "enc-1",
+  "pattern": "river_valley",
+  "origin": { "x": 0, "y": 0 },
+  "width": 25,
+  "height": 40
+}`,
+    inputSchema: external_exports.object({
+      encounterId: external_exports.string().describe("The ID of the encounter"),
+      pattern: external_exports.enum(["river_valley", "canyon", "arena", "mountain_pass"]).describe("Terrain pattern to generate"),
+      origin: external_exports.object({
+        x: external_exports.number().int(),
+        y: external_exports.number().int()
+      }).describe("Top-left corner of the pattern"),
+      width: external_exports.number().int().min(10).max(100).describe("Width of the pattern area"),
+      height: external_exports.number().int().min(10).max(100).describe("Height of the pattern area")
     })
   }
 };
@@ -52534,6 +52689,43 @@ async function handleGenerateTerrainPatch(args, ctx) {
   if (!state.props) {
     state.props = [];
   }
+  if (parsed.pattern) {
+    const patternGen = getPatternGenerator(parsed.pattern);
+    const result = patternGen(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height);
+    state.terrain.obstacles.push(...result.obstacles);
+    if (!state.terrain.water)
+      state.terrain.water = [];
+    state.terrain.water.push(...result.water);
+    state.terrain.difficultTerrain.push(...result.difficultTerrain);
+    for (const prop of result.props) {
+      state.props.push({
+        id: `prop-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        label: prop.label,
+        position: prop.position,
+        heightFeet: prop.heightFeet,
+        propType: prop.propType,
+        cover: prop.cover,
+        description: PATTERN_DESCRIPTIONS[parsed.pattern]
+      });
+    }
+    const db2 = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+    const repo2 = new EncounterRepository(db2);
+    repo2.saveState(parsed.encounterId, state);
+    const stateJson2 = buildStateJson(state, parsed.encounterId);
+    const output2 = `\u{1F3D4}\uFE0F TERRAIN PATTERN GENERATED: ${parsed.pattern.toUpperCase()}
+\u{1F4D0} Area: (${parsed.origin.x},${parsed.origin.y}) to (${parsed.origin.x + parsed.width},${parsed.origin.y + parsed.height})
+\u{1F9F1} Obstacles: ${result.obstacles.length}
+\u{1F4A7} Water: ${result.water.length}
+\u{1F33F} Difficult terrain: ${result.difficultTerrain.length}
+\u{1F3D7}\uFE0F Props: ${result.props.length}
+
+<!-- STATE_JSON
+${JSON.stringify(stateJson2)}
+STATE_JSON -->`;
+    return {
+      content: [{ type: "text", text: output2 }]
+    };
+  }
   const seedStr = parsed.seed || `${parsed.biome}-${Date.now()}`;
   let seedNum = 0;
   for (let i = 0; i < seedStr.length; i++) {
@@ -52697,6 +52889,70 @@ async function handleGenerateTerrainPatch(args, ctx) {
       type: "text",
       text: output
     }]
+  };
+}
+async function handleGenerateTerrainPattern(args, ctx) {
+  const parsed = CombatTools.GENERATE_TERRAIN_PATTERN.inputSchema.parse(args);
+  let engine = getCombatManager().get(`${ctx.sessionId}:${parsed.encounterId}`);
+  if (!engine) {
+    const db2 = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+    const repo2 = new EncounterRepository(db2);
+    const state2 = repo2.loadState(parsed.encounterId);
+    if (!state2) {
+      throw new Error(`Encounter ${parsed.encounterId} not found.`);
+    }
+    engine = new CombatEngine(parsed.encounterId, pubsub2 || void 0);
+    engine.loadState(state2);
+    getCombatManager().create(`${ctx.sessionId}:${parsed.encounterId}`, engine);
+  }
+  const state = engine.getState();
+  if (!state) {
+    throw new Error("No active encounter");
+  }
+  if (!state.terrain) {
+    state.terrain = { obstacles: [], difficultTerrain: [], water: [] };
+  }
+  if (!state.props) {
+    state.props = [];
+  }
+  const patternGen = getPatternGenerator(parsed.pattern);
+  const result = patternGen(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height);
+  state.terrain.obstacles.push(...result.obstacles);
+  if (!state.terrain.water)
+    state.terrain.water = [];
+  state.terrain.water.push(...result.water);
+  if (!state.terrain.difficultTerrain)
+    state.terrain.difficultTerrain = [];
+  state.terrain.difficultTerrain.push(...result.difficultTerrain);
+  for (const prop of result.props) {
+    state.props.push({
+      id: `prop-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      label: prop.label,
+      position: prop.position,
+      heightFeet: prop.heightFeet,
+      propType: prop.propType,
+      cover: prop.cover,
+      description: PATTERN_DESCRIPTIONS[parsed.pattern]
+    });
+  }
+  const db = getDb(process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db");
+  const repo = new EncounterRepository(db);
+  repo.saveState(parsed.encounterId, state);
+  const stateJson = buildStateJson(state, parsed.encounterId);
+  const output = `\u{1F3D4}\uFE0F TERRAIN PATTERN GENERATED: ${parsed.pattern.toUpperCase()}
+\u{1F4D0} Area: (${parsed.origin.x},${parsed.origin.y}) to (${parsed.origin.x + parsed.width},${parsed.origin.y + parsed.height})
+\u{1F9F1} Obstacles: ${result.obstacles.length}
+\u{1F4A7} Water: ${result.water.length}
+\u{1F33F} Difficult terrain: ${result.difficultTerrain.length}
+\u{1F3D7}\uFE0F Props: ${result.props.length}
+
+` + PATTERN_DESCRIPTIONS[parsed.pattern] + `
+
+<!-- STATE_JSON
+${JSON.stringify(stateJson)}
+STATE_JSON -->`;
+  return {
+    content: [{ type: "text", text: output }]
   };
 }
 
@@ -64995,6 +65251,11 @@ function buildToolRegistry() {
       metadata: meta(CombatTools.GENERATE_TERRAIN_PATCH.name, CombatTools.GENERATE_TERRAIN_PATCH.description, "combat", ["terrain", "biome", "generate", "procedural", "forest", "cave", "dungeon", "village", "swamp", "battlefield"], ["Procedural terrain generation", "Biome presets", "Mass terrain placement"], false, "medium"),
       schema: CombatTools.GENERATE_TERRAIN_PATCH.inputSchema,
       handler: handleGenerateTerrainPatch
+    },
+    [CombatTools.GENERATE_TERRAIN_PATTERN.name]: {
+      metadata: meta(CombatTools.GENERATE_TERRAIN_PATTERN.name, CombatTools.GENERATE_TERRAIN_PATTERN.description, "combat", ["terrain", "pattern", "generate", "river", "canyon", "arena", "valley", "geometric", "layout"], ["Geometric terrain patterns", "Consistent layouts", "River valleys, canyons, arenas"], false, "medium"),
+      schema: CombatTools.GENERATE_TERRAIN_PATTERN.inputSchema,
+      handler: handleGenerateTerrainPattern
     },
     // === CHARACTER/CRUD TOOLS ===
     [CRUDTools.CREATE_WORLD.name]: {
