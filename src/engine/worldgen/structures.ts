@@ -100,6 +100,18 @@ export function placeStructures(options: StructureGenerationOptions): StructureL
             if (maxSlope < 5) score += 10;
             else if (maxSlope > 20) score -= 20;
 
+            // Coastal bonus - tiles adjacent to water are prime real estate for ports/trade
+            let coastalNeighbors = 0;
+            for (const { nx, ny } of neighbors) {
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                    const nIdx = toIndex(nx, ny, width);
+                    if (elevation[nIdx] < 20) { // Adjacent to water
+                        coastalNeighbors++;
+                    }
+                }
+            }
+            if (coastalNeighbors > 0) score += 15; // Coastal bonus
+
             habitability[idx] = Math.max(0, score);
         }
     }
