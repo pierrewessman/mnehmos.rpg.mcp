@@ -35,7 +35,7 @@ import { ContextTools, handleGetNarrativeContext } from './context-tools.js';
 import { ProgressionTools, handleAddXp, handleGetLevelProgression, handleLevelUp } from './progression-tools.js';
 import { SkillCheckTools, handleRollSkillCheck, handleRollAbilityCheck, handleRollSavingThrow } from './skill-check-tools.js';
 import { NarrativeTools, handleAddNarrativeNote, handleSearchNarrativeNotes, handleUpdateNarrativeNote, handleGetNarrativeNote, handleDeleteNarrativeNote, handleGetNarrativeContextNotes } from './narrative-tools.js';
-import { CompositeTools, handleSetupTacticalEncounter, handleSpawnEquippedCharacter, handleInitializeSession, handleSpawnPopulatedLocation, handleSpawnPresetEncounter, handleRestParty } from './composite-tools.js';
+import { CompositeTools, handleSetupTacticalEncounter, handleSpawnEquippedCharacter, handleInitializeSession, handleSpawnPopulatedLocation, handleSpawnPresetEncounter, handleRestParty, handleLootEncounter } from './composite-tools.js';
 
 // Helper to create metadata
 // deferLoading defaults to true (most tools should be deferred)
@@ -1445,6 +1445,13 @@ export function buildToolRegistry(): ToolRegistry {
         ['Party rest', 'HP restoration', 'Spell slot recovery', 'Hit dice healing'], false, 'low', false),
       schema: CompositeTools.REST_PARTY.inputSchema,
       handler: handleRestParty
+    },
+    [CompositeTools.LOOT_ENCOUNTER.name]: {
+      metadata: meta(CompositeTools.LOOT_ENCOUNTER.name, CompositeTools.LOOT_ENCOUNTER.description, 'composite',
+        ['loot', 'encounter', 'corpse', 'gold', 'items', 'currency', 'harvest', 'distribute', 'party'],
+        ['Encounter looting', 'Corpse management', 'Loot distribution', 'Currency collection'], false, 'low', false),
+      schema: CompositeTools.LOOT_ENCOUNTER.inputSchema,
+      handler: handleLootEncounter
     }
     // Note: search_tools and load_tool_schema are registered separately in index.ts with full handlers
   };

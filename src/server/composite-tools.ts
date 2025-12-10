@@ -32,6 +32,7 @@ import { getCombatManager } from './state/combat-manager.js';
 import { CombatEngine, CombatParticipant } from '../engine/combat/engine.js';
 import { getPatternGenerator } from './terrain-patterns.js';
 import { restoreAllSpellSlots, restorePactSlots, getSpellcastingConfig } from '../engine/magic/spell-validator.js';
+import { CorpseRepository } from '../storage/repos/corpse.repo.js';
 import { Character } from '../schema/character.js';
 import { Item } from '../schema/inventory.js';
 import { parsePosition as parsePos } from '../utils/schema-shorthand.js';
@@ -572,6 +573,55 @@ Example - Short rest with custom allocation:
                 .describe('Hit dice each member spends on short rest (default: 1)'),
             hitDiceAllocation: z.record(z.string(), z.number().int().min(0).max(20)).optional()
                 .describe('Custom hit dice allocation per character ID (overrides hitDicePerMember)')
+        })
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LOOT_ENCOUNTER
+    // ─────────────────────────────────────────────────────────────────────────
+    LOOT_ENCOUNTER: {
+        name: 'loot_encounter',
+        description: `Loot all corpses from an encounter in a single call.
+
+REPLACES: list_corpses_in_encounter + N×loot_corpse (5-10 calls → 1 call)
+TOKEN SAVINGS: ~85%
+
+Automatically:
+- Finds all corpses from the encounter
+- Transfers all loot to specified character (or distributes to party)
+- Optionally includes currency/gold distribution
+- Returns comprehensive loot summary
+
+Example - Single looter:
+{ "encounterId": "encounter-123", "looterId": "char-456" }
+
+Example - Distribute to party:
+{
+  "encounterId": "encounter-123",
+  "partyId": "party-789",
+  "distributeEvenly": true
+}
+
+Example - Selective looting:
+{
+  "encounterId": "encounter-123",
+  "looterId": "char-456",
+  "includeItems": true,
+  "includeCurrency": true,
+  "includeHarvestable": false
+}`,
+        inputSchema: z.object({
+            encounterId: z.string().describe('The encounter ID to loot corpses from'),
+            looterId: z.string().optional().describe('Character ID to receive all loot'),
+            partyId: z.string().optional().describe('Party ID for distributing loot among members'),
+            distributeEvenly: z.boolean().optional().default(false)
+                .describe('If true with partyId, distribute items round-robin to party members'),
+            includeItems: z.boolean().optional().default(true)
+                .describe('Include equipment and items'),
+            includeCurrency: z.boolean().optional().default(true)
+                .describe('Include gold/silver/copper'),
+            includeHarvestable: z.boolean().optional().default(false)
+                .describe('Auto-harvest resources (may fail without skill check)')
         })
     }
 } as const;
@@ -1820,6 +1870,201 @@ export async function handleRestParty(args: unknown, _ctx: SessionContext) {
                 totalHpRestored,
                 members: results,
                 message: `${party.name} completed a ${parsed.restType} rest. ${totalHpRestored} total HP restored across ${results.length} members.`
+            }, null, 2)
+        }]
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOOT_ENCOUNTER HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Handle loot_encounter - loot all corpses from an encounter
+ */
+export async function handleLootEncounter(args: unknown, _ctx: SessionContext) {
+    const parsed = CompositeTools.LOOT_ENCOUNTER.inputSchema.parse(args);
+    const { partyRepo, inventoryRepo } = ensureDb();
+
+    // Need either looterId or partyId
+    if (!parsed.looterId && !parsed.partyId) {
+        throw new Error('Must provide either looterId or partyId');
+    }
+
+    // Get looter(s)
+    let looterIds: string[] = [];
+
+    if (parsed.looterId) {
+        looterIds = [parsed.looterId];
+    } else if (parsed.partyId) {
+        const party = partyRepo.getPartyWithMembers(parsed.partyId);
+        if (!party || !party.members || party.members.length === 0) {
+            throw new Error(`Party not found or has no members: ${parsed.partyId}`);
+        }
+        looterIds = party.members.map(m => m.characterId);
+    }
+
+    // Get corpse repository
+    const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : 'rpg.db';
+    const db = getDb(dbPath);
+    const corpseRepo = new CorpseRepository(db);
+
+    // Find all corpses from encounter
+    const corpses = corpseRepo.findByEncounterId(parsed.encounterId);
+
+    if (corpses.length === 0) {
+        return {
+            content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                    encounterId: parsed.encounterId,
+                    corpseCount: 0,
+                    message: 'No corpses found for this encounter'
+                }, null, 2)
+            }]
+        };
+    }
+
+    // Track looted items
+    const lootedItems: Array<{
+        corpseId: string;
+        corpseName: string;
+        itemId: string;
+        itemName?: string;
+        quantity: number;
+        receivedBy: string;
+    }> = [];
+
+    const currencyCollected = {
+        gold: 0,
+        silver: 0,
+        copper: 0
+    };
+
+    const harvestedResources: Array<{
+        corpseId: string;
+        resourceType: string;
+        quantity: number;
+        success: boolean;
+    }> = [];
+
+    let looterIndex = 0;
+
+    // Loot each corpse
+    for (const corpse of corpses) {
+        // Skip fully looted corpses
+        if (corpse.looted && !parsed.includeHarvestable) continue;
+
+        // Get available loot
+        const availableLoot = corpseRepo.getAvailableLoot(corpse.id);
+
+        // Determine who gets this corpse's loot
+        const currentLooter = parsed.distributeEvenly
+            ? looterIds[looterIndex % looterIds.length]
+            : looterIds[0];
+
+        // Loot items if requested
+        if (parsed.includeItems && availableLoot.length > 0) {
+            const looted = corpseRepo.lootAll(corpse.id, currentLooter);
+
+            for (const item of looted) {
+                lootedItems.push({
+                    corpseId: corpse.id,
+                    corpseName: corpse.characterName,
+                    itemId: item.itemId,
+                    quantity: item.quantity || 1,
+                    receivedBy: currentLooter
+                });
+            }
+        }
+
+        // Collect currency if requested
+        if (parsed.includeCurrency && corpse.currency) {
+            const currency = corpse.currency as { gold?: number; silver?: number; copper?: number };
+            currencyCollected.gold += currency.gold || 0;
+            currencyCollected.silver += currency.silver || 0;
+            currencyCollected.copper += currency.copper || 0;
+        }
+
+        // Harvest resources if requested
+        if (parsed.includeHarvestable && corpse.harvestable && corpse.harvestableResources) {
+            const harvestables = corpse.harvestableResources as Array<{ resourceType: string; quantity: number; dcRequired?: number; harvested: boolean }>;
+
+            for (const resource of harvestables) {
+                // Skip already-harvested resources
+                if (resource.harvested) continue;
+
+                // Auto-harvest without skill check (will succeed for non-DC resources)
+                const result = corpseRepo.harvestResource(
+                    corpse.id,
+                    resource.resourceType,
+                    currentLooter
+                );
+
+                harvestedResources.push({
+                    corpseId: corpse.id,
+                    resourceType: resource.resourceType,
+                    quantity: result.quantity || 0,
+                    success: result.success
+                });
+            }
+        }
+
+        // Rotate to next looter if distributing evenly
+        if (parsed.distributeEvenly) {
+            looterIndex++;
+        }
+    }
+
+    // Distribute currency evenly to party if requested
+    if (parsed.includeCurrency && parsed.partyId && currencyCollected.gold + currencyCollected.silver + currencyCollected.copper > 0) {
+        const totalCopper = currencyCollected.gold * 100 + currencyCollected.silver * 10 + currencyCollected.copper;
+        const shareCopper = Math.floor(totalCopper / looterIds.length);
+
+        // Convert share back to gold/silver/copper
+        const shareGold = Math.floor(shareCopper / 100);
+        const shareSilver = Math.floor((shareCopper % 100) / 10);
+        const sharecopperRemainder = shareCopper % 10;
+
+        // Add currency to each party member's inventory
+        for (const looterId of looterIds) {
+            if (shareGold > 0 || shareSilver > 0 || sharecopperRemainder > 0) {
+                inventoryRepo.addCurrency(looterId, {
+                    gold: shareGold,
+                    silver: shareSilver,
+                    copper: sharecopperRemainder
+                });
+            }
+        }
+    } else if (parsed.includeCurrency && parsed.looterId && currencyCollected.gold + currencyCollected.silver + currencyCollected.copper > 0) {
+        // Give all currency to single looter
+        inventoryRepo.addCurrency(parsed.looterId, currencyCollected);
+    }
+
+    const totalItems = lootedItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalCurrency = currencyCollected.gold * 100 + currencyCollected.silver * 10 + currencyCollected.copper;
+
+    return {
+        content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+                encounterId: parsed.encounterId,
+                corpseCount: corpses.length,
+                lootedBy: parsed.partyId ? `party:${parsed.partyId}` : parsed.looterId,
+                distributeEvenly: parsed.distributeEvenly,
+                items: {
+                    count: totalItems,
+                    details: lootedItems
+                },
+                currency: parsed.includeCurrency ? {
+                    gold: currencyCollected.gold,
+                    silver: currencyCollected.silver,
+                    copper: currencyCollected.copper,
+                    totalCopperValue: totalCurrency,
+                    distributedTo: parsed.partyId ? looterIds : [parsed.looterId]
+                } : undefined,
+                harvestedResources: parsed.includeHarvestable ? harvestedResources : undefined,
+                message: `Looted ${corpses.length} corpses: ${totalItems} items, ${currencyCollected.gold}gp ${currencyCollected.silver}sp ${currencyCollected.copper}cp`
             }, null, 2)
         }]
     };
