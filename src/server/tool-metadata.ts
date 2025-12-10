@@ -3,11 +3,11 @@
  * Enables search_tools discovery and load_tool_schema on-demand loading
  */
 
-export type ToolCategory = 
+export type ToolCategory =
   | 'world' | 'combat' | 'character' | 'inventory' | 'quest' | 'party'
   | 'math' | 'strategy' | 'secret' | 'concentration' | 'rest' | 'scroll'
   | 'aura' | 'npc' | 'spatial' | 'theft' | 'corpse' | 'improvisation'
-  | 'turn-management' | 'meta' | 'batch' | 'context' | 'narrative';
+  | 'turn-management' | 'meta' | 'batch' | 'context' | 'narrative' | 'composite';
 
 export type TokenCost = 'low' | 'medium' | 'high' | 'variable';
 

@@ -35,6 +35,7 @@ import { ContextTools, handleGetNarrativeContext } from './context-tools.js';
 import { ProgressionTools, handleAddXp, handleGetLevelProgression, handleLevelUp } from './progression-tools.js';
 import { SkillCheckTools, handleRollSkillCheck, handleRollAbilityCheck, handleRollSavingThrow } from './skill-check-tools.js';
 import { NarrativeTools, handleAddNarrativeNote, handleSearchNarrativeNotes, handleUpdateNarrativeNote, handleGetNarrativeNote, handleDeleteNarrativeNote, handleGetNarrativeContextNotes } from './narrative-tools.js';
+import { CompositeTools, handleSetupTacticalEncounter, handleSpawnEquippedCharacter, handleInitializeSession } from './composite-tools.js';
 
 // Helper to create metadata
 // deferLoading defaults to true (most tools should be deferred)
@@ -1400,6 +1401,29 @@ export function buildToolRegistry(): ToolRegistry {
         ['Saving throws', 'Save proficiency handling', 'DC comparison'], false, 'low', false),
       schema: SkillCheckTools.ROLL_SAVING_THROW.inputSchema,
       handler: handleRollSavingThrow
+    },
+
+    // === COMPOSITE TOOLS (TIER 1 - Token Efficiency Optimization) ===
+    [CompositeTools.SETUP_TACTICAL_ENCOUNTER.name]: {
+      metadata: meta(CompositeTools.SETUP_TACTICAL_ENCOUNTER.name, CompositeTools.SETUP_TACTICAL_ENCOUNTER.description, 'composite',
+        ['encounter', 'combat', 'spawn', 'tactical', 'creature', 'preset', 'terrain', 'goblin', 'skeleton', 'wolf', 'setup'],
+        ['Multi-creature spawning from presets', 'Terrain configuration', 'Position shorthand', 'Party positioning'], true, 'medium', false),
+      schema: CompositeTools.SETUP_TACTICAL_ENCOUNTER.inputSchema,
+      handler: handleSetupTacticalEncounter
+    },
+    [CompositeTools.SPAWN_EQUIPPED_CHARACTER.name]: {
+      metadata: meta(CompositeTools.SPAWN_EQUIPPED_CHARACTER.name, CompositeTools.SPAWN_EQUIPPED_CHARACTER.description, 'composite',
+        ['character', 'create', 'spawn', 'equipment', 'preset', 'weapon', 'armor', 'gear', 'longsword', 'chain_mail'],
+        ['Character creation with equipment', 'Item presets', 'AC calculation', 'Party assignment'], false, 'medium', false),
+      schema: CompositeTools.SPAWN_EQUIPPED_CHARACTER.inputSchema,
+      handler: handleSpawnEquippedCharacter
+    },
+    [CompositeTools.INITIALIZE_SESSION.name]: {
+      metadata: meta(CompositeTools.INITIALIZE_SESSION.name, CompositeTools.INITIALIZE_SESSION.description, 'composite',
+        ['session', 'initialize', 'start', 'party', 'world', 'setup', 'campaign', 'begin'],
+        ['Session initialization', 'Party creation', 'Character batch creation', 'Starting location'], true, 'high', false),
+      schema: CompositeTools.INITIALIZE_SESSION.inputSchema,
+      handler: handleInitializeSession
     }
     // Note: search_tools and load_tool_schema are registered separately in index.ts with full handlers
   };
