@@ -50509,18 +50509,21 @@ function smoothHeightmap(heightmap, width, height, iterations = 1) {
 var import_seedrandom2 = __toESM(require_seedrandom2(), 1);
 var toIndex2 = (x, y, width) => y * width + x;
 var fromIndex = (index, width) => ({ x: index % width, y: Math.floor(index / width) });
-function generateClimateMap(seed, width, height, heightmap) {
-  const options = {
+function generateClimateMap(seed, width, height, heightmap, options) {
+  const fullOptions = {
     seed,
     width,
     height,
     heightmap,
     equatorTemp: 30,
     poleTemp: -10,
-    elevationLapseRate: 3
+    elevationLapseRate: 3,
+    temperatureOffset: 0,
+    moistureOffset: 0,
+    ...options
   };
-  const temperature = generateTemperatureMap(options);
-  const moisture = generateMoistureMap(options);
+  const temperature = generateTemperatureMap(fullOptions);
+  const moisture = generateMoistureMap(fullOptions);
   return {
     width,
     height,
@@ -50530,7 +50533,7 @@ function generateClimateMap(seed, width, height, heightmap) {
   };
 }
 function generateTemperatureMap(options) {
-  const { width, height, seed, heightmap, equatorTemp, poleTemp, elevationLapseRate } = options;
+  const { width, height, seed, heightmap, equatorTemp, poleTemp, elevationLapseRate, temperatureOffset = 0 } = options;
   const rng2 = (0, import_seedrandom2.default)(seed + "-temp");
   const noise2D = createNoise2D(rng2);
   const size = width * height;
@@ -50546,14 +50549,14 @@ function generateTemperatureMap(options) {
       const elevationAdjustment = -(elevationAboveSeaLevel / 10) * elevationLapseRate;
       const noiseValue = noise2D(x / (width * 0.3), y / (height * 0.3));
       const noiseAdjustment = noiseValue * 5;
-      const temp = baseTemp + elevationAdjustment + noiseAdjustment;
+      const temp = baseTemp + elevationAdjustment + noiseAdjustment + temperatureOffset;
       temperature[idx] = Math.round(Math.max(-20, Math.min(40, temp)));
     }
   }
   return temperature;
 }
 function generateMoistureMap(options) {
-  const { width, height, seed, heightmap } = options;
+  const { width, height, seed, heightmap, moistureOffset = 0 } = options;
   const rng2 = (0, import_seedrandom2.default)(seed + "-moisture");
   const noise2D = createNoise2D(rng2);
   const size = width * height;
@@ -50581,7 +50584,7 @@ function generateMoistureMap(options) {
       const noise3 = noise2D((x + seedOffsetX) / (width * 0.15), (y + seedOffsetY) / (height * 0.15)) * 0.3;
       const noiseAdjustment = (noise1 + noise2 + noise3) * 12;
       const seedBias = Math.round((rng2() - 0.5) * 12);
-      const totalMoisture = baseMoisture + latitudeMoisture + noiseAdjustment + seedBias;
+      const totalMoisture = baseMoisture + latitudeMoisture + noiseAdjustment + seedBias + moistureOffset;
       moisture[idx] = Math.round(Math.max(0, Math.min(100, totalMoisture)));
     }
   }
@@ -51984,12 +51987,15 @@ function getSuggestedBiomesForStructure(structureType) {
 
 // dist/engine/worldgen/index.js
 function generateWorld(options) {
-  const { seed, width, height, landRatio, octaves, numRegions, numCities, numTowns, numDungeons } = options;
+  const { seed, width, height, landRatio, octaves, numRegions, numCities, numTowns, numDungeons, temperatureOffset, moistureOffset } = options;
   const elevation = generateHeightmap(seed, width, height, {
     landRatio,
     octaves
   });
-  const climate = generateClimateMap(seed, width, height, elevation);
+  const climate = generateClimateMap(seed, width, height, elevation, {
+    temperatureOffset,
+    moistureOffset
+  });
   const biomeMap = generateBiomeMap({
     width,
     height,
@@ -53122,18 +53128,6 @@ function runMigrations(db) {
   const hasNetworkId = roomColumns.some((col) => col.name === "network_id");
   const hasLocalX = roomColumns.some((col) => col.name === "local_x");
   const hasLocalY = roomColumns.some((col) => col.name === "local_y");
-  if (!hasNetworkId) {
-    console.error("[Migration] Adding network_id column to room_nodes table");
-    db.exec(`ALTER TABLE room_nodes ADD COLUMN network_id TEXT;`);
-  }
-  if (!hasLocalX) {
-    console.error("[Migration] Adding local_x column to room_nodes table");
-    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_x INTEGER DEFAULT 0;`);
-  }
-  if (!hasLocalY) {
-    console.error("[Migration] Adding local_y column to room_nodes table");
-    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_y INTEGER DEFAULT 0;`);
-  }
   const hasXp = charColumns.some((col) => col.name === "xp");
   if (!hasXp) {
     console.error("[Migration] Adding xp column to characters table");
@@ -53146,14 +53140,14 @@ function runMigrations(db) {
     db.exec(`ALTER TABLE room_nodes RENAME COLUMN world_x TO local_x;`);
   } else if (!hasLocalX && !hasWorldX) {
     console.error("[Migration] Adding local_x column to room_nodes table");
-    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_x INTEGER;`);
+    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_x INTEGER DEFAULT 0;`);
   }
   if (hasWorldY && !hasLocalY) {
     console.error("[Migration] Renaming world_y to local_y in room_nodes table");
     db.exec(`ALTER TABLE room_nodes RENAME COLUMN world_y TO local_y;`);
   } else if (!hasLocalY && !hasWorldY) {
     console.error("[Migration] Adding local_y column to room_nodes table");
-    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_y INTEGER;`);
+    db.exec(`ALTER TABLE room_nodes ADD COLUMN local_y INTEGER DEFAULT 0;`);
   }
   if (!hasNetworkId) {
     console.error("[Migration] Adding network_id column to room_nodes table");
@@ -53176,6 +53170,29 @@ function runMigrations(db) {
     CREATE INDEX IF NOT EXISTS idx_node_networks_world ON node_networks(world_id);
     CREATE INDEX IF NOT EXISTS idx_room_nodes_local_coords ON room_nodes(local_x, local_y);
     CREATE INDEX IF NOT EXISTS idx_room_nodes_network ON room_nodes(network_id);
+
+    -- NARRATIVE MEMORY LAYER: Typed notes for plot threads, canonical moments, NPC voices
+    CREATE TABLE IF NOT EXISTS narrative_notes(
+      id TEXT PRIMARY KEY,
+      world_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('plot_thread', 'canonical_moment', 'npc_voice', 'foreshadowing', 'session_log')),
+      content TEXT NOT NULL,
+      metadata TEXT NOT NULL DEFAULT '{}', -- JSON: type-specific structured data
+      visibility TEXT NOT NULL DEFAULT 'dm_only' CHECK(visibility IN ('dm_only', 'player_visible')),
+      tags TEXT NOT NULL DEFAULT '[]', -- JSON array of tag strings
+      entity_id TEXT, -- Optional: Link to character/NPC/location
+      entity_type TEXT, -- Optional: 'character', 'npc', 'location', 'item'
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'resolved', 'dormant', 'archived')),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_narrative_notes_world ON narrative_notes(world_id);
+    CREATE INDEX IF NOT EXISTS idx_narrative_notes_type ON narrative_notes(type);
+    CREATE INDEX IF NOT EXISTS idx_narrative_notes_status ON narrative_notes(status);
+    CREATE INDEX IF NOT EXISTS idx_narrative_notes_created ON narrative_notes(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_narrative_notes_entity ON narrative_notes(entity_id, entity_type);
   `);
 }
 function createPostMigrationIndexes(db) {
@@ -53627,7 +53644,10 @@ var Tools = {
     inputSchema: external_exports.object({
       seed: external_exports.string().describe("Seed for random number generation"),
       width: external_exports.number().int().min(10).max(1e3).describe("Width of the world grid"),
-      height: external_exports.number().int().min(10).max(1e3).describe("Height of the world grid")
+      height: external_exports.number().int().min(10).max(1e3).describe("Height of the world grid"),
+      landRatio: external_exports.number().min(0.1).max(0.9).optional().describe("Land to water ratio (0.1 = mostly ocean, 0.9 = mostly land, default 0.3)"),
+      temperatureOffset: external_exports.number().min(-30).max(30).optional().describe("Global temperature offset (-30 to +30) to shift biome distribution"),
+      moistureOffset: external_exports.number().min(-30).max(30).optional().describe("Global moisture offset (-30 to +30) to shift biome distribution")
     })
   },
   GET_WORLD_STATE: {
@@ -53754,7 +53774,10 @@ async function handleGenerateWorld(args, ctx) {
   const world = generateWorld({
     seed: parsed.seed,
     width: parsed.width,
-    height: parsed.height
+    height: parsed.height,
+    landRatio: parsed.landRatio,
+    temperatureOffset: parsed.temperatureOffset,
+    moistureOffset: parsed.moistureOffset
   });
   const genTime = Date.now() - startTime;
   console.error(`[WorldGen] World generated in ${genTime}ms`);
@@ -75097,6 +75120,395 @@ async function handleRollSavingThrow(args, _ctx) {
   };
 }
 
+// dist/server/narrative-tools.js
+init_zod();
+var NoteTypeEnum = external_exports.enum([
+  "plot_thread",
+  "canonical_moment",
+  "npc_voice",
+  "foreshadowing",
+  "session_log"
+]);
+var NoteStatusEnum = external_exports.enum([
+  "active",
+  "resolved",
+  "dormant",
+  "archived"
+]);
+var VisibilityEnum = external_exports.enum([
+  "dm_only",
+  "player_visible"
+]);
+var PlotThreadMetadata = external_exports.object({
+  urgency: external_exports.enum(["low", "medium", "high", "critical"]).optional(),
+  hooks: external_exports.array(external_exports.string()).optional().default([]),
+  resolution_conditions: external_exports.array(external_exports.string()).optional().default([])
+});
+var CanonicalMomentMetadata = external_exports.object({
+  speaker: external_exports.string().optional(),
+  participants: external_exports.array(external_exports.string()).optional().default([]),
+  location: external_exports.string().optional(),
+  session_number: external_exports.number().optional()
+});
+var NpcVoiceMetadata = external_exports.object({
+  speech_pattern: external_exports.string().optional(),
+  vocabulary: external_exports.array(external_exports.string()).optional().default([]),
+  mannerisms: external_exports.array(external_exports.string()).optional().default([]),
+  current_goal: external_exports.string().optional(),
+  secrets: external_exports.array(external_exports.string()).optional().default([])
+});
+var ForeshadowingMetadata = external_exports.object({
+  target: external_exports.string().describe("What this foreshadows"),
+  hints_given: external_exports.array(external_exports.string()).optional().default([]),
+  hints_remaining: external_exports.array(external_exports.string()).optional().default([]),
+  trigger: external_exports.string().optional().describe("When to reveal fully")
+});
+var SessionLogMetadata = external_exports.object({
+  session_number: external_exports.number().optional(),
+  xp_awarded: external_exports.number().optional(),
+  player_count: external_exports.number().optional()
+});
+var AddNarrativeNoteSchema = external_exports.object({
+  worldId: external_exports.string().describe("World/campaign ID to associate the note with"),
+  type: NoteTypeEnum.describe("Category of note"),
+  content: external_exports.string().min(1).describe("Main text content of the note"),
+  metadata: external_exports.record(external_exports.any()).optional().default({}).describe("Type-specific structured data"),
+  visibility: VisibilityEnum.optional().default("dm_only"),
+  tags: external_exports.array(external_exports.string()).optional().default([]).describe('Tags for filtering (e.g., "faction:legion")'),
+  entityId: external_exports.string().optional().describe("Link to a character/NPC/location"),
+  entityType: external_exports.enum(["character", "npc", "location", "item"]).optional(),
+  status: NoteStatusEnum.optional().default("active")
+});
+var SearchNarrativeNotesSchema = external_exports.object({
+  worldId: external_exports.string().describe("World/campaign ID"),
+  query: external_exports.string().optional().describe("Text search in content"),
+  type: NoteTypeEnum.optional().describe("Filter by note type"),
+  status: NoteStatusEnum.optional().describe("Filter by status"),
+  tags: external_exports.array(external_exports.string()).optional().describe("Filter by tags (AND logic)"),
+  entityId: external_exports.string().optional().describe("Filter by linked entity"),
+  visibility: VisibilityEnum.optional().describe("Filter by visibility"),
+  limit: external_exports.number().optional().default(20).describe("Max results to return"),
+  orderBy: external_exports.enum(["created_at", "updated_at"]).optional().default("created_at")
+});
+var UpdateNarrativeNoteSchema = external_exports.object({
+  noteId: external_exports.string().describe("ID of the note to update"),
+  content: external_exports.string().optional().describe("New content (if changing)"),
+  metadata: external_exports.record(external_exports.any()).optional().describe("Merge into existing metadata"),
+  status: NoteStatusEnum.optional().describe("Change status (e.g., resolve a plot thread)"),
+  visibility: VisibilityEnum.optional(),
+  tags: external_exports.array(external_exports.string()).optional().describe("Replace tags")
+});
+var GetNarrativeNoteSchema = external_exports.object({
+  noteId: external_exports.string().describe("ID of the note to retrieve")
+});
+var DeleteNarrativeNoteSchema = external_exports.object({
+  noteId: external_exports.string().describe("ID of the note to delete")
+});
+var GetNarrativeContextSchema2 = external_exports.object({
+  worldId: external_exports.string().describe("World/campaign ID"),
+  includeTypes: external_exports.array(NoteTypeEnum).optional().default(["plot_thread", "canonical_moment", "npc_voice", "foreshadowing"]),
+  maxPerType: external_exports.number().optional().default(5).describe("Max notes per type to include"),
+  statusFilter: external_exports.array(NoteStatusEnum).optional().default(["active"]).describe("Only include notes with these statuses"),
+  forPlayer: external_exports.boolean().optional().default(false).describe("If true, only return player_visible notes")
+});
+var NarrativeTools = {
+  ADD_NARRATIVE_NOTE: {
+    name: "add_narrative_note",
+    description: "Create a typed narrative note (plot thread, canonical moment, NPC voice, foreshadowing, or session log). Used to build long-term narrative memory.",
+    inputSchema: AddNarrativeNoteSchema
+  },
+  SEARCH_NARRATIVE_NOTES: {
+    name: "search_narrative_notes",
+    description: "Search and filter narrative notes by type, status, tags, or text content. Returns matching notes for context building.",
+    inputSchema: SearchNarrativeNotesSchema
+  },
+  UPDATE_NARRATIVE_NOTE: {
+    name: "update_narrative_note",
+    description: "Update an existing narrative note. Common use: marking a plot_thread as resolved.",
+    inputSchema: UpdateNarrativeNoteSchema
+  },
+  GET_NARRATIVE_NOTE: {
+    name: "get_narrative_note",
+    description: "Retrieve a single narrative note by ID.",
+    inputSchema: GetNarrativeNoteSchema
+  },
+  DELETE_NARRATIVE_NOTE: {
+    name: "delete_narrative_note",
+    description: "Delete a narrative note. Use sparingly - prefer archiving via status update.",
+    inputSchema: DeleteNarrativeNoteSchema
+  },
+  GET_NARRATIVE_CONTEXT: {
+    name: "get_narrative_context_notes",
+    description: "Retrieve aggregated narrative context for LLM prompt injection. Returns active plot threads, recent canonical moments, NPC voices, and pending foreshadowing.",
+    inputSchema: GetNarrativeContextSchema2
+  }
+};
+async function handleAddNarrativeNote(args, _ctx) {
+  const parsed = NarrativeTools.ADD_NARRATIVE_NOTE.inputSchema.parse(args);
+  const db = getDb(process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db");
+  const id = v4_default();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  let validatedMetadata = parsed.metadata;
+  try {
+    switch (parsed.type) {
+      case "plot_thread":
+        validatedMetadata = PlotThreadMetadata.parse(parsed.metadata);
+        break;
+      case "canonical_moment":
+        validatedMetadata = CanonicalMomentMetadata.parse(parsed.metadata);
+        break;
+      case "npc_voice":
+        validatedMetadata = NpcVoiceMetadata.parse(parsed.metadata);
+        break;
+      case "foreshadowing":
+        validatedMetadata = ForeshadowingMetadata.parse(parsed.metadata);
+        break;
+      case "session_log":
+        validatedMetadata = SessionLogMetadata.parse(parsed.metadata);
+        break;
+    }
+  } catch (e) {
+    console.warn(`[NarrativeNote] Metadata validation warning for type ${parsed.type}:`, e);
+  }
+  db.prepare(`
+    INSERT INTO narrative_notes (id, world_id, type, content, metadata, visibility, tags, entity_id, entity_type, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, parsed.worldId, parsed.type, parsed.content, JSON.stringify(validatedMetadata), parsed.visibility, JSON.stringify(parsed.tags), parsed.entityId || null, parsed.entityType || null, parsed.status, now, now);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        noteId: id,
+        type: parsed.type,
+        message: `Created ${parsed.type} note: "${parsed.content.substring(0, 50)}..."`
+      })
+    }]
+  };
+}
+async function handleSearchNarrativeNotes(args, _ctx) {
+  const parsed = NarrativeTools.SEARCH_NARRATIVE_NOTES.inputSchema.parse(args);
+  const db = getDb(process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db");
+  let sql = `SELECT * FROM narrative_notes WHERE world_id = ?`;
+  const params = [parsed.worldId];
+  if (parsed.type) {
+    sql += ` AND type = ?`;
+    params.push(parsed.type);
+  }
+  if (parsed.status) {
+    sql += ` AND status = ?`;
+    params.push(parsed.status);
+  }
+  if (parsed.visibility) {
+    sql += ` AND visibility = ?`;
+    params.push(parsed.visibility);
+  }
+  if (parsed.entityId) {
+    sql += ` AND entity_id = ?`;
+    params.push(parsed.entityId);
+  }
+  if (parsed.query) {
+    sql += ` AND content LIKE ?`;
+    params.push(`%${parsed.query}%`);
+  }
+  if (parsed.tags && parsed.tags.length > 0) {
+    for (const tag of parsed.tags) {
+      sql += ` AND tags LIKE ?`;
+      params.push(`%"${tag}"%`);
+    }
+  }
+  sql += ` ORDER BY ${parsed.orderBy} DESC LIMIT ?`;
+  params.push(parsed.limit);
+  const notes = db.prepare(sql).all(...params);
+  const results = notes.map((note) => ({
+    ...note,
+    metadata: JSON.parse(note.metadata || "{}"),
+    tags: JSON.parse(note.tags || "[]")
+  }));
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        count: results.length,
+        notes: results
+      })
+    }]
+  };
+}
+async function handleUpdateNarrativeNote(args, _ctx) {
+  const parsed = NarrativeTools.UPDATE_NARRATIVE_NOTE.inputSchema.parse(args);
+  const db = getDb(process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db");
+  const existing = db.prepare("SELECT * FROM narrative_notes WHERE id = ?").get(parsed.noteId);
+  if (!existing) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({ success: false, error: "Note not found" })
+      }],
+      isError: true
+    };
+  }
+  const updates = [];
+  const params = [];
+  if (parsed.content !== void 0) {
+    updates.push("content = ?");
+    params.push(parsed.content);
+  }
+  if (parsed.status !== void 0) {
+    updates.push("status = ?");
+    params.push(parsed.status);
+  }
+  if (parsed.visibility !== void 0) {
+    updates.push("visibility = ?");
+    params.push(parsed.visibility);
+  }
+  if (parsed.tags !== void 0) {
+    updates.push("tags = ?");
+    params.push(JSON.stringify(parsed.tags));
+  }
+  if (parsed.metadata !== void 0) {
+    const existingMeta = JSON.parse(existing.metadata || "{}");
+    const merged = { ...existingMeta, ...parsed.metadata };
+    updates.push("metadata = ?");
+    params.push(JSON.stringify(merged));
+  }
+  if (updates.length === 0) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({ success: true, message: "No updates provided" })
+      }]
+    };
+  }
+  updates.push("updated_at = ?");
+  params.push((/* @__PURE__ */ new Date()).toISOString());
+  params.push(parsed.noteId);
+  db.prepare(`UPDATE narrative_notes SET ${updates.join(", ")} WHERE id = ?`).run(...params);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: true,
+        noteId: parsed.noteId,
+        message: `Updated note. Changes: ${updates.slice(0, -1).join(", ")}`
+      })
+    }]
+  };
+}
+async function handleGetNarrativeNote(args, _ctx) {
+  const parsed = NarrativeTools.GET_NARRATIVE_NOTE.inputSchema.parse(args);
+  const db = getDb(process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db");
+  const note = db.prepare("SELECT * FROM narrative_notes WHERE id = ?").get(parsed.noteId);
+  if (!note) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({ success: false, error: "Note not found" })
+      }],
+      isError: true
+    };
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        ...note,
+        metadata: JSON.parse(note.metadata || "{}"),
+        tags: JSON.parse(note.tags || "[]")
+      })
+    }]
+  };
+}
+async function handleDeleteNarrativeNote(args, _ctx) {
+  const parsed = NarrativeTools.DELETE_NARRATIVE_NOTE.inputSchema.parse(args);
+  const db = getDb(process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db");
+  const result = db.prepare("DELETE FROM narrative_notes WHERE id = ?").run(parsed.noteId);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        success: result.changes > 0,
+        deleted: result.changes > 0,
+        message: result.changes > 0 ? "Note deleted" : "Note not found"
+      })
+    }]
+  };
+}
+async function handleGetNarrativeContextNotes(args, _ctx) {
+  const parsed = NarrativeTools.GET_NARRATIVE_CONTEXT.inputSchema.parse(args);
+  const db = getDb(process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db");
+  const sections = [];
+  const typePriority = {
+    "foreshadowing": 100,
+    "plot_thread": 90,
+    "npc_voice": 80,
+    "canonical_moment": 70,
+    "session_log": 50
+  };
+  const typeLabels = {
+    "foreshadowing": "\u{1F52E} FORESHADOWING HINTS",
+    "plot_thread": "\u{1F4DC} ACTIVE PLOT THREADS",
+    "npc_voice": "\u{1F5E3}\uFE0F NPC VOICE NOTES",
+    "canonical_moment": "\u2B50 CANONICAL MOMENTS",
+    "session_log": "\u{1F4DD} SESSION LOGS"
+  };
+  for (const noteType of parsed.includeTypes) {
+    let sql = `SELECT * FROM narrative_notes WHERE world_id = ? AND type = ?`;
+    const params = [parsed.worldId, noteType];
+    if (parsed.statusFilter.length > 0) {
+      sql += ` AND status IN (${parsed.statusFilter.map(() => "?").join(",")})`;
+      params.push(...parsed.statusFilter);
+    }
+    if (parsed.forPlayer) {
+      sql += ` AND visibility = 'player_visible'`;
+    }
+    sql += ` ORDER BY created_at DESC LIMIT ?`;
+    params.push(parsed.maxPerType);
+    const notes = db.prepare(sql).all(...params);
+    if (notes.length > 0) {
+      sections.push({
+        title: typeLabels[noteType] || noteType.toUpperCase(),
+        notes: notes.map((n2) => ({
+          id: n2.id,
+          content: n2.content,
+          metadata: JSON.parse(n2.metadata || "{}"),
+          tags: JSON.parse(n2.tags || "[]"),
+          status: n2.status,
+          entityId: n2.entity_id,
+          entityType: n2.entity_type,
+          createdAt: n2.created_at
+        })),
+        priority: typePriority[noteType] || 0
+      });
+    }
+  }
+  sections.sort((a, b) => b.priority - a.priority);
+  let contextText = "";
+  for (const section of sections) {
+    contextText += `--- ${section.title} ---
+`;
+    for (const note of section.notes) {
+      contextText += `\u2022 ${note.content}`;
+      if (note.metadata && Object.keys(note.metadata).length > 0) {
+        const metaStr = Object.entries(note.metadata).filter(([_, v]) => v !== void 0 && v !== null && (Array.isArray(v) ? v.length > 0 : true)).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join(" | ");
+        if (metaStr)
+          contextText += ` [${metaStr}]`;
+      }
+      if (note.tags && note.tags.length > 0) {
+        contextText += ` #${note.tags.join(" #")}`;
+      }
+      contextText += "\n";
+    }
+    contextText += "\n";
+  }
+  return {
+    content: [{
+      type: "text",
+      text: contextText.trim() || "(No narrative notes found for this world)"
+    }]
+  };
+}
+
 // dist/server/tool-registry.js
 function meta(name, description, category, keywords, capabilities, contextAware = false, estimatedTokenCost = "medium", deferLoading = true) {
   return {
@@ -75305,6 +75717,37 @@ function buildToolRegistry() {
       metadata: meta(ProgressionTools.LEVEL_UP.name, ProgressionTools.LEVEL_UP.description, "character", ["level", "up", "increase", "stats", "hp"], ["Level increment", "Stat updates"], false, "medium"),
       schema: ProgressionTools.LEVEL_UP.inputSchema,
       handler: handleLevelUp
+    },
+    // === NARRATIVE MEMORY TOOLS ===
+    [NarrativeTools.ADD_NARRATIVE_NOTE.name]: {
+      metadata: meta(NarrativeTools.ADD_NARRATIVE_NOTE.name, NarrativeTools.ADD_NARRATIVE_NOTE.description, "narrative", ["narrative", "note", "plot", "thread", "story", "memory", "session", "canonical"], ["Plot tracking", "Canonical moments", "NPC voices", "Foreshadowing"], false, "low"),
+      schema: NarrativeTools.ADD_NARRATIVE_NOTE.inputSchema,
+      handler: handleAddNarrativeNote
+    },
+    [NarrativeTools.SEARCH_NARRATIVE_NOTES.name]: {
+      metadata: meta(NarrativeTools.SEARCH_NARRATIVE_NOTES.name, NarrativeTools.SEARCH_NARRATIVE_NOTES.description, "narrative", ["narrative", "search", "filter", "notes", "memory", "query"], ["Note retrieval", "Filtering by type/tag"], true, "medium"),
+      schema: NarrativeTools.SEARCH_NARRATIVE_NOTES.inputSchema,
+      handler: handleSearchNarrativeNotes
+    },
+    [NarrativeTools.UPDATE_NARRATIVE_NOTE.name]: {
+      metadata: meta(NarrativeTools.UPDATE_NARRATIVE_NOTE.name, NarrativeTools.UPDATE_NARRATIVE_NOTE.description, "narrative", ["narrative", "update", "resolve", "status", "edit"], ["Note status updates", "Plot resolution"], false, "low"),
+      schema: NarrativeTools.UPDATE_NARRATIVE_NOTE.inputSchema,
+      handler: handleUpdateNarrativeNote
+    },
+    [NarrativeTools.GET_NARRATIVE_NOTE.name]: {
+      metadata: meta(NarrativeTools.GET_NARRATIVE_NOTE.name, NarrativeTools.GET_NARRATIVE_NOTE.description, "narrative", ["narrative", "get", "retrieve", "note"], ["Single note retrieval"], false, "low"),
+      schema: NarrativeTools.GET_NARRATIVE_NOTE.inputSchema,
+      handler: handleGetNarrativeNote
+    },
+    [NarrativeTools.DELETE_NARRATIVE_NOTE.name]: {
+      metadata: meta(NarrativeTools.DELETE_NARRATIVE_NOTE.name, NarrativeTools.DELETE_NARRATIVE_NOTE.description, "narrative", ["narrative", "delete", "remove", "note"], ["Note deletion"], false, "low"),
+      schema: NarrativeTools.DELETE_NARRATIVE_NOTE.inputSchema,
+      handler: handleDeleteNarrativeNote
+    },
+    [NarrativeTools.GET_NARRATIVE_CONTEXT.name]: {
+      metadata: meta(NarrativeTools.GET_NARRATIVE_CONTEXT.name, NarrativeTools.GET_NARRATIVE_CONTEXT.description, "narrative", ["narrative", "context", "llm", "inject", "prompt", "memory", "hot"], ["Aggregated context", "LLM prompt injection"], true, "high"),
+      schema: NarrativeTools.GET_NARRATIVE_CONTEXT.inputSchema,
+      handler: handleGetNarrativeContextNotes
     },
     // === PARTY TOOLS ===
     [PartyTools.CREATE_PARTY.name]: {

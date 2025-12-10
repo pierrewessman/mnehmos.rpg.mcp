@@ -363,7 +363,7 @@ describe('Concentration System', () => {
         });
 
         it('should break concentration when unconscious', () => {
-            characterRepo.update(testCharacter.id, { conditions: ['unconscious'] });
+            characterRepo.update(testCharacter.id, { conditions: [{ name: 'unconscious' }] });
             const updatedChar = characterRepo.findById(testCharacter.id)!;
 
             const result = checkAutomaticConcentrationBreak(
@@ -377,7 +377,7 @@ describe('Concentration System', () => {
         });
 
         it('should break concentration when stunned', () => {
-            characterRepo.update(testCharacter.id, { conditions: ['stunned'] });
+            characterRepo.update(testCharacter.id, { conditions: [{ name: 'stunned' }] });
             const updatedChar = characterRepo.findById(testCharacter.id)!;
 
             const result = checkAutomaticConcentrationBreak(
@@ -391,7 +391,7 @@ describe('Concentration System', () => {
         });
 
         it('should not break concentration for non-incapacitating conditions', () => {
-            characterRepo.update(testCharacter.id, { conditions: ['frightened', 'restrained'] });
+            characterRepo.update(testCharacter.id, { conditions: [{ name: 'frightened' }, { name: 'restrained' }] });
             const updatedChar = characterRepo.findById(testCharacter.id)!;
 
             const result = checkAutomaticConcentrationBreak(

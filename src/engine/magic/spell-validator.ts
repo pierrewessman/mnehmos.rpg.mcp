@@ -376,12 +376,72 @@ export function hasSpellSlotAvailable(character: Character, minLevel: number): {
 }
 
 /**
+ * Check range for spell targeting
+ */
+export function validateSpellRange(
+    spell: Spell,
+    casterPosition: { x: number; y: number },
+    targetPosition?: { x: number; y: number },
+    options: { casterId?: string; targetId?: string } = {}
+): { valid: boolean; reason?: string } {
+    // Self-targeting spells
+    const range = typeof spell.range === 'string' ? spell.range.toLowerCase() : spell.range;
+    
+    if (range === 'self') {
+        if (options.targetId && options.casterId && options.targetId !== options.casterId) {
+            return { valid: false, reason: `${spell.name} can only target self` };
+        }
+        return { valid: true };
+    }
+
+    // Touch spells - must be adjacent (within 1 square / 5 feet)
+    if (range === 'touch') {
+        if (!targetPosition) {
+            return { valid: true }; 
+        }
+        const distance = Math.sqrt(
+            Math.pow(targetPosition.x - casterPosition.x, 2) +
+            Math.pow(targetPosition.y - casterPosition.y, 2)
+        );
+        // Adjacent = within 1.5 squares (allows diagonals)
+        if (distance > 1.5) {
+            return { valid: false, reason: `${spell.name} has range Touch - target must be adjacent` };
+        }
+        return { valid: true };
+    }
+
+    // Ranged spells
+    if (typeof range === 'number') {
+        if (!targetPosition) {
+            return { valid: true }; // No target position to validate
+        }
+        const distanceInSquares = Math.sqrt(
+            Math.pow(targetPosition.x - casterPosition.x, 2) +
+            Math.pow(targetPosition.y - casterPosition.y, 2)
+        );
+        const distanceInFeet = distanceInSquares * 5; // 5 feet per square
+
+        if (distanceInFeet > range) {
+            return { valid: false, reason: `${spell.name} has range ${range} feet` };
+        }
+        return { valid: true };
+    }
+
+    return { valid: true };
+}
+
+/**
  * Main validation function - validates a spell cast request
  */
 export function validateSpellCast(
     character: Character,
     spellName: string,
-    requestedSlotLevel?: number
+    requestedSlotLevel?: number,
+    options: {
+        casterPosition?: { x: number; y: number };
+        targetPosition?: { x: number; y: number };
+        targetId?: string;
+    } = {}
 ): SpellValidationResult {
     // Check empty spell name
     if (!spellName || spellName.trim() === '') {
@@ -431,6 +491,28 @@ export function validateSpellCast(
 
     // Handle cantrips (no slot needed)
     if (spell.level === 0) {
+        // Still need to validate range for cantrips!
+        // Validate Range & Targeting
+        const range = typeof spell.range === 'string' ? spell.range.toLowerCase() : spell.range;
+
+        if (options.casterPosition) {
+            const rangeCheck = validateSpellRange(spell, options.casterPosition, options.targetPosition, {
+                casterId: character.id,
+                targetId: options.targetId
+            });
+            if (!rangeCheck.valid) {
+                return {
+                    valid: false,
+                    error: { code: 'INVALID_TARGET', message: rangeCheck.reason! }
+                };
+            }
+        } else if (range === 'self' && options.targetId && options.targetId !== character.id) {
+            return {
+                valid: false,
+                error: { code: 'INVALID_TARGET', message: `${spell.name} can only target self` }
+            };
+        }
+
         return {
             valid: true,
             spell,
@@ -483,6 +565,28 @@ export function validateSpellCast(
         return {
             valid: false,
             error: { code: 'NO_SLOTS', message: slotCheck.reason! }
+        };
+    }
+
+    // Validate Range & Targeting (moved after level checks)
+    const range = typeof spell.range === 'string' ? spell.range.toLowerCase() : spell.range;
+
+    if (options.casterPosition) {
+        const rangeCheck = validateSpellRange(spell, options.casterPosition, options.targetPosition, {
+            casterId: character.id,
+            targetId: options.targetId
+        });
+        if (!rangeCheck.valid) {
+            return {
+                valid: false,
+                error: { code: 'INVALID_TARGET', message: rangeCheck.reason! }
+            };
+        }
+    } else if (range === 'self' && options.targetId && options.targetId !== character.id) {
+        // Fallback for self-check if no positions provided
+        return {
+            valid: false,
+            error: { code: 'INVALID_TARGET', message: `${spell.name} can only target self` }
         };
     }
 
@@ -596,54 +700,7 @@ export function restorePactSlots(character: Character): Character {
     };
 }
 
-/**
- * Check range for spell targeting
- */
-export function validateSpellRange(
-    spell: Spell,
-    casterPosition: { x: number; y: number },
-    targetPosition?: { x: number; y: number }
-): { valid: boolean; reason?: string } {
-    // Self-targeting spells
-    if (spell.range === 'self') {
-        return { valid: true };
-    }
 
-    // Touch spells - must be adjacent (within 1 square / 5 feet)
-    if (spell.range === 'touch') {
-        if (!targetPosition) {
-            return { valid: false, reason: `${spell.name} has range Touch - target must be adjacent` };
-        }
-        const distance = Math.sqrt(
-            Math.pow(targetPosition.x - casterPosition.x, 2) +
-            Math.pow(targetPosition.y - casterPosition.y, 2)
-        );
-        // Adjacent = within 1 square (diagonal counts)
-        if (distance > 1.5) { // Allow for diagonal (sqrt(2) ≈ 1.41)
-            return { valid: false, reason: `${spell.name} has range Touch - target must be adjacent` };
-        }
-        return { valid: true };
-    }
-
-    // Ranged spells
-    if (typeof spell.range === 'number') {
-        if (!targetPosition) {
-            return { valid: true }; // No target position to validate
-        }
-        const distanceInSquares = Math.sqrt(
-            Math.pow(targetPosition.x - casterPosition.x, 2) +
-            Math.pow(targetPosition.y - casterPosition.y, 2)
-        );
-        const distanceInFeet = distanceInSquares * 5; // 5 feet per square
-
-        if (distanceInFeet > spell.range) {
-            return { valid: false, reason: `${spell.name} has range ${spell.range} feet` };
-        }
-        return { valid: true };
-    }
-
-    return { valid: true };
-}
 
 /**
  * Get spellcasting configuration for a class

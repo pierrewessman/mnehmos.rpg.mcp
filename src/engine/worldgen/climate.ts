@@ -25,6 +25,10 @@ export interface ClimateOptions {
   poleTemp?: number;
   /** Temperature decrease per 10 elevation units (default 3°C) */
   elevationLapseRate?: number;
+  /** Global temperature offset (shift entire map hotter/colder) */
+  temperatureOffset?: number;
+  /** Global moisture offset (shift entire map wetter/drier) */
+  moistureOffset?: number;
 }
 
 export interface ClimateMap {
@@ -46,9 +50,10 @@ export function generateClimateMap(
   seed: string,
   width: number,
   height: number,
-  heightmap: Uint8Array
+  heightmap: Uint8Array,
+  options?: Partial<ClimateOptions>
 ): ClimateMap {
-  const options: ClimateOptions = {
+  const fullOptions: ClimateOptions = {
     seed,
     width,
     height,
@@ -56,10 +61,13 @@ export function generateClimateMap(
     equatorTemp: 30,
     poleTemp: -10,
     elevationLapseRate: 3,
+    temperatureOffset: 0,
+    moistureOffset: 0,
+    ...options
   };
 
-  const temperature = generateTemperatureMap(options);
-  const moisture = generateMoistureMap(options);
+  const temperature = generateTemperatureMap(fullOptions);
+  const moisture = generateMoistureMap(fullOptions);
 
   return {
     width,
@@ -76,7 +84,7 @@ export function generateClimateMap(
  * Temperature = Base(latitude) - Elevation adjustment + Noise variation
  */
 function generateTemperatureMap(options: ClimateOptions): Int8Array {
-  const { width, height, seed, heightmap, equatorTemp, poleTemp, elevationLapseRate } = options;
+  const { width, height, seed, heightmap, equatorTemp, poleTemp, elevationLapseRate, temperatureOffset = 0 } = options;
 
   const rng = seedrandom(seed + '-temp');
   const noise2D = createNoise2D(rng);
@@ -103,7 +111,7 @@ function generateTemperatureMap(options: ClimateOptions): Int8Array {
       const noiseAdjustment = noiseValue * 5;
 
       // Combined temperature
-      const temp = baseTemp + elevationAdjustment + noiseAdjustment;
+      const temp = baseTemp + elevationAdjustment + noiseAdjustment + temperatureOffset;
 
       // Clamp to realistic range
       temperature[idx] = Math.round(Math.max(-20, Math.min(40, temp)));
@@ -119,7 +127,7 @@ function generateTemperatureMap(options: ClimateOptions): Int8Array {
  * Moisture = Ocean distance + Latitude (tropical wet) + Noise
  */
 function generateMoistureMap(options: ClimateOptions): Uint8Array {
-  const { width, height, seed, heightmap } = options;
+  const { width, height, seed, heightmap, moistureOffset = 0 } = options;
 
   const rng = seedrandom(seed + '-moisture');
   const noise2D = createNoise2D(rng);
@@ -168,7 +176,7 @@ function generateMoistureMap(options: ClimateOptions): Uint8Array {
       const seedBias = Math.round((rng() - 0.5) * 12); // -6 to +6
 
       // Combined moisture
-      const totalMoisture = baseMoisture + latitudeMoisture + noiseAdjustment + seedBias;
+      const totalMoisture = baseMoisture + latitudeMoisture + noiseAdjustment + seedBias + moistureOffset;
 
       // Clamp to 0-100%
       moisture[idx] = Math.round(Math.max(0, Math.min(100, totalMoisture)));

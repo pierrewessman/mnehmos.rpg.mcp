@@ -229,7 +229,10 @@ export function checkAutomaticConcentrationBreak(
             if (typeof condition === 'string') {
                 return incapacitatingConditions.includes(condition.toLowerCase());
             }
-            return incapacitatingConditions.includes(condition.type.toLowerCase());
+            if (typeof condition === 'object' && condition.name) {
+                return incapacitatingConditions.includes(condition.name.toLowerCase());
+            }
+            return false;
         }
     );
 

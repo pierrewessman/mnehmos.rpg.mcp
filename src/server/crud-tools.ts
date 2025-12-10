@@ -28,7 +28,7 @@ export const CRUDTools = {
     // World tools
     CREATE_WORLD: {
         name: 'create_world',
-        description: 'Create a new world in the database with name, seed, and dimensions.',
+        description: 'Create a new world in the database with name, seed, and dimensions. Example: { "name": "New World", "seed": "abc", "width": 50, "height": 50 }',
         inputSchema: WorldSchema.omit({ id: true, createdAt: true, updatedAt: true })
     },
     GET_WORLD: {

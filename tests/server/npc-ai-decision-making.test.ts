@@ -27,6 +27,8 @@ import { PartyRepository } from '../../src/storage/repos/party.repo.js';
 import { NationRepository } from '../../src/storage/repos/nation.repo.js';
 import { DiplomacyRepository } from '../../src/storage/repos/diplomacy.repo.js';
 import { SpatialRepository } from '../../src/storage/repos/spatial.repo.js';
+import { WorldRepository } from '../../src/storage/repos/world.repo.js';
+import { RoomNode } from '../../src/schema/spatial.js';
 
 // Import tool handlers for AI testing
 import {
@@ -54,6 +56,7 @@ let partyRepo: PartyRepository;
 let nationRepo: NationRepository;
 let diplomacyRepo: DiplomacyRepository;
 let spatialRepo: SpatialRepository;
+let worldRepo: WorldRepository;
 
 const mockCtx = { sessionId: 'test-session' };
 
@@ -67,6 +70,16 @@ beforeEach(() => {
     nationRepo = new NationRepository(db);
     diplomacyRepo = new DiplomacyRepository(db);
     spatialRepo = new SpatialRepository(db);
+    worldRepo = new WorldRepository(db);
+    worldRepo.create({
+        id: 'test-world',
+        name: 'Test World',
+        seed: 'test-seed',
+        width: 100,
+        height: 100,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
 });
 
 afterEach(() => {
@@ -120,6 +133,32 @@ function simulateAiDecision(characterId: string, context: any) {
         reasoning: 'Based on personality traits and context',
         confidence: 0.8
     };
+}
+
+function createTestRoom(overrides: Partial<RoomNode> = {}): RoomNode {
+    return {
+        id: overrides.id || uuid(),
+        name: overrides.name || 'Test Room',
+        baseDescription: overrides.baseDescription || 'A generic test room',
+        biomeContext: overrides.biomeContext || 'urban',
+        atmospherics: overrides.atmospherics || [],
+        exits: overrides.exits || [],
+        entityIds: overrides.entityIds || [],
+        visitedCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ...overrides
+    };
+}
+
+function extractJsonFromResponse(text: string): any {
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        const match = text.match(/<!-- STATE_JSON\n([\s\S]*?)\nSTATE_JSON -->/);
+        if (match) return JSON.parse(match[1]);
+        throw e;
+    }
 }
 
 // =============================================================================
@@ -190,7 +229,7 @@ describe('Category 1: Combat AI Decision-Making', () => {
                 ]
             }, mockCtx);
 
-            const encounterId = JSON.parse(encounterResult.content[0].text).encounterId;
+            const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Get encounter state to analyze AI decisions
             const state = await handleGetEncounterState({ encounterId }, mockCtx);
@@ -262,7 +301,7 @@ describe('Category 1: Combat AI Decision-Making', () => {
                 ]
             }, mockCtx);
 
-            const encounterId = JSON.parse(encounterResult.content[0].text).encounterId;
+            const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test defensive AI decision-making
             const state = await handleGetEncounterState({ encounterId }, mockCtx);
@@ -314,7 +353,7 @@ describe('Category 1: Combat AI Decision-Making', () => {
                 ]
             }, mockCtx);
 
-            const encounterId = JSON.parse(encounterResult.content[0].text).encounterId;
+            const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test tactical AI considers positioning, flanking, environmental factors
             const state = await handleGetEncounterState({ encounterId }, mockCtx);
@@ -382,7 +421,7 @@ describe('Category 1: Combat AI Decision-Making', () => {
                 ]
             }, mockCtx);
 
-            const encounterId = JSON.parse(encounterResult.content[0].text).encounterId;
+            const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test: AI should analyze spell effectiveness vs targets
             const state = await handleGetEncounterState({ encounterId }, mockCtx);
@@ -432,7 +471,7 @@ describe('Category 1: Combat AI Decision-Making', () => {
                 ]
             }, mockCtx);
 
-            const encounterId = JSON.parse(encounterResult.content[0].text).encounterId;
+            const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test: AI should prefer low-level spells when appropriate
             // vs saving high-level spells for tougher opponents
@@ -499,7 +538,7 @@ describe('Category 1: Combat AI Decision-Making', () => {
                 ]
             }, mockCtx);
 
-            const encounterId = JSON.parse(encounterResult.content[0].text).encounterId;
+            const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test: Ranged AI should maintain distance, use kiting tactics
             const state = await handleGetEncounterState({ encounterId }, mockCtx);
@@ -659,6 +698,16 @@ describe('Category 2: Social AI Decision-Making', () => {
                 stats: { str: 10, dex: 12, con: 12, int: 12, wis: 10, cha: 16 }
             });
 
+            // Create room and add characters
+            const room = createTestRoom({ entityIds: [hero.id, shyNpc.id, confidentNpc.id] });
+            spatialRepo.create(room);
+            spatialRepo.addEntityToRoom(room.id, hero.id);
+            spatialRepo.addEntityToRoom(room.id, shyNpc.id);
+            spatialRepo.addEntityToRoom(room.id, confidentNpc.id);
+            charRepo.update(hero.id, { currentRoomId: room.id });
+            charRepo.update(shyNpc.id, { currentRoomId: room.id });
+            charRepo.update(confidentNpc.id, { currentRoomId: room.id });
+
             // Test conversation with both NPCs
             await handleInteractSocially({
                 speakerId: hero.id,
@@ -736,6 +785,14 @@ describe('Category 2: Social AI Decision-Making', () => {
                 behavior: 'wise',
                 stats: { str: 8, dex: 10, con: 12, int: 16, wis: 18, cha: 14 }
             });
+
+            // Create room and add characters
+            const room = createTestRoom({ entityIds: [hero.id, elder.id] });
+            spatialRepo.create(room);
+            spatialRepo.addEntityToRoom(room.id, hero.id);
+            spatialRepo.addEntityToRoom(room.id, elder.id);
+            charRepo.update(hero.id, { currentRoomId: room.id });
+            charRepo.update(elder.id, { currentRoomId: room.id });
 
             // Test different intents
             const intents = ['greeting', 'question', 'request', 'threaten', 'bargain', 'confide'];
@@ -876,7 +933,7 @@ describe('Category 3: Strategic AI Decision-Making', () => {
                 worldId: 'test-world',
                 name: 'Honorable Kingdom',
                 leader: 'King Truth',
-                ideology: 'monarchy',
+                ideology: 'autocracy',
                 aggression: 20,
                 trust: 90,
                 paranoia: 20
@@ -1017,7 +1074,7 @@ describe('Category 4: Adaptive AI Behavior', () => {
                 ]
             }, mockCtx);
 
-            const encounterId1 = JSON.parse(encounter1.content[0].text).encounterId;
+            const encounterId1 = extractJsonFromResponse(encounter1.content[0].text).encounterId;
 
             // Simulate combat where fighter loses
             await handleExecuteCombatAction({
@@ -1055,7 +1112,7 @@ describe('Category 4: Adaptive AI Behavior', () => {
             }, mockCtx);
 
             const state2 = await handleGetEncounterState({
-                encounterId: JSON.parse(encounter2.content[0].text).encounterId
+                encounterId: extractJsonFromResponse(encounter2.content[0].text).encounterId
             }, mockCtx);
 
             expect(state2.participants).toBeDefined();
@@ -1080,13 +1137,14 @@ describe('Category 4: Adaptive AI Behavior', () => {
             });
 
             // Create room representing tavern
-            const tavernRoom = spatialRepo.createRoom({
+            const tavernRoom = createTestRoom({
                 name: 'The Drunken Dragon Tavern',
                 baseDescription: 'A crowded tavern with low lighting and wooden tables',
                 biomeContext: 'urban',
                 atmospherics: ['BRIGHT'],
                 entityIds: [cityGuard.id, drunk.id]
             });
+            spatialRepo.create(tavernRoom);
 
             // Test: Authoritative AI should be more lenient in tavern vs street
             const roomContext = spatialRepo.findById(tavernRoom.id);
@@ -1110,13 +1168,14 @@ describe('Category 4: Adaptive AI Behavior', () => {
             });
 
             // Create sacred space
-            const templeRoom = spatialRepo.createRoom({
+            const templeRoom = createTestRoom({
                 name: 'Sacred Altar of Light',
                 baseDescription: 'A consecrated space filled with divine radiance',
                 biomeContext: 'divine',
                 atmospherics: ['BRIGHT', 'MAGICAL'],
                 entityIds: [zealot.id, troublemaker.id]
             });
+            spatialRepo.create(templeRoom);
 
             const temple = spatialRepo.findById(templeRoom.id);
             expect(temple?.atmospherics).toContain('BRIGHT');
@@ -1312,32 +1371,52 @@ describe('Category 6: Multi-Character Coordination', () => {
 
             // Create party
             const party = partyRepo.create({
+                id: uuid(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
                 name: 'The Companions',
                 description: 'Adventuring party',
                 worldId: 'test-world',
                 currentLocation: 'Tavern',
                 formation: 'defensive',
-                status: 'active',
-                initialMembers: [
-                    {
-                        characterId: partyLeader.id,
-                        role: 'leader',
-                        position: 1,
-                        notes: 'Party leader'
-                    },
-                    {
-                        characterId: healer.id,
-                        role: 'member',
-                        position: 2,
-                        notes: 'Healer support'
-                    },
-                    {
-                        characterId: attacker.id,
-                        role: 'member',
-                        position: 3,
-                        notes: 'Flanking specialist'
-                    }
-                ]
+                status: 'active'
+            });
+
+            // Add members explicitly
+            partyRepo.addMember({
+                id: uuid(),
+                partyId: party.id,
+                characterId: partyLeader.id,
+                role: 'leader',
+                isActive: true,
+                sharePercentage: 1,
+                joinedAt: new Date().toISOString(),
+                position: 1,
+                notes: 'Party leader'
+            });
+
+            partyRepo.addMember({
+                id: uuid(),
+                partyId: party.id,
+                characterId: healer.id,
+                role: 'member',
+                isActive: true,
+                sharePercentage: 1,
+                joinedAt: new Date().toISOString(),
+                position: 2,
+                notes: 'Healer support'
+            });
+
+            partyRepo.addMember({
+                id: uuid(),
+                partyId: party.id,
+                characterId: attacker.id,
+                role: 'member',
+                isActive: true,
+                sharePercentage: 1,
+                joinedAt: new Date().toISOString(),
+                position: 3,
+                notes: 'Flanking specialist'
             });
 
             // Test: Party should coordinate in combat scenarios
@@ -1932,7 +2011,10 @@ describe('Test Utilities and Helpers', () => {
         // Verify we can create and query data
         const testChar = createTestCharacter({ name: 'Cleanup Test' });
         const found = charRepo.findById(testChar.id);
-        expect(found.name).toBe('Cleanup Test');
+        expect(found).toBeDefined();
+        if (found) {
+            expect(found.name).toBe('Cleanup Test');
+        }
     });
 });
 

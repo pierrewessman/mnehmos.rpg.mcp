@@ -41,6 +41,14 @@ export interface CombatParticipant {
     // HIGH-003: Opportunity attack tracking
     reactionUsed?: boolean;    // Whether reaction has been used this round
     hasDisengaged?: boolean;   // Whether creature took disengage action this turn
+    // ACTION ECONOMY
+    actionUsed?: boolean;          // Has used main Action this turn
+    bonusActionUsed?: boolean;     // Has used Bonus Action this turn
+    spellsCast?: {                 // Track spells cast this turn for Bonus Action Rule
+        action?: number;           // Level of spell cast as Action
+        bonus?: number;            // Level of spell cast as Bonus Action
+        reaction?: number;         // Level of spell cast as Reaction
+    };
     // LEGENDARY CREATURE SUPPORT
     legendaryActions?: number;           // Total legendary actions per round (usually 3)
     legendaryActionsRemaining?: number;  // Remaining legendary actions this round
@@ -190,7 +198,15 @@ export class CombatEngine {
                 isEnemy: p.isEnemy ?? this.detectIsEnemy(p.id, p.name),
                 // Initialize legendary actions remaining to max if applicable
                 legendaryActionsRemaining: p.legendaryActions ?? p.legendaryActionsRemaining,
-                legendaryResistancesRemaining: p.legendaryResistances ?? p.legendaryResistancesRemaining
+                legendaryResistancesRemaining: p.legendaryResistances ?? p.legendaryResistancesRemaining,
+                // Initialize resources
+                movementRemaining: p.movementSpeed ?? 30,
+                actionUsed: false,
+                bonusActionUsed: false,
+                spellsCast: {},
+                reactionUsed: false,
+                hasDashed: false,
+                hasDisengaged: false
             };
         });
 
@@ -919,6 +935,11 @@ export class CombatEngine {
     private resetTurnResources(participant: CombatParticipant): void {
         participant.reactionUsed = false;
         participant.hasDisengaged = false;
+        participant.hasDashed = false;
+        participant.actionUsed = false;
+        participant.bonusActionUsed = false;
+        participant.spellsCast = {};
+        participant.movementRemaining = participant.movementSpeed ?? 30;
     }
 
     /**
@@ -1075,6 +1096,89 @@ export class CombatEngine {
             const effects = CONDITION_EFFECTS[c.type];
             return effects.canTakeReactions === false;
         });
+    }
+
+    /**
+     * Validate Action Economy rules
+     * Handles: Action/Bonus Action availability and "Bonus Action Spell" rule
+     */
+    validateActionEconomy(
+        participantId: string, 
+        actionType: 'action' | 'bonus' | 'reaction',
+        spellLevel?: number
+    ): { valid: boolean; error?: string } {
+        if (!this.state) return { valid: false, error: 'No active combat' };
+
+        const participant = this.state.participants.find(p => p.id === participantId);
+        if (!participant) return { valid: false, error: 'Participant not found' };
+
+        // 1. Check strict incapacitation
+        if (!this.canTakeActions(participantId)) {
+            return { valid: false, error: 'Participant is incapacitated' };
+        }
+
+        // 2. Check Action availability
+        if (actionType === 'action') {
+            if (participant.actionUsed) {
+                return { valid: false, error: 'Action already used this turn' };
+            }
+            
+            // Bonus Action Spell Rule: If bonus spell cast, Action can only be Cantrip (level 0)
+            if (spellLevel !== undefined && spellLevel > 0) {
+                if (participant.spellsCast?.bonus !== undefined) {
+                    return { valid: false, error: 'Cannot cast leveled spell as Action after casting Bonus Action spell (only Cantrips allowed)' };
+                }
+            }
+        } 
+        else if (actionType === 'bonus') {
+            if (participant.bonusActionUsed) {
+                return { valid: false, error: 'Bonus Action already used this turn' };
+            }
+
+            // Bonus Action Spell Rule: If casting spell as BA, no leveled Action spell allowed
+            if (spellLevel !== undefined) {
+                // If we already cast a leveled action spell, we cannot cast a BA spell
+                if (participant.spellsCast?.action !== undefined && participant.spellsCast.action > 0) {
+                     return { valid: false, error: 'Cannot cast Bonus Action spell if leveled spell was cast as Action' };
+                }
+            }
+        }
+        else if (actionType === 'reaction') {
+            if (!this.canTakeReactions(participantId)) {
+                return { valid: false, error: 'Cannot take reactions (incapacitated or condition)' };
+            }
+            if (participant.reactionUsed) {
+                return { valid: false, error: 'Reaction already used this round' };
+            }
+        }
+
+        return { valid: true };
+    }
+
+    /**
+     * Commit an action to the economy tracking
+     */
+    commitAction(
+        participantId: string, 
+        actionType: 'action' | 'bonus' | 'reaction', 
+        spellLevel?: number
+    ): void {
+        if (!this.state) return;
+        const participant = this.state.participants.find(p => p.id === participantId);
+        if (!participant) return;
+
+        if (!participant.spellsCast) participant.spellsCast = {};
+
+        if (actionType === 'action') {
+            participant.actionUsed = true;
+            if (spellLevel !== undefined) participant.spellsCast.action = spellLevel;
+        } else if (actionType === 'bonus') {
+            participant.bonusActionUsed = true;
+            if (spellLevel !== undefined) participant.spellsCast.bonus = spellLevel;
+        } else if (actionType === 'reaction') {
+            participant.reactionUsed = true;
+            if (spellLevel !== undefined) participant.spellsCast.reaction = spellLevel;
+        }
     }
 
     /**

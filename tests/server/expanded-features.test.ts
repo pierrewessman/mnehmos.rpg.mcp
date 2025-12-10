@@ -1228,7 +1228,12 @@ describe('Integration: Combined Systems', () => {
         const hero1Total = (hero1.deathSaveSuccesses || 0) + (hero1.deathSaveFailures || 0);
         const hero2Total = (hero2.deathSaveSuccesses || 0) + (hero2.deathSaveFailures || 0);
 
-        expect(hero1Total).toBeGreaterThanOrEqual(1);
-        expect(hero2Total).toBeGreaterThanOrEqual(1);
+        // Check hero1 (handle Nat 20 case where hp becomes 1 and saves reset)
+        const hero1Valid = hero1Total >= 1 || hero1.hp === 1;
+        expect(hero1Valid, `Hero 1 should have rolled a death save (Total: ${hero1Total}, HP: ${hero1.hp})`).toBe(true);
+
+        // Check hero2
+        const hero2Valid = hero2Total >= 1 || hero2.hp === 1;
+        expect(hero2Valid, `Hero 2 should have rolled a death save (Total: ${hero2Total}, HP: ${hero2.hp})`).toBe(true);
     });
 });

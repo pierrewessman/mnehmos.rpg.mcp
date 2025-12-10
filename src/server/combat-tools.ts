@@ -142,7 +142,7 @@ function formatCombatStateText(state: CombatState): string {
  * Create a visual HP bar
  */
 function createHpBar(percentage: number): string {
-    const filled = Math.round(percentage / 10);
+    const filled = Math.max(0, Math.min(10, Math.round(percentage / 10)));
     const empty = 10 - filled;
     
     // Simple ASCII bar for cleaner output
@@ -190,17 +190,38 @@ function formatHealResult(result: CombatActionResult): string {
  */
 function formatSpellCastResult(
     casterName: string,
-    resolution: { spellName: string; damage?: number; damageType?: string; healing?: number; diceRolled: string; saveResult?: string; saveDC?: number; autoHit?: boolean; dartCount?: number; concentration?: boolean },
+    resolution: { 
+        spellName: string; 
+        damage?: number; 
+        damageType?: string; 
+        healing?: number; 
+        diceRolled: string; 
+        saveResult?: string; 
+        saveDC?: number; 
+        autoHit?: boolean; 
+        dartCount?: number; 
+        concentration?: boolean;
+        attackRoll?: number;
+        attackTotal?: number;
+        hit?: boolean;
+    },
     target: { name: string; hp: number; maxHp: number } | undefined,
     targetHpBefore: number
 ): string {
     let output = `\n┌─────────────────────────────────────────┐\n`;
     output += `│ ✨ SPELL CAST\n`;
     output += `└─────────────────────────────────────────┘\n\n`;
-
     output += `${casterName} casts ${resolution.spellName}!\n\n`;
 
-    // Dice rolled
+    // Attack Roll details
+    if (resolution.attackRoll !== undefined) {
+        const hitStr = resolution.hit ? 'HIT' : 'MISS';
+        const bonus = (resolution.attackTotal || 0) - resolution.attackRoll;
+        const sign = bonus >= 0 ? '+' : '';
+        output += `⚔️ Attack Roll: ${resolution.attackRoll} (d20) ${sign}${bonus} = ${resolution.attackTotal} → ${hitStr}\n`;
+    }
+
+    // Dice & Damage
     if (resolution.diceRolled) {
         output += `🎲 Rolled: ${resolution.diceRolled}\n`;
     }
@@ -210,8 +231,8 @@ function formatSpellCastResult(
         output += `✨ Darts: ${resolution.dartCount}\n`;
     }
 
-    // Save info
-    if (resolution.saveResult && resolution.saveDC) {
+    // Save info (moved into damage block if applicable, or standalone if no damage)
+    if (resolution.saveResult && resolution.saveDC && (!resolution.damage || resolution.damage <= 0)) {
         const saveIcon = resolution.saveResult === 'passed' ? '✓' : '✗';
         output += `🛡️ Save DC ${resolution.saveDC}: ${saveIcon} ${resolution.saveResult}\n`;
     }
@@ -222,9 +243,15 @@ function formatSpellCastResult(
     }
 
     // Damage
-    if (resolution.damage && resolution.damage > 0) {
+    if (resolution.damage !== undefined && resolution.damage > 0) {
         const damageType = resolution.damageType || 'magical';
         output += `💥 Damage: ${resolution.damage} ${damageType}\n`;
+        
+        // Save details (if damage was dealt and there was a save)
+        if (resolution.saveResult) {
+            const saveEmoji = resolution.saveResult === 'passed' ? '✓' : '✗';
+            output += `   (Save DC ${resolution.saveDC}: ${saveEmoji} ${resolution.saveResult.toUpperCase()})\n`;
+        }
 
         if (target) {
             output += `\n${target.name}: ${targetHpBefore} → ${target.hp} HP`;
@@ -232,6 +259,8 @@ function formatSpellCastResult(
                 output += ` 💀 DEFEATED!`;
             }
         }
+    } else if (resolution.hit === false) {
+        output += `💨 The spell missed!\n`;
     }
 
     // Healing
@@ -1106,12 +1135,26 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
     let result: CombatActionResult | undefined;
     let output = '';
 
+    // Helper to determine action type from casting time
+    const parseCastingTime = (castingTime: string): 'action' | 'bonus' | 'reaction' => {
+        const lower = castingTime.toLowerCase();
+        if (lower.includes('bonus')) return 'bonus';
+        if (lower.includes('reaction')) return 'reaction';
+        return 'action';
+    };
+
     if (parsed.action === 'attack') {
         if (parsed.attackBonus === undefined || parsed.dc === undefined || parsed.damage === undefined) {
             throw new Error('Attack action requires attackBonus, dc, and damage');
         }
         if (!parsed.targetId) {
             throw new Error('Attack action requires targetId');
+        }
+
+        // Validate Action Economy
+        const validation = engine.validateActionEconomy(parsed.actorId, 'action');
+        if (!validation.valid) {
+            throw new Error(validation.error);
         }
 
         // Use the new detailed attack method with optional damageType for HIGH-002
@@ -1146,6 +1189,9 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
 
         output = formatAttackResult(result);
         
+        // Commit Action Economy
+        engine.commitAction(parsed.actorId, 'action');
+
     } else if (parsed.action === 'heal') {
         if (parsed.amount === undefined) {
             throw new Error('Heal action requires amount');
@@ -1154,8 +1200,18 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
             throw new Error('Heal action requires targetId');
         }
 
+        // Validate Action Economy
+        const validation = engine.validateActionEconomy(parsed.actorId, 'action');
+        if (!validation.valid) {
+            throw new Error(validation.error);
+        }
+
         result = engine.executeHeal(parsed.actorId, parsed.targetId, parsed.amount);
         output = formatHealResult(result);
+        
+        // Commit Action Economy
+        engine.commitAction(parsed.actorId, 'action');
+
     } else if (parsed.action === 'disengage') {
         // HIGH-003: Disengage action - prevents opportunity attacks
         const currentState = engine.getState();
@@ -1168,8 +1224,17 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
             throw new Error(`Actor ${parsed.actorId} not found`);
         }
 
+        // Validate Action Economy
+        const validation = engine.validateActionEconomy(parsed.actorId, 'action');
+        if (!validation.valid) {
+            throw new Error(validation.error);
+        }
+
         // Mark as disengaged using engine method
         engine.disengage(parsed.actorId);
+        
+        // Commit Action Economy
+        engine.commitAction(parsed.actorId, 'action');
 
         output = formatDisengageResult(actor.name);
 
@@ -1276,9 +1341,20 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
                         // No valid path
                         output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, false, 'No valid path - blocked by obstacles');
                     } else {
-                        // Move successful - update position
-                        (updatedActor as any).position = parsed.targetPosition;
-                        output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, true, null, path.length - 1);
+                        // Calculate movement cost (5ft per step)
+                        // path includes start node, so steps = length - 1
+                        const moveCost = (path.length - 1) * 5;
+                        const currentMovement = (actor as any).movementRemaining ?? 30; // Default 30 if undefined
+
+                        if (currentMovement < moveCost) {
+                            output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, false, `Insufficient movement (Cost: ${moveCost}ft, Remaining: ${currentMovement}ft)`);
+                        } else {
+                            // Move successful - update position and remaining movement
+                            (updatedActor as any).position = parsed.targetPosition;
+                            (updatedActor as any).movementRemaining = currentMovement - moveCost;
+                            
+                            output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, true, null, path.length - 1);
+                        }
                     }
                 }
 
@@ -1346,8 +1422,18 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
             throw new Error(`Character ${parsed.actorId} not found in database. Spellcasting requires a character record with class and spell slots.`);
         }
 
+        // Get target (needed for validation of range)
+        // Re-use logic: defined outside or define here once?
+        // Note: variable 'target' is defined later in the file.
+        // We will define it here as 'validationTarget' to avoid conflict, or check if we can hoist.
+        const validationTarget = currentState.participants.find(p => p.id === parsed.targetId);
+
         // Validate spell cast (CRIT-006 core validation)
-        const validation = validateSpellCast(casterChar, parsed.spellName, parsed.slotLevel);
+        const validation = validateSpellCast(casterChar, parsed.spellName, parsed.slotLevel, {
+            casterPosition: actor.position || undefined,
+            targetPosition: validationTarget ? (validationTarget.position || undefined) : (parsed.targetPosition || undefined),
+            targetId: parsed.targetId
+        });
 
         if (!validation.valid) {
             throw new Error(validation.error?.message || 'Invalid spell cast');
@@ -1356,6 +1442,28 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
         // Spell is valid - resolve effects
         const spell = validation.spell!;
         const effectiveSlotLevel = validation.effectiveSlotLevel || spell.level;
+
+        // ACTION ECONOMY VALIDATION
+        const actionType = parseCastingTime(spell.castingTime);
+        // Is it a leveled spell? (Cantrips are level 0)
+        // Bonus Action Rule applies to "casting a spell" (BA) and "casting a spell" (Action).
+        // My engine logic handles the specific combinations (BA spell -> Action Cantrip Only).
+        // I need to pass the spell level (effective slot level? No, base level usually? Rules say "Cantrip", which is level 0. Casting at higher level doesn't make it a leveled spell? Yes it does. "Level 1 or higher". )
+        // "You can't cast another spell during the same turn, except for a cantrip with a casting time of 1 action."
+        // So effectiveSlotLevel is what matters for consumption, but base level matters for "Cantrip"? A Level 1 spell cast with Level 2 slot is Level 2. A Cantrip cast with... cantrips don't use slots.
+        // So I'll use `effectiveSlotLevel` (which is 0 for cantrips).
+        
+        const economyValidation = engine.validateActionEconomy(parsed.actorId, actionType, effectiveSlotLevel);
+        if (!economyValidation.valid) {
+            throw new Error(economyValidation.error);
+        }
+        
+        // Commit Action Economy (do this BEFORE resolving just in case resolution fails? No, if resolution fails we shouldn't burn action? 
+        // But throwing errors inside resolution is bad. 
+        // However, I'll commit at end to be safe, or start? 
+        // If I commit at end, and resolution crashes, action is saved? 
+        // If logic throws, we don't save state. 
+        // So better to commit at end of block).
 
         // Get target for damage/effects
         let target = currentState.participants.find(p => p.id === parsed.targetId);
@@ -1449,6 +1557,9 @@ export async function handleExecuteCombatAction(args: unknown, ctx: SessionConte
         // Format output with SPELL tag for test parsing
         output = formatSpellCastResult(actor.name, resolution, target, targetHpBefore);
         output += `\n[SPELL: ${spell.name}, SLOT: ${effectiveSlotLevel > 0 ? effectiveSlotLevel : 'cantrip'}, DMG: ${resolution.damage || 0}, HEAL: ${resolution.healing || 0}]`;
+
+        // Commit Action Economy
+        engine.commitAction(parsed.actorId, actionType, effectiveSlotLevel);
 
         // Create result
         result = {

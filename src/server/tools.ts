@@ -23,11 +23,14 @@ export function setWorldPubSub(instance: PubSub) {
 export const Tools = {
     GENERATE_WORLD: {
         name: 'generate_world',
-        description: 'Generate a new procedural RPG world with seed, width, and height parameters.',
+        description: 'Generate a new procedural RPG world with seed, width, and height parameters. Example: { "seed": "atlas", "width": 50, "height": 50 }',
         inputSchema: z.object({
             seed: z.string().describe('Seed for random number generation'),
             width: z.number().int().min(10).max(1000).describe('Width of the world grid'),
-            height: z.number().int().min(10).max(1000).describe('Height of the world grid')
+            height: z.number().int().min(10).max(1000).describe('Height of the world grid'),
+            landRatio: z.number().min(0.1).max(0.9).optional().describe('Land to water ratio (0.1 = mostly ocean, 0.9 = mostly land, default 0.3)'),
+            temperatureOffset: z.number().min(-30).max(30).optional().describe('Global temperature offset (-30 to +30) to shift biome distribution'),
+            moistureOffset: z.number().min(-30).max(30).optional().describe('Global moisture offset (-30 to +30) to shift biome distribution')
         })
     },
     GET_WORLD_STATE: {
@@ -39,7 +42,7 @@ export const Tools = {
     },
     APPLY_MAP_PATCH: {
         name: 'apply_map_patch',
-        description: 'Apply DSL commands to modify the world map. Use find_valid_poi_location first for structure placement.',
+        description: 'Apply DSL commands to modify the world map. Use find_valid_poi_location first for structure placement. Example: { "worldId": "id", "script": "ADD_STRUCTURE..." }',
         inputSchema: z.object({
             worldId: z.string().describe('The ID of the world to patch'),
             script: z.string().describe('The DSL script containing patch commands.')
@@ -167,7 +170,10 @@ export async function handleGenerateWorld(args: unknown, ctx: SessionContext) {
     const world = generateWorld({
         seed: parsed.seed,
         width: parsed.width,
-        height: parsed.height
+        height: parsed.height,
+        landRatio: parsed.landRatio,
+        temperatureOffset: parsed.temperatureOffset,
+        moistureOffset: parsed.moistureOffset
     });
 
     const genTime = Date.now() - startTime;

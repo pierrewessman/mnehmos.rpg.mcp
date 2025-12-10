@@ -380,7 +380,7 @@ describe('PHASE-2: Social Hearing Mechanics', () => {
             const deafListener = createChar({
                 name: 'Deafened Guard',
                 currentRoomId: room.id,
-                conditions: ['DEAFENED']
+                conditions: [{ name: 'DEAFENED' }]
             });
 
             spatialRepo.update(room.id, { entityIds: [speaker.id, deafListener.id] });

@@ -73,7 +73,12 @@ export interface WorldGenOptions {
   /** Number of towns (default 10) */
   numTowns?: number;
   /** Number of dungeons (default 5) */
+  /** Number of dungeons (default 5) */
   numDungeons?: number;
+  /** Global temperature offset (shift entire map hotter/colder) */
+  temperatureOffset?: number;
+  /** Global moisture offset (shift entire map wetter/drier) */
+  moistureOffset?: number;
 }
 
 /**
@@ -96,7 +101,8 @@ export interface WorldGenOptions {
 export function generateWorld(options: WorldGenOptions): GeneratedWorld {
   const {
     seed, width, height, landRatio, octaves,
-    numRegions, numCities, numTowns, numDungeons
+    numRegions, numCities, numTowns, numDungeons,
+    temperatureOffset, moistureOffset
   } = options;
 
   // Step 1: Generate heightmap
@@ -106,7 +112,10 @@ export function generateWorld(options: WorldGenOptions): GeneratedWorld {
   });
 
   // Step 2: Generate climate (temperature + moisture)
-  const climate = generateClimateMap(seed, width, height, elevation);
+  const climate = generateClimateMap(seed, width, height, elevation, {
+    temperatureOffset,
+    moistureOffset
+  });
 
   // Step 3: Assign biomes
   const biomeMap = generateBiomeMap({

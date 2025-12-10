@@ -300,7 +300,7 @@ describe('PHASE-1: Spatial Graph System', () => {
 
             const observer = createTestCharacter({
                 id: observerId,
-                conditions: ['DARKVISION']
+                conditions: [{ name: 'DARKVISION' }]
             });
             characterRepo.create(observer);
 
