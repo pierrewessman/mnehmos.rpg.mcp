@@ -35,7 +35,7 @@ import { ContextTools, handleGetNarrativeContext } from './context-tools.js';
 import { ProgressionTools, handleAddXp, handleGetLevelProgression, handleLevelUp } from './progression-tools.js';
 import { SkillCheckTools, handleRollSkillCheck, handleRollAbilityCheck, handleRollSavingThrow } from './skill-check-tools.js';
 import { NarrativeTools, handleAddNarrativeNote, handleSearchNarrativeNotes, handleUpdateNarrativeNote, handleGetNarrativeNote, handleDeleteNarrativeNote, handleGetNarrativeContextNotes } from './narrative-tools.js';
-import { CompositeTools, handleSetupTacticalEncounter, handleSpawnEquippedCharacter, handleInitializeSession, handleSpawnPopulatedLocation, handleSpawnPresetEncounter } from './composite-tools.js';
+import { CompositeTools, handleSetupTacticalEncounter, handleSpawnEquippedCharacter, handleInitializeSession, handleSpawnPopulatedLocation, handleSpawnPresetEncounter, handleRestParty } from './composite-tools.js';
 
 // Helper to create metadata
 // deferLoading defaults to true (most tools should be deferred)
@@ -1438,6 +1438,13 @@ export function buildToolRegistry(): ToolRegistry {
         ['Preset encounter spawning', 'Combat setup', 'Enemy scaling', 'Random encounters'], false, 'low', false),
       schema: CompositeTools.SPAWN_PRESET_ENCOUNTER.inputSchema,
       handler: handleSpawnPresetEncounter
+    },
+    [CompositeTools.REST_PARTY.name]: {
+      metadata: meta(CompositeTools.REST_PARTY.name, CompositeTools.REST_PARTY.description, 'composite',
+        ['rest', 'party', 'heal', 'long', 'short', 'spell', 'slots', 'hit', 'dice', 'recovery'],
+        ['Party rest', 'HP restoration', 'Spell slot recovery', 'Hit dice healing'], false, 'low', false),
+      schema: CompositeTools.REST_PARTY.inputSchema,
+      handler: handleRestParty
     }
     // Note: search_tools and load_tool_schema are registered separately in index.ts with full handlers
   };

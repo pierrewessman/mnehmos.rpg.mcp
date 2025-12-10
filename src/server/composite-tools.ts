@@ -31,6 +31,7 @@ import { getItemPreset, getArmorPreset } from '../data/items/index.js';
 import { getCombatManager } from './state/combat-manager.js';
 import { CombatEngine, CombatParticipant } from '../engine/combat/engine.js';
 import { getPatternGenerator } from './terrain-patterns.js';
+import { restoreAllSpellSlots, restorePactSlots, getSpellcastingConfig } from '../engine/magic/spell-validator.js';
 import { Character } from '../schema/character.js';
 import { Item } from '../schema/inventory.js';
 import { parsePosition as parsePos } from '../utils/schema-shorthand.js';
@@ -524,6 +525,53 @@ Difficulties: easy, medium, hard, deadly`,
             // Combat seed
             seed: z.string().optional()
                 .describe('Seed for deterministic combat (auto-generated if not provided)')
+        })
+    },
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // REST_PARTY
+    // ─────────────────────────────────────────────────────────────────────────
+    REST_PARTY: {
+        name: 'rest_party',
+        description: `Rest entire party at once - heals all members and restores spell slots.
+
+REPLACES: N×take_long_rest or N×take_short_rest (4-6 calls → 1 call)
+TOKEN SAVINGS: ~80%
+
+Long rest (8 hours):
+- Restores ALL party members to max HP
+- Restores all spell slots
+- Clears concentration and active spells
+- Cannot rest while any member is in combat
+
+Short rest (1 hour):
+- Rolls hit dice for healing (configurable per member)
+- Warlocks regain pact magic slots
+- Cannot rest while any member is in combat
+
+Example - Long rest:
+{ "partyId": "party-123", "restType": "long" }
+
+Example - Short rest with hit dice:
+{ "partyId": "party-123", "restType": "short", "hitDicePerMember": 2 }
+
+Example - Short rest with custom allocation:
+{
+  "partyId": "party-123",
+  "restType": "short",
+  "hitDiceAllocation": {
+    "char-id-1": 3,
+    "char-id-2": 1,
+    "char-id-3": 0
+  }
+}`,
+        inputSchema: z.object({
+            partyId: z.string().describe('The party ID'),
+            restType: z.enum(['long', 'short']).describe('Type of rest to take'),
+            hitDicePerMember: z.number().int().min(0).max(20).optional().default(1)
+                .describe('Hit dice each member spends on short rest (default: 1)'),
+            hitDiceAllocation: z.record(z.string(), z.number().int().min(0).max(20)).optional()
+                .describe('Custom hit dice allocation per character ID (overrides hitDicePerMember)')
         })
     }
 } as const;
@@ -1578,6 +1626,200 @@ export async function handleSpawnPresetEncounter(args: unknown, _ctx: SessionCon
                 createdCharacterIds,
                 asciiMap,
                 message: `Created "${scaledPreset.name}" encounter with ${participants.length} combatants`
+            }, null, 2)
+        }]
+    };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REST_PARTY HANDLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Roll a die (simulated with random)
+ */
+function rollDie(sides: number): number {
+    return Math.floor(Math.random() * sides) + 1;
+}
+
+/**
+ * Get hit die size based on class
+ */
+function getHitDieSize(characterClass: string): number {
+    const hitDice: Record<string, number> = {
+        barbarian: 12,
+        fighter: 10, paladin: 10, ranger: 10,
+        bard: 8, cleric: 8, druid: 8, monk: 8, rogue: 8, warlock: 8,
+        sorcerer: 6, wizard: 6
+    };
+    return hitDice[characterClass.toLowerCase()] || 8;
+}
+
+/**
+ * Handle rest_party - rest entire party at once
+ */
+export async function handleRestParty(args: unknown, _ctx: SessionContext) {
+    const parsed = CompositeTools.REST_PARTY.inputSchema.parse(args);
+    const { charRepo, partyRepo } = ensureDb();
+
+    const party = partyRepo.getPartyWithMembers(parsed.partyId);
+    if (!party) {
+        throw new Error(`Party not found: ${parsed.partyId}`);
+    }
+
+    if (!party.members || party.members.length === 0) {
+        throw new Error(`Party ${parsed.partyId} has no members`);
+    }
+
+    // Check if any member is in combat
+    const combatManager = getCombatManager();
+    const membersInCombat: string[] = [];
+    for (const member of party.members) {
+        if (combatManager.isCharacterInCombat(member.characterId)) {
+            membersInCombat.push(member.character.name);
+        }
+    }
+
+    if (membersInCombat.length > 0) {
+        throw new Error(`Cannot rest while party members are in combat: ${membersInCombat.join(', ')}`);
+    }
+
+    const results: Array<{
+        characterId: string;
+        name: string;
+        previousHp: number;
+        newHp: number;
+        maxHp: number;
+        hpRestored: number;
+        spellSlotsRestored?: any;
+        hitDiceSpent?: number;
+        rolls?: number[];
+    }> = [];
+
+    if (parsed.restType === 'long') {
+        // Long rest - full HP and spell slot recovery
+        for (const member of party.members) {
+            const char = charRepo.findById(member.characterId);
+            if (!char) continue;
+
+            const previousHp = char.hp;
+            const hpRestored = char.maxHp - char.hp;
+
+            // Restore spell slots
+            const charClass = char.characterClass || 'fighter';
+            const spellConfig = getSpellcastingConfig(charClass as any);
+
+            let spellSlotsRestored: any = undefined;
+            let updatedChar: any = { hp: char.maxHp };
+
+            if (spellConfig.canCast && char.level >= spellConfig.startLevel) {
+                const restoredChar = restoreAllSpellSlots(char);
+
+                if (spellConfig.pactMagic) {
+                    spellSlotsRestored = {
+                        type: 'pactMagic',
+                        slotsRestored: restoredChar.pactMagicSlots?.max || 0,
+                        slotLevel: restoredChar.pactMagicSlots?.slotLevel || 0
+                    };
+                    updatedChar.pactMagicSlots = restoredChar.pactMagicSlots;
+                } else if (restoredChar.spellSlots) {
+                    spellSlotsRestored = {
+                        type: 'standard',
+                        restored: true
+                    };
+                    updatedChar.spellSlots = restoredChar.spellSlots;
+                }
+
+                // Clear concentration and active spells
+                updatedChar.concentratingOn = null;
+                updatedChar.activeSpells = [];
+            }
+
+            charRepo.update(member.characterId, updatedChar);
+
+            results.push({
+                characterId: member.characterId,
+                name: char.name,
+                previousHp,
+                newHp: char.maxHp,
+                maxHp: char.maxHp,
+                hpRestored,
+                spellSlotsRestored
+            });
+        }
+    } else {
+        // Short rest - hit dice healing, warlock pact slot recovery
+        for (const member of party.members) {
+            const char = charRepo.findById(member.characterId);
+            if (!char) continue;
+
+            // Determine hit dice to spend
+            const hitDiceToSpend = parsed.hitDiceAllocation?.[member.characterId]
+                ?? parsed.hitDicePerMember
+                ?? 1;
+
+            const hitDieSize = getHitDieSize(char.characterClass || 'fighter');
+            const conMod = Math.floor((char.stats.con - 10) / 2);
+
+            // Roll hit dice
+            let totalHealing = 0;
+            const rolls: number[] = [];
+
+            for (let i = 0; i < hitDiceToSpend; i++) {
+                const roll = rollDie(hitDieSize);
+                rolls.push(roll);
+                totalHealing += Math.max(1, roll + conMod);
+            }
+
+            const actualHealing = Math.min(totalHealing, char.maxHp - char.hp);
+            const newHp = char.hp + actualHealing;
+
+            // Warlock pact slot recovery
+            const charClass = char.characterClass || 'fighter';
+            const spellConfig = getSpellcastingConfig(charClass as any);
+
+            let pactSlotsRestored: any = undefined;
+            let updatedChar: any = { hp: newHp };
+
+            if (spellConfig.pactMagic && spellConfig.canCast && char.level >= spellConfig.startLevel) {
+                const restoredChar = restorePactSlots(char);
+                pactSlotsRestored = {
+                    type: 'pactMagic',
+                    slotsRestored: restoredChar.pactMagicSlots?.max || 0,
+                    slotLevel: restoredChar.pactMagicSlots?.slotLevel || 0
+                };
+                updatedChar.pactMagicSlots = restoredChar.pactMagicSlots;
+            }
+
+            charRepo.update(member.characterId, updatedChar);
+
+            results.push({
+                characterId: member.characterId,
+                name: char.name,
+                previousHp: char.hp,
+                newHp,
+                maxHp: char.maxHp,
+                hpRestored: actualHealing,
+                hitDiceSpent: hitDiceToSpend,
+                rolls: rolls.length > 0 ? rolls : undefined,
+                spellSlotsRestored: pactSlotsRestored
+            });
+        }
+    }
+
+    const totalHpRestored = results.reduce((sum, r) => sum + r.hpRestored, 0);
+
+    return {
+        content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+                partyId: parsed.partyId,
+                partyName: party.name,
+                restType: parsed.restType,
+                memberCount: results.length,
+                totalHpRestored,
+                members: results,
+                message: `${party.name} completed a ${parsed.restType} rest. ${totalHpRestored} total HP restored across ${results.length} members.`
             }, null, 2)
         }]
     };
