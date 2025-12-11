@@ -95,21 +95,25 @@ export async function handleGetNarrativeContext(args: unknown, _ctx: SessionCont
         if (encounter && encounter.status === 'active') {
             const state = typeof encounter.state === 'string' ? JSON.parse(encounter.state) : encounter.state;
             
-            let combatSummary = `⚠️ COMBAT ACTIVE (Round ${state.round})`;
-            
-            const participants = state.participants || [];
-            const activeCount = participants.filter((p: any) => p.hp > 0).length;
-            
-            combatSummary += `\n${activeCount} active combatants.`;
-            if (state.currentTurn !== undefined && participants[state.currentTurn]) {
-                combatSummary += `\nCurrent Turn: ${participants[state.currentTurn].name}`;
-            }
+            // Guard against undefined or malformed state
+            if (state && typeof state === 'object') {
+                const round = state.round ?? 1;
+                let combatSummary = `⚠️ COMBAT ACTIVE (Round ${round})`;
+                
+                const participants = state.participants || [];
+                const activeCount = participants.filter((p: any) => p.hp > 0).length;
+                
+                combatSummary += `\n${activeCount} active combatants.`;
+                if (state.currentTurn !== undefined && participants[state.currentTurn]) {
+                    combatSummary += `\nCurrent Turn: ${participants[state.currentTurn].name}`;
+                }
 
-            sections.push({
-                title: '⚔️ COMBAT SITUATION',
-                content: combatSummary,
-                priority: 100 // Highest priority
-            });
+                sections.push({
+                    title: '⚔️ COMBAT SITUATION',
+                    content: combatSummary,
+                    priority: 100 // Highest priority
+                });
+            }
         }
     } catch (e) {
         console.warn('Failed to load combat context', e);

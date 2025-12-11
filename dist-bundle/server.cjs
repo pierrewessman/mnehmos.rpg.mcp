@@ -6332,8 +6332,8 @@ var require_resolve = __commonJS({
       }
       return count;
     }
-    function getFullPath(resolver, id = "", normalize) {
-      if (normalize !== false)
+    function getFullPath(resolver, id = "", normalize2) {
+      if (normalize2 !== false)
         id = normalizeId(id);
       const p = resolver.parse(id);
       return _getFullPath(resolver, p);
@@ -7673,7 +7673,7 @@ var require_fast_uri = __commonJS({
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizeComponentEncoding, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
-    function normalize(uri, options) {
+    function normalize2(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
         serialize(parse4(uri, options), options);
@@ -7909,7 +7909,7 @@ var require_fast_uri = __commonJS({
     }
     var fastUri = {
       SCHEMES,
-      normalize,
+      normalize: normalize2,
       resolve,
       resolveComponent,
       equal,
@@ -12445,6 +12445,255 @@ var init_character_repo = __esm({
         }
         return CharacterSchema.parse(base);
       }
+    };
+  }
+});
+
+// dist/server/terrain-patterns.js
+var terrain_patterns_exports = {};
+__export(terrain_patterns_exports, {
+  PATTERN_DESCRIPTIONS: () => PATTERN_DESCRIPTIONS,
+  generateArena: () => generateArena,
+  generateCanyon: () => generateCanyon,
+  generateMaze: () => generateMaze,
+  generateMazeWithRooms: () => generateMazeWithRooms,
+  generateMountainPass: () => generateMountainPass,
+  generateRiverValley: () => generateRiverValley,
+  getPatternGenerator: () => getPatternGenerator
+});
+function generateRiverValley(originX, originY, width, height) {
+  const obstacles = [];
+  const water = [];
+  const westWallX = originX + 2;
+  const eastWallX = originX + width - 3;
+  const riverStartX = originX + Math.floor(width / 2) - 1;
+  const riverWidth = 3;
+  for (let y = originY; y < originY + height; y++) {
+    obstacles.push(`${westWallX},${y}`);
+    obstacles.push(`${westWallX + 1},${y}`);
+  }
+  for (let y = originY; y < originY + height; y++) {
+    obstacles.push(`${eastWallX},${y}`);
+    obstacles.push(`${eastWallX - 1},${y}`);
+  }
+  for (let y = originY; y < originY + height; y++) {
+    for (let dx = 0; dx < riverWidth; dx++) {
+      water.push(`${riverStartX + dx},${y}`);
+    }
+  }
+  const props = [
+    { position: `${westWallX},${originY + 2}`, label: "West Cliff", heightFeet: 30, propType: "structure", cover: "full" },
+    { position: `${eastWallX},${originY + 2}`, label: "East Cliff", heightFeet: 30, propType: "structure", cover: "full" }
+  ];
+  return { obstacles, water, difficultTerrain: [], props };
+}
+function generateCanyon(originX, originY, width, height) {
+  const obstacles = [];
+  const northWallY = originY + 3;
+  const southWallY = originY + height - 4;
+  for (let x = originX; x < originX + width; x++) {
+    obstacles.push(`${x},${northWallY}`);
+    obstacles.push(`${x},${northWallY - 1}`);
+  }
+  for (let x = originX; x < originX + width; x++) {
+    obstacles.push(`${x},${southWallY}`);
+    obstacles.push(`${x},${southWallY + 1}`);
+  }
+  const props = [
+    { position: `${originX + Math.floor(width / 2)},${northWallY}`, label: "North Canyon Wall", heightFeet: 25, propType: "structure", cover: "full" },
+    { position: `${originX + Math.floor(width / 2)},${southWallY}`, label: "South Canyon Wall", heightFeet: 25, propType: "structure", cover: "full" }
+  ];
+  return { obstacles, water: [], difficultTerrain: [], props };
+}
+function generateArena(originX, originY, width, height) {
+  const obstacles = [];
+  const centerX = originX + Math.floor(width / 2);
+  const centerY = originY + Math.floor(height / 2);
+  const radius = Math.min(width, height) / 2 - 2;
+  for (let angle = 0; angle < 360; angle += 5) {
+    const rad = angle * Math.PI / 180;
+    const x = Math.round(centerX + radius * Math.cos(rad));
+    const y = Math.round(centerY + radius * Math.sin(rad));
+    const key = `${x},${y}`;
+    if (!obstacles.includes(key)) {
+      obstacles.push(key);
+    }
+  }
+  const props = [
+    { position: `${centerX},${originY + 1}`, label: "Arena North Gate", heightFeet: 15, propType: "structure", cover: "three-quarter" },
+    { position: `${centerX},${originY + height - 2}`, label: "Arena South Gate", heightFeet: 15, propType: "structure", cover: "three-quarter" }
+  ];
+  return { obstacles, water: [], difficultTerrain: [], props };
+}
+function generateMountainPass(originX, originY, width, height) {
+  const obstacles = [];
+  const difficultTerrain = [];
+  const centerY = originY + Math.floor(height / 2);
+  for (let y = originY; y < originY + height; y++) {
+    const distFromCenter = Math.abs(y - centerY);
+    const wallOffset = Math.floor(distFromCenter / 3) + 3;
+    obstacles.push(`${originX + wallOffset},${y}`);
+    obstacles.push(`${originX + width - wallOffset - 1},${y}`);
+    if (distFromCenter > 2) {
+      difficultTerrain.push(`${originX + wallOffset + 1},${y}`);
+      difficultTerrain.push(`${originX + width - wallOffset - 2},${y}`);
+    }
+  }
+  const props = [
+    { position: `${originX + Math.floor(width / 2)},${centerY}`, label: "Pass Chokepoint", heightFeet: 5, propType: "cover", cover: "half" }
+  ];
+  return { obstacles, water: [], difficultTerrain, props };
+}
+function generateMaze(originX, originY, width, height, seed, corridorWidth = 1) {
+  const obstacles = [];
+  const seedNum = seed ? seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) : Date.now();
+  let rngState = seedNum;
+  const random = () => {
+    rngState = rngState * 1103515245 + 12345 & 2147483647;
+    return rngState / 2147483647;
+  };
+  const cellSize = corridorWidth + 1;
+  const mazeWidth = Math.floor((width - 1) / cellSize);
+  const mazeHeight = Math.floor((height - 1) / cellSize);
+  const grid = Array(height).fill(null).map(() => Array(width).fill(true));
+  const stack = [];
+  const visited = Array(mazeHeight).fill(null).map(() => Array(mazeWidth).fill(false));
+  const startCellX = Math.floor(mazeWidth / 2);
+  const startCellY = Math.floor(mazeHeight / 2);
+  const cellToGrid = (cx, cy) => {
+    return [originX + 1 + cx * cellSize, originY + 1 + cy * cellSize];
+  };
+  const carveCell = (cx, cy) => {
+    const [gx, gy] = cellToGrid(cx, cy);
+    for (let dy = 0; dy < corridorWidth; dy++) {
+      for (let dx = 0; dx < corridorWidth; dx++) {
+        if (gy + dy < originY + height && gx + dx < originX + width) {
+          grid[gy + dy - originY][gx + dx - originX] = false;
+        }
+      }
+    }
+  };
+  const carvePassage = (cx1, cy1, cx2, cy2) => {
+    const [gx1, gy1] = cellToGrid(cx1, cy1);
+    const [gx2, gy2] = cellToGrid(cx2, cy2);
+    const midX = Math.min(gx1, gx2) + (cx1 !== cx2 ? corridorWidth : 0);
+    const midY = Math.min(gy1, gy2) + (cy1 !== cy2 ? corridorWidth : 0);
+    for (let dy = 0; dy < corridorWidth; dy++) {
+      for (let dx = 0; dx < corridorWidth; dx++) {
+        const y = cy1 === cy2 ? gy1 + dy - originY : midY + dy - originY;
+        const x = cx1 === cx2 ? gx1 + dx - originX : midX + dx - originX;
+        if (y >= 0 && y < height && x >= 0 && x < width) {
+          grid[y][x] = false;
+        }
+      }
+    }
+  };
+  const getNeighbors = (cx, cy) => {
+    const neighbors = [];
+    const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    for (const [dx, dy] of dirs) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      if (nx >= 0 && nx < mazeWidth && ny >= 0 && ny < mazeHeight && !visited[ny][nx]) {
+        neighbors.push([nx, ny]);
+      }
+    }
+    return neighbors;
+  };
+  visited[startCellY][startCellX] = true;
+  carveCell(startCellX, startCellY);
+  stack.push([startCellX, startCellY]);
+  while (stack.length > 0) {
+    const [cx, cy] = stack[stack.length - 1];
+    const neighbors = getNeighbors(cx, cy);
+    if (neighbors.length === 0) {
+      stack.pop();
+    } else {
+      const [nx, ny] = neighbors[Math.floor(random() * neighbors.length)];
+      visited[ny][nx] = true;
+      carveCell(nx, ny);
+      carvePassage(cx, cy, nx, ny);
+      stack.push([nx, ny]);
+    }
+  }
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (grid[y][x]) {
+        obstacles.push(`${originX + x},${originY + y}`);
+      }
+    }
+  }
+  return { obstacles, water: [], difficultTerrain: [], props: [] };
+}
+function generateMazeWithRooms(originX, originY, width, height, seed, roomCount = 5, minRoomSize = 4, maxRoomSize = 8) {
+  const baseMaze = generateMaze(originX, originY, width, height, seed, 1);
+  const obstacles = new Set(baseMaze.obstacles);
+  const seedNum = seed ? seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) + 1e3 : Date.now();
+  let rngState = seedNum;
+  const random = () => {
+    rngState = rngState * 1103515245 + 12345 & 2147483647;
+    return rngState / 2147483647;
+  };
+  const rooms = [];
+  for (let i = 0; i < roomCount * 3 && rooms.length < roomCount; i++) {
+    const rw = Math.floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
+    const rh = Math.floor(random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
+    const rx = originX + Math.floor(random() * (width - rw - 2)) + 1;
+    const ry = originY + Math.floor(random() * (height - rh - 2)) + 1;
+    let overlaps = false;
+    for (const room of rooms) {
+      if (rx < room.x + room.w + 1 && rx + rw + 1 > room.x && ry < room.y + room.h + 1 && ry + rh + 1 > room.y) {
+        overlaps = true;
+        break;
+      }
+    }
+    if (!overlaps) {
+      rooms.push({ x: rx, y: ry, w: rw, h: rh });
+      for (let y = ry; y < ry + rh; y++) {
+        for (let x = rx; x < rx + rw; x++) {
+          obstacles.delete(`${x},${y}`);
+        }
+      }
+    }
+  }
+  const props = rooms.map((room, i) => ({
+    position: `${room.x + Math.floor(room.w / 2)},${room.y + Math.floor(room.h / 2)}`,
+    label: `Chamber ${i + 1}`,
+    heightFeet: 0,
+    propType: "marker",
+    cover: "none"
+  }));
+  return { obstacles: Array.from(obstacles), water: [], difficultTerrain: [], props };
+}
+function getPatternGenerator(pattern) {
+  switch (pattern) {
+    case "river_valley":
+      return generateRiverValley;
+    case "canyon":
+      return generateCanyon;
+    case "arena":
+      return generateArena;
+    case "mountain_pass":
+      return generateMountainPass;
+    case "maze":
+      return generateMaze;
+    case "maze_rooms":
+      return (ox, oy, w, h, s) => generateMazeWithRooms(ox, oy, w, h, s);
+    default:
+      return generateCanyon;
+  }
+}
+var PATTERN_DESCRIPTIONS;
+var init_terrain_patterns = __esm({
+  "dist/server/terrain-patterns.js"() {
+    "use strict";
+    PATTERN_DESCRIPTIONS = {
+      river_valley: "Parallel cliff walls on east/west edges with 3-wide river in center",
+      canyon: "Two parallel walls running east-west with open pass between",
+      arena: "Circular wall perimeter enclosing an open fighting area",
+      mountain_pass: "Narrowing corridor toward center, wider at edges",
+      maze: "Procedural maze using recursive backtracking - dense corridors",
+      maze_rooms: "Maze with carved-out rooms/chambers connected by corridors"
     };
   }
 });
@@ -53640,7 +53889,7 @@ function setWorldPubSub(instance3) {
 var Tools = {
   GENERATE_WORLD: {
     name: "generate_world",
-    description: "Generate a new procedural RPG world with seed, width, and height parameters.",
+    description: 'Generate a new procedural RPG world with seed, width, and height parameters. Example: { "seed": "atlas", "width": 50, "height": 50 }',
     inputSchema: external_exports.object({
       seed: external_exports.string().describe("Seed for random number generation"),
       width: external_exports.number().int().min(10).max(1e3).describe("Width of the world grid"),
@@ -53659,7 +53908,7 @@ var Tools = {
   },
   APPLY_MAP_PATCH: {
     name: "apply_map_patch",
-    description: "Apply DSL commands to modify the world map. Use find_valid_poi_location first for structure placement.",
+    description: 'Apply DSL commands to modify the world map. Use find_valid_poi_location first for structure placement. Example: { "worldId": "id", "script": "ADD_STRUCTURE..." }',
     inputSchema: external_exports.object({
       worldId: external_exports.string().describe("The ID of the world to patch"),
       script: external_exports.string().describe("The DSL script containing patch commands.")
@@ -54826,7 +55075,15 @@ var CombatEngine = class {
         isEnemy: p.isEnemy ?? this.detectIsEnemy(p.id, p.name),
         // Initialize legendary actions remaining to max if applicable
         legendaryActionsRemaining: p.legendaryActions ?? p.legendaryActionsRemaining,
-        legendaryResistancesRemaining: p.legendaryResistances ?? p.legendaryResistancesRemaining
+        legendaryResistancesRemaining: p.legendaryResistances ?? p.legendaryResistancesRemaining,
+        // Initialize resources
+        movementRemaining: p.movementSpeed ?? 30,
+        actionUsed: false,
+        bonusActionUsed: false,
+        spellsCast: {},
+        reactionUsed: false,
+        hasDashed: false,
+        hasDisengaged: false
       };
     });
     const lairOwner = participantsWithInitiative.find((p) => p.hasLairActions);
@@ -55445,6 +55702,11 @@ var CombatEngine = class {
   resetTurnResources(participant) {
     participant.reactionUsed = false;
     participant.hasDisengaged = false;
+    participant.hasDashed = false;
+    participant.actionUsed = false;
+    participant.bonusActionUsed = false;
+    participant.spellsCast = {};
+    participant.movementRemaining = participant.movementSpeed ?? 30;
   }
   /**
    * Process start-of-turn condition effects
@@ -55571,6 +55833,72 @@ var CombatEngine = class {
       const effects = CONDITION_EFFECTS[c.type];
       return effects.canTakeReactions === false;
     });
+  }
+  /**
+   * Validate Action Economy rules
+   * Handles: Action/Bonus Action availability and "Bonus Action Spell" rule
+   */
+  validateActionEconomy(participantId, actionType, spellLevel) {
+    if (!this.state)
+      return { valid: false, error: "No active combat" };
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (!participant)
+      return { valid: false, error: "Participant not found" };
+    if (!this.canTakeActions(participantId)) {
+      return { valid: false, error: "Participant is incapacitated" };
+    }
+    if (actionType === "action") {
+      if (participant.actionUsed) {
+        return { valid: false, error: "Action already used this turn" };
+      }
+      if (spellLevel !== void 0 && spellLevel > 0) {
+        if (participant.spellsCast?.bonus !== void 0) {
+          return { valid: false, error: "Cannot cast leveled spell as Action after casting Bonus Action spell (only Cantrips allowed)" };
+        }
+      }
+    } else if (actionType === "bonus") {
+      if (participant.bonusActionUsed) {
+        return { valid: false, error: "Bonus Action already used this turn" };
+      }
+      if (spellLevel !== void 0) {
+        if (participant.spellsCast?.action !== void 0 && participant.spellsCast.action > 0) {
+          return { valid: false, error: "Cannot cast Bonus Action spell if leveled spell was cast as Action" };
+        }
+      }
+    } else if (actionType === "reaction") {
+      if (!this.canTakeReactions(participantId)) {
+        return { valid: false, error: "Cannot take reactions (incapacitated or condition)" };
+      }
+      if (participant.reactionUsed) {
+        return { valid: false, error: "Reaction already used this round" };
+      }
+    }
+    return { valid: true };
+  }
+  /**
+   * Commit an action to the economy tracking
+   */
+  commitAction(participantId, actionType, spellLevel) {
+    if (!this.state)
+      return;
+    const participant = this.state.participants.find((p) => p.id === participantId);
+    if (!participant)
+      return;
+    if (!participant.spellsCast)
+      participant.spellsCast = {};
+    if (actionType === "action") {
+      participant.actionUsed = true;
+      if (spellLevel !== void 0)
+        participant.spellsCast.action = spellLevel;
+    } else if (actionType === "bonus") {
+      participant.bonusActionUsed = true;
+      if (spellLevel !== void 0)
+        participant.spellsCast.bonus = spellLevel;
+    } else if (actionType === "reaction") {
+      participant.reactionUsed = true;
+      if (spellLevel !== void 0)
+        participant.spellsCast.reaction = spellLevel;
+    }
   }
   /**
    * HIGH-003: Check if two positions are adjacent (within 1 tile - 8-directional)
@@ -57571,7 +57899,38 @@ function hasSpellSlotAvailable(character, minLevel) {
   }
   return { available: false, reason: `No level ${minLevel}+ spell slots available` };
 }
-function validateSpellCast(character, spellName, requestedSlotLevel) {
+function validateSpellRange(spell, casterPosition, targetPosition, options = {}) {
+  const range = typeof spell.range === "string" ? spell.range.toLowerCase() : spell.range;
+  if (range === "self") {
+    if (options.targetId && options.casterId && options.targetId !== options.casterId) {
+      return { valid: false, reason: `${spell.name} can only target self` };
+    }
+    return { valid: true };
+  }
+  if (range === "touch") {
+    if (!targetPosition) {
+      return { valid: true };
+    }
+    const distance = Math.sqrt(Math.pow(targetPosition.x - casterPosition.x, 2) + Math.pow(targetPosition.y - casterPosition.y, 2));
+    if (distance > 1.5) {
+      return { valid: false, reason: `${spell.name} has range Touch - target must be adjacent` };
+    }
+    return { valid: true };
+  }
+  if (typeof range === "number") {
+    if (!targetPosition) {
+      return { valid: true };
+    }
+    const distanceInSquares = Math.sqrt(Math.pow(targetPosition.x - casterPosition.x, 2) + Math.pow(targetPosition.y - casterPosition.y, 2));
+    const distanceInFeet = distanceInSquares * 5;
+    if (distanceInFeet > range) {
+      return { valid: false, reason: `${spell.name} has range ${range} feet` };
+    }
+    return { valid: true };
+  }
+  return { valid: true };
+}
+function validateSpellCast(character, spellName, requestedSlotLevel, options = {}) {
   if (!spellName || spellName.trim() === "") {
     return {
       valid: false,
@@ -57607,6 +57966,24 @@ function validateSpellCast(character, spellName, requestedSlotLevel) {
     };
   }
   if (spell.level === 0) {
+    const range2 = typeof spell.range === "string" ? spell.range.toLowerCase() : spell.range;
+    if (options.casterPosition) {
+      const rangeCheck = validateSpellRange(spell, options.casterPosition, options.targetPosition, {
+        casterId: character.id,
+        targetId: options.targetId
+      });
+      if (!rangeCheck.valid) {
+        return {
+          valid: false,
+          error: { code: "INVALID_TARGET", message: rangeCheck.reason }
+        };
+      }
+    } else if (range2 === "self" && options.targetId && options.targetId !== character.id) {
+      return {
+        valid: false,
+        error: { code: "INVALID_TARGET", message: `${spell.name} can only target self` }
+      };
+    }
     return {
       valid: true,
       spell,
@@ -57648,6 +58025,24 @@ function validateSpellCast(character, spellName, requestedSlotLevel) {
     return {
       valid: false,
       error: { code: "NO_SLOTS", message: slotCheck.reason }
+    };
+  }
+  const range = typeof spell.range === "string" ? spell.range.toLowerCase() : spell.range;
+  if (options.casterPosition) {
+    const rangeCheck = validateSpellRange(spell, options.casterPosition, options.targetPosition, {
+      casterId: character.id,
+      targetId: options.targetId
+    });
+    if (!rangeCheck.valid) {
+      return {
+        valid: false,
+        error: { code: "INVALID_TARGET", message: rangeCheck.reason }
+      };
+    }
+  } else if (range === "self" && options.targetId && options.targetId !== character.id) {
+    return {
+      valid: false,
+      error: { code: "INVALID_TARGET", message: `${spell.name} can only target self` }
     };
   }
   const config2 = SPELLCASTING_CONFIG[character.characterClass || "fighter"];
@@ -58169,7 +58564,10 @@ function checkAutomaticConcentrationBreak(character, concentrationRepo, characte
     if (typeof condition === "string") {
       return incapacitatingConditions.includes(condition.toLowerCase());
     }
-    return incapacitatingConditions.includes(condition.type.toLowerCase());
+    if (typeof condition === "object" && condition.name) {
+      return incapacitatingConditions.includes(condition.name.toLowerCase());
+    }
+    return false;
   });
   if (hasIncapacitatingCondition) {
     return breakConcentration({ characterId: character.id, reason: "incapacitated" }, concentrationRepo, characterRepo);
@@ -58177,112 +58575,8 @@ function checkAutomaticConcentrationBreak(character, concentrationRepo, characte
   return null;
 }
 
-// dist/server/terrain-patterns.js
-function generateRiverValley(originX, originY, width, height) {
-  const obstacles = [];
-  const water = [];
-  const westWallX = originX + 2;
-  const eastWallX = originX + width - 3;
-  const riverStartX = originX + Math.floor(width / 2) - 1;
-  const riverWidth = 3;
-  for (let y = originY; y < originY + height; y++) {
-    obstacles.push(`${westWallX},${y}`);
-    obstacles.push(`${westWallX + 1},${y}`);
-  }
-  for (let y = originY; y < originY + height; y++) {
-    obstacles.push(`${eastWallX},${y}`);
-    obstacles.push(`${eastWallX - 1},${y}`);
-  }
-  for (let y = originY; y < originY + height; y++) {
-    for (let dx = 0; dx < riverWidth; dx++) {
-      water.push(`${riverStartX + dx},${y}`);
-    }
-  }
-  const props = [
-    { position: `${westWallX},${originY + 2}`, label: "West Cliff", heightFeet: 30, propType: "structure", cover: "full" },
-    { position: `${eastWallX},${originY + 2}`, label: "East Cliff", heightFeet: 30, propType: "structure", cover: "full" }
-  ];
-  return { obstacles, water, difficultTerrain: [], props };
-}
-function generateCanyon(originX, originY, width, height) {
-  const obstacles = [];
-  const northWallY = originY + 3;
-  const southWallY = originY + height - 4;
-  for (let x = originX; x < originX + width; x++) {
-    obstacles.push(`${x},${northWallY}`);
-    obstacles.push(`${x},${northWallY - 1}`);
-  }
-  for (let x = originX; x < originX + width; x++) {
-    obstacles.push(`${x},${southWallY}`);
-    obstacles.push(`${x},${southWallY + 1}`);
-  }
-  const props = [
-    { position: `${originX + Math.floor(width / 2)},${northWallY}`, label: "North Canyon Wall", heightFeet: 25, propType: "structure", cover: "full" },
-    { position: `${originX + Math.floor(width / 2)},${southWallY}`, label: "South Canyon Wall", heightFeet: 25, propType: "structure", cover: "full" }
-  ];
-  return { obstacles, water: [], difficultTerrain: [], props };
-}
-function generateArena(originX, originY, width, height) {
-  const obstacles = [];
-  const centerX = originX + Math.floor(width / 2);
-  const centerY = originY + Math.floor(height / 2);
-  const radius = Math.min(width, height) / 2 - 2;
-  for (let angle = 0; angle < 360; angle += 5) {
-    const rad = angle * Math.PI / 180;
-    const x = Math.round(centerX + radius * Math.cos(rad));
-    const y = Math.round(centerY + radius * Math.sin(rad));
-    const key = `${x},${y}`;
-    if (!obstacles.includes(key)) {
-      obstacles.push(key);
-    }
-  }
-  const props = [
-    { position: `${centerX},${originY + 1}`, label: "Arena North Gate", heightFeet: 15, propType: "structure", cover: "three-quarter" },
-    { position: `${centerX},${originY + height - 2}`, label: "Arena South Gate", heightFeet: 15, propType: "structure", cover: "three-quarter" }
-  ];
-  return { obstacles, water: [], difficultTerrain: [], props };
-}
-function generateMountainPass(originX, originY, width, height) {
-  const obstacles = [];
-  const difficultTerrain = [];
-  const centerY = originY + Math.floor(height / 2);
-  for (let y = originY; y < originY + height; y++) {
-    const distFromCenter = Math.abs(y - centerY);
-    const wallOffset = Math.floor(distFromCenter / 3) + 3;
-    obstacles.push(`${originX + wallOffset},${y}`);
-    obstacles.push(`${originX + width - wallOffset - 1},${y}`);
-    if (distFromCenter > 2) {
-      difficultTerrain.push(`${originX + wallOffset + 1},${y}`);
-      difficultTerrain.push(`${originX + width - wallOffset - 2},${y}`);
-    }
-  }
-  const props = [
-    { position: `${originX + Math.floor(width / 2)},${centerY}`, label: "Pass Chokepoint", heightFeet: 5, propType: "cover", cover: "half" }
-  ];
-  return { obstacles, water: [], difficultTerrain, props };
-}
-function getPatternGenerator(pattern) {
-  switch (pattern) {
-    case "river_valley":
-      return generateRiverValley;
-    case "canyon":
-      return generateCanyon;
-    case "arena":
-      return generateArena;
-    case "mountain_pass":
-      return generateMountainPass;
-    default:
-      return generateCanyon;
-  }
-}
-var PATTERN_DESCRIPTIONS = {
-  river_valley: "Parallel cliff walls on east/west edges with 3-wide river in center",
-  canyon: "Two parallel walls running east-west with open pass between",
-  arena: "Circular wall perimeter enclosing an open fighting area",
-  mountain_pass: "Narrowing corridor toward center, wider at edges"
-};
-
 // dist/server/combat-tools.js
+init_terrain_patterns();
 var pubsub2 = null;
 function setCombatPubSub(instance3) {
   pubsub2 = instance3;
@@ -58382,7 +58676,7 @@ function formatCombatStateText(state) {
   return output;
 }
 function createHpBar(percentage) {
-  const filled = Math.round(percentage / 10);
+  const filled = Math.max(0, Math.min(10, Math.round(percentage / 10)));
   const empty = 10 - filled;
   const bar = "\u2588".repeat(filled) + "\u2591".repeat(empty);
   return `[${bar}]`;
@@ -58440,6 +58734,13 @@ function formatSpellCastResult(casterName, resolution, target, targetHpBefore) {
   output += `${casterName} casts ${resolution.spellName}!
 
 `;
+  if (resolution.attackRoll !== void 0) {
+    const hitStr = resolution.hit ? "HIT" : "MISS";
+    const bonus = (resolution.attackTotal || 0) - resolution.attackRoll;
+    const sign = bonus >= 0 ? "+" : "";
+    output += `\u2694\uFE0F Attack Roll: ${resolution.attackRoll} (d20) ${sign}${bonus} = ${resolution.attackTotal} \u2192 ${hitStr}
+`;
+  }
   if (resolution.diceRolled) {
     output += `\u{1F3B2} Rolled: ${resolution.diceRolled}
 `;
@@ -58448,7 +58749,7 @@ function formatSpellCastResult(casterName, resolution, target, targetHpBefore) {
     output += `\u2728 Darts: ${resolution.dartCount}
 `;
   }
-  if (resolution.saveResult && resolution.saveDC) {
+  if (resolution.saveResult && resolution.saveDC && (!resolution.damage || resolution.damage <= 0)) {
     const saveIcon = resolution.saveResult === "passed" ? "\u2713" : "\u2717";
     output += `\u{1F6E1}\uFE0F Save DC ${resolution.saveDC}: ${saveIcon} ${resolution.saveResult}
 `;
@@ -58457,10 +58758,15 @@ function formatSpellCastResult(casterName, resolution, target, targetHpBefore) {
     output += `\u{1F3AF} Auto-hit!
 `;
   }
-  if (resolution.damage && resolution.damage > 0) {
+  if (resolution.damage !== void 0 && resolution.damage > 0) {
     const damageType = resolution.damageType || "magical";
     output += `\u{1F4A5} Damage: ${resolution.damage} ${damageType}
 `;
+    if (resolution.saveResult) {
+      const saveEmoji = resolution.saveResult === "passed" ? "\u2713" : "\u2717";
+      output += `   (Save DC ${resolution.saveDC}: ${saveEmoji} ${resolution.saveResult.toUpperCase()})
+`;
+    }
     if (target) {
       output += `
 ${target.name}: ${targetHpBefore} \u2192 ${target.hp} HP`;
@@ -58468,6 +58774,9 @@ ${target.name}: ${targetHpBefore} \u2192 ${target.hp} HP`;
         output += ` \u{1F480} DEFEATED!`;
       }
     }
+  } else if (resolution.hit === false) {
+    output += `\u{1F4A8} The spell missed!
+`;
   }
   if (resolution.healing && resolution.healing > 0) {
     output += `\u{1F49A} Healing: ${resolution.healing}
@@ -58889,33 +59198,66 @@ Example - Lightning Bolt (100ft line):
   },
   UPDATE_TERRAIN: {
     name: "update_terrain",
-    description: `Add, remove, or modify terrain in an active encounter. Use this to dynamically change the battlefield.
+    description: `Add, remove, or modify terrain in an active encounter. ALWAYS prefer ranges over tiles arrays for efficiency.
 
-Supports:
+TERRAIN TYPES:
 - obstacles: Blocking terrain (walls, rocks, fallen trees)
 - difficultTerrain: Half-speed terrain (mud, rubble, underbrush)
 - water: Watery terrain (streams, rivers, pools)
 
-Example - Add a river:
-{
-  "encounterId": "encounter-1",
-  "operation": "add",
-  "terrainType": "water",
-  "tiles": ["40,0", "40,1", "40,2", "40,3", "40,4"]
-}
+INPUT OPTIONS (use ranges for efficiency):
+1. ranges: Array of range shortcuts (PREFERRED - saves tokens)
+2. tiles: Array of "x,y" strings (only for specific scattered tiles)
 
-Example - Remove obstacles:
-{
-  "encounterId": "encounter-1",
-  "operation": "remove",
-  "terrainType": "obstacles",
-  "tiles": ["5,5", "5,6"]
-}`,
+RANGE SHORTCUTS (use these!):
+
+LINES:
+- "x=N" - vertical line at x=N (full height)
+- "x=N:y1:y2" - vertical line segment
+- "y=N" - horizontal line at y=N (full width)
+- "y=N:x1:x2" - horizontal line segment
+- "line:x1,y1,x2,y2" - diagonal/any line from point to point (Bresenham)
+- "hline:y:x1:x2" - horizontal line
+- "vline:x:y1:y2" - vertical line
+- "row:N" / "col:N" - aliases for y=N / x=N
+
+SHAPES:
+- "rect:x,y,w,h" - filled rectangle
+- "box:x,y,w,h" - hollow rectangle (border only)
+- "border:margin" - outer border of grid (margin=0 for edge)
+- "fill:x1,y1,x2,y2" - fill between two corners
+- "circle:cx,cy,r" - filled circle
+- "ring:cx,cy,r" - hollow circle
+
+ALGEBRA (for curves, diagonals):
+- "y=x:0:99" - diagonal line (y equals x)
+- "y=2*x+5:0:50" - any linear equation
+- "y=x/2:0:99" - half-speed diagonal
+- "expr:EQUATION:xMin:xMax" - explicit expression format
+
+EXAMPLES:
+
+Maze outer walls (1 call vs 4):
+{ "ranges": ["border:0"], "gridWidth": 100, "gridHeight": 100 }
+
+Complex maze section:
+{ "ranges": ["y=10:0:50", "x=25:10:40", "line:50,50,75,25", "box:60,60,15,15"] }
+
+Diagonal river:
+{ "terrainType": "water", "ranges": ["y=x:0:99"] }
+
+Circular arena:
+{ "ranges": ["ring:50,50,40", "border:0"] }`,
     inputSchema: external_exports.object({
       encounterId: external_exports.string().describe("The ID of the encounter"),
       operation: external_exports.enum(["add", "remove"]).describe("Add or remove terrain"),
       terrainType: external_exports.enum(["obstacles", "difficultTerrain", "water"]).describe("Type of terrain to modify"),
-      tiles: external_exports.array(external_exports.string()).min(1).describe('Array of "x,y" coordinate strings')
+      tiles: external_exports.array(external_exports.string()).optional().describe('Array of "x,y" coordinate strings (use this OR ranges)'),
+      ranges: external_exports.array(external_exports.string()).optional().describe('Array of range shortcuts like "row:5", "col:10", "rect:0,0,10,10", "border:0"'),
+      gridWidth: external_exports.number().int().min(1).max(500).default(100).describe("Grid width for range calculations"),
+      gridHeight: external_exports.number().int().min(1).max(500).default(100).describe("Grid height for range calculations")
+    }).refine((data) => data.tiles || data.ranges, {
+      message: "Either tiles or ranges must be provided"
     })
   },
   PLACE_PROP: {
@@ -59064,33 +59406,45 @@ Example - Dungeon room:
    */
   GENERATE_TERRAIN_PATTERN: {
     name: "generate_terrain_pattern",
-    description: `Generate terrain using a geometric pattern template for consistent layouts.
+    description: `Generate terrain using a pattern template. ONE CALL generates entire layout.
 
 PATTERNS:
-- river_valley: Parallel cliff walls on east/west edges, 3-wide river in center
-- canyon: Two parallel walls running east-west with open pass between
-- arena: Circular wall perimeter enclosing fighting area
-- mountain_pass: Narrowing corridor toward center, wider at edges
+- maze: Full procedural maze (corridors & walls) - USE THIS FOR MAZES
+- maze_rooms: Maze with open chambers/rooms connected by corridors
+- river_valley: Cliff walls on east/west with river in center
+- canyon: Parallel walls east-west with pass between
+- arena: Circular wall enclosing fighting area
+- mountain_pass: Narrowing corridor toward center
 
-This tool generates consistent terrain layouts every time, unlike biome-based generation.
-
-Example:
+MAZE EXAMPLE (100x100 in ONE call):
 {
   "encounterId": "enc-1",
-  "pattern": "river_valley",
+  "pattern": "maze",
   "origin": { "x": 0, "y": 0 },
-  "width": 25,
-  "height": 40
+  "width": 100,
+  "height": 100,
+  "seed": "maze-runner-001"
+}
+
+MAZE WITH ROOMS:
+{
+  "pattern": "maze_rooms",
+  "width": 100,
+  "height": 100,
+  "roomCount": 8
 }`,
     inputSchema: external_exports.object({
       encounterId: external_exports.string().describe("The ID of the encounter"),
-      pattern: external_exports.enum(["river_valley", "canyon", "arena", "mountain_pass"]).describe("Terrain pattern to generate"),
+      pattern: external_exports.enum(["river_valley", "canyon", "arena", "mountain_pass", "maze", "maze_rooms"]).describe("Terrain pattern to generate"),
       origin: external_exports.object({
         x: external_exports.number().int(),
         y: external_exports.number().int()
-      }).describe("Top-left corner of the pattern"),
-      width: external_exports.number().int().min(10).max(100).describe("Width of the pattern area"),
-      height: external_exports.number().int().min(10).max(100).describe("Height of the pattern area")
+      }).default({ x: 0, y: 0 }).describe("Top-left corner of the pattern"),
+      width: external_exports.number().int().min(10).max(500).default(100).describe("Width of the pattern area"),
+      height: external_exports.number().int().min(10).max(500).default(100).describe("Height of the pattern area"),
+      seed: external_exports.string().optional().describe("Seed for reproducible generation"),
+      corridorWidth: external_exports.number().int().min(1).max(5).default(1).describe("Width of corridors (maze patterns only)"),
+      roomCount: external_exports.number().int().min(0).max(20).default(5).describe("Number of rooms (maze_rooms pattern only)")
     })
   }
 };
@@ -59204,12 +59558,24 @@ async function handleExecuteCombatAction(args, ctx) {
   }
   let result;
   let output = "";
+  const parseCastingTime = (castingTime) => {
+    const lower = castingTime.toLowerCase();
+    if (lower.includes("bonus"))
+      return "bonus";
+    if (lower.includes("reaction"))
+      return "reaction";
+    return "action";
+  };
   if (parsed.action === "attack") {
     if (parsed.attackBonus === void 0 || parsed.dc === void 0 || parsed.damage === void 0) {
       throw new Error("Attack action requires attackBonus, dc, and damage");
     }
     if (!parsed.targetId) {
       throw new Error("Attack action requires targetId");
+    }
+    const validation = engine.validateActionEconomy(parsed.actorId, "action");
+    if (!validation.valid) {
+      throw new Error(validation.error);
     }
     result = engine.executeAttack(
       parsed.actorId,
@@ -59233,6 +59599,7 @@ async function handleExecuteCombatAction(args, ctx) {
       }
     }
     output = formatAttackResult(result);
+    engine.commitAction(parsed.actorId, "action");
   } else if (parsed.action === "heal") {
     if (parsed.amount === void 0) {
       throw new Error("Heal action requires amount");
@@ -59240,8 +59607,13 @@ async function handleExecuteCombatAction(args, ctx) {
     if (!parsed.targetId) {
       throw new Error("Heal action requires targetId");
     }
+    const validation = engine.validateActionEconomy(parsed.actorId, "action");
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
     result = engine.executeHeal(parsed.actorId, parsed.targetId, parsed.amount);
     output = formatHealResult(result);
+    engine.commitAction(parsed.actorId, "action");
   } else if (parsed.action === "disengage") {
     const currentState = engine.getState();
     if (!currentState) {
@@ -59251,7 +59623,12 @@ async function handleExecuteCombatAction(args, ctx) {
     if (!actor) {
       throw new Error(`Actor ${parsed.actorId} not found`);
     }
+    const validation = engine.validateActionEconomy(parsed.actorId, "action");
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
     engine.disengage(parsed.actorId);
+    engine.commitAction(parsed.actorId, "action");
     output = formatDisengageResult(actor.name);
     result = {
       type: "attack",
@@ -59325,8 +59702,15 @@ ${actor.name} was defeated while attempting to move and cannot complete the move
           if (path === null) {
             output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, false, "No valid path - blocked by obstacles");
           } else {
-            updatedActor.position = parsed.targetPosition;
-            output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, true, null, path.length - 1);
+            const moveCost = (path.length - 1) * 5;
+            const currentMovement = actor.movementRemaining ?? 30;
+            if (currentMovement < moveCost) {
+              output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, false, `Insufficient movement (Cost: ${moveCost}ft, Remaining: ${currentMovement}ft)`);
+            } else {
+              updatedActor.position = parsed.targetPosition;
+              updatedActor.movementRemaining = currentMovement - moveCost;
+              output = opportunityAttackOutput + formatMoveResult(actor.name, actorPos, parsed.targetPosition, true, null, path.length - 1);
+            }
           }
         }
         result = {
@@ -59376,12 +59760,22 @@ ${actor.name} was defeated while attempting to move and cannot complete the move
     if (!casterChar) {
       throw new Error(`Character ${parsed.actorId} not found in database. Spellcasting requires a character record with class and spell slots.`);
     }
-    const validation = validateSpellCast(casterChar, parsed.spellName, parsed.slotLevel);
+    const validationTarget = currentState.participants.find((p) => p.id === parsed.targetId);
+    const validation = validateSpellCast(casterChar, parsed.spellName, parsed.slotLevel, {
+      casterPosition: actor.position || void 0,
+      targetPosition: validationTarget ? validationTarget.position || void 0 : parsed.targetPosition || void 0,
+      targetId: parsed.targetId
+    });
     if (!validation.valid) {
       throw new Error(validation.error?.message || "Invalid spell cast");
     }
     const spell = validation.spell;
     const effectiveSlotLevel = validation.effectiveSlotLevel || spell.level;
+    const actionType = parseCastingTime(spell.castingTime);
+    const economyValidation = engine.validateActionEconomy(parsed.actorId, actionType, effectiveSlotLevel);
+    if (!economyValidation.valid) {
+      throw new Error(economyValidation.error);
+    }
     let target = currentState.participants.find((p) => p.id === parsed.targetId);
     const targetHpBefore = target?.hp || 0;
     const resolution = resolveSpell(spell, casterChar, effectiveSlotLevel, {
@@ -59440,6 +59834,7 @@ ${actor.name} was defeated while attempting to move and cannot complete the move
     output = formatSpellCastResult(actor.name, resolution, target, targetHpBefore);
     output += `
 [SPELL: ${spell.name}, SLOT: ${effectiveSlotLevel > 0 ? effectiveSlotLevel : "cantrip"}, DMG: ${resolution.damage || 0}, HEAL: ${resolution.healing || 0}]`;
+    engine.commitAction(parsed.actorId, actionType, effectiveSlotLevel);
     result = {
       type: "attack",
       success: resolution.success,
@@ -59901,6 +60296,233 @@ AOE_JSON -->`;
     }]
   };
 }
+function bresenhamLine(x1, y1, x2, y2) {
+  const tiles = [];
+  const dx = Math.abs(x2 - x1);
+  const dy = Math.abs(y2 - y1);
+  const sx = x1 < x2 ? 1 : -1;
+  const sy = y1 < y2 ? 1 : -1;
+  let err = dx - dy;
+  let x = x1;
+  let y = y1;
+  while (true) {
+    tiles.push(`${x},${y}`);
+    if (x === x2 && y === y2)
+      break;
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y += sy;
+    }
+  }
+  return tiles;
+}
+function evaluateExpression(expr, x) {
+  const substituted = expr.replace(/x/gi, `(${x})`);
+  try {
+    const result = new Function(`return ${substituted}`)();
+    return Math.round(result);
+  } catch {
+    throw new Error(`Invalid expression: ${expr}`);
+  }
+}
+function parseRangeShortcut(range, gridWidth, gridHeight) {
+  const tiles = [];
+  if (range.startsWith("x=")) {
+    const afterEquals = range.substring(2);
+    const colonParts = afterEquals.split(":");
+    const x = parseInt(colonParts[0], 10);
+    const y1 = colonParts[1] ? parseInt(colonParts[1], 10) : 0;
+    const y2 = colonParts[2] ? parseInt(colonParts[2], 10) : gridHeight - 1;
+    for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+      tiles.push(`${x},${y}`);
+    }
+    return tiles;
+  }
+  if (range.startsWith("y=")) {
+    const afterEquals = range.substring(2);
+    const colonParts = afterEquals.split(":");
+    const firstPart = colonParts[0];
+    const isSimpleNumber = /^-?\d+$/.test(firstPart);
+    if (isSimpleNumber) {
+      const y = parseInt(firstPart, 10);
+      const x1 = colonParts[1] ? parseInt(colonParts[1], 10) : 0;
+      const x2 = colonParts[2] ? parseInt(colonParts[2], 10) : gridWidth - 1;
+      for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+        tiles.push(`${x},${y}`);
+      }
+    } else {
+      const expr = firstPart;
+      const xMin = colonParts[1] ? parseInt(colonParts[1], 10) : 0;
+      const xMax = colonParts[2] ? parseInt(colonParts[2], 10) : gridWidth - 1;
+      for (let x = xMin; x <= xMax; x++) {
+        const y = evaluateExpression(expr, x);
+        if (y >= 0 && y < gridHeight) {
+          tiles.push(`${x},${y}`);
+        }
+      }
+    }
+    return tiles;
+  }
+  const parts = range.split(":");
+  const command = parts[0].toLowerCase();
+  switch (command) {
+    case "row": {
+      const y = parseInt(parts[1], 10);
+      const x1 = parts[2] ? parseInt(parts[2], 10) : 0;
+      const x2 = parts[3] ? parseInt(parts[3], 10) : gridWidth - 1;
+      for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+        tiles.push(`${x},${y}`);
+      }
+      break;
+    }
+    case "col": {
+      const x = parseInt(parts[1], 10);
+      const y1 = parts[2] ? parseInt(parts[2], 10) : 0;
+      const y2 = parts[3] ? parseInt(parts[3], 10) : gridHeight - 1;
+      for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+        tiles.push(`${x},${y}`);
+      }
+      break;
+    }
+    case "hline": {
+      const y = parseInt(parts[1], 10);
+      const x1 = parseInt(parts[2], 10);
+      const x2 = parseInt(parts[3], 10);
+      for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+        tiles.push(`${x},${y}`);
+      }
+      break;
+    }
+    case "vline": {
+      const x = parseInt(parts[1], 10);
+      const y1 = parseInt(parts[2], 10);
+      const y2 = parseInt(parts[3], 10);
+      for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+        tiles.push(`${x},${y}`);
+      }
+      break;
+    }
+    case "line": {
+      const lineParts = parts[1].split(",");
+      const x1 = parseInt(lineParts[0], 10);
+      const y1 = parseInt(lineParts[1], 10);
+      const x2 = parseInt(lineParts[2], 10);
+      const y2 = parseInt(lineParts[3], 10);
+      tiles.push(...bresenhamLine(x1, y1, x2, y2));
+      break;
+    }
+    case "rect": {
+      const rectParts = parts[1].split(",");
+      const rx = parseInt(rectParts[0], 10);
+      const ry = parseInt(rectParts[1], 10);
+      const rw = parseInt(rectParts[2], 10);
+      const rh = parseInt(rectParts[3], 10);
+      for (let y = ry; y < ry + rh; y++) {
+        for (let x = rx; x < rx + rw; x++) {
+          tiles.push(`${x},${y}`);
+        }
+      }
+      break;
+    }
+    case "box": {
+      const boxParts = parts[1].split(",");
+      const bx = parseInt(boxParts[0], 10);
+      const by = parseInt(boxParts[1], 10);
+      const bw = parseInt(boxParts[2], 10);
+      const bh = parseInt(boxParts[3], 10);
+      for (let x = bx; x < bx + bw; x++) {
+        tiles.push(`${x},${by}`);
+        tiles.push(`${x},${by + bh - 1}`);
+      }
+      for (let y = by + 1; y < by + bh - 1; y++) {
+        tiles.push(`${bx},${y}`);
+        tiles.push(`${bx + bw - 1},${y}`);
+      }
+      break;
+    }
+    case "border": {
+      const margin = parseInt(parts[1], 10);
+      for (let x = margin; x < gridWidth - margin; x++) {
+        tiles.push(`${x},${margin}`);
+      }
+      for (let x = margin; x < gridWidth - margin; x++) {
+        tiles.push(`${x},${gridHeight - 1 - margin}`);
+      }
+      for (let y = margin + 1; y < gridHeight - margin - 1; y++) {
+        tiles.push(`${margin},${y}`);
+      }
+      for (let y = margin + 1; y < gridHeight - margin - 1; y++) {
+        tiles.push(`${gridWidth - 1 - margin},${y}`);
+      }
+      break;
+    }
+    case "fill": {
+      const fillParts = parts[1].split(",");
+      const fx1 = parseInt(fillParts[0], 10);
+      const fy1 = parseInt(fillParts[1], 10);
+      const fx2 = parseInt(fillParts[2], 10);
+      const fy2 = parseInt(fillParts[3], 10);
+      for (let y = Math.min(fy1, fy2); y <= Math.max(fy1, fy2); y++) {
+        for (let x = Math.min(fx1, fx2); x <= Math.max(fx1, fx2); x++) {
+          tiles.push(`${x},${y}`);
+        }
+      }
+      break;
+    }
+    case "circle": {
+      const circleParts = parts[1].split(",");
+      const cx = parseInt(circleParts[0], 10);
+      const cy = parseInt(circleParts[1], 10);
+      const r = parseInt(circleParts[2], 10);
+      for (let y = cy - r; y <= cy + r; y++) {
+        for (let x = cx - r; x <= cx + r; x++) {
+          if ((x - cx) ** 2 + (y - cy) ** 2 <= r ** 2) {
+            if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+              tiles.push(`${x},${y}`);
+            }
+          }
+        }
+      }
+      break;
+    }
+    case "ring": {
+      const ringParts = parts[1].split(",");
+      const rcx = parseInt(ringParts[0], 10);
+      const rcy = parseInt(ringParts[1], 10);
+      const rr = parseInt(ringParts[2], 10);
+      for (let angle = 0; angle < 360; angle += 1) {
+        const rad = angle * Math.PI / 180;
+        const x = Math.round(rcx + rr * Math.cos(rad));
+        const y = Math.round(rcy + rr * Math.sin(rad));
+        const key = `${x},${y}`;
+        if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight && !tiles.includes(key)) {
+          tiles.push(key);
+        }
+      }
+      break;
+    }
+    case "expr": {
+      const expr = parts[1];
+      const xMin = parts[2] ? parseInt(parts[2], 10) : 0;
+      const xMax = parts[3] ? parseInt(parts[3], 10) : gridWidth - 1;
+      for (let x = xMin; x <= xMax; x++) {
+        const y = evaluateExpression(expr, x);
+        if (y >= 0 && y < gridHeight) {
+          tiles.push(`${x},${y}`);
+        }
+      }
+      break;
+    }
+    default:
+      throw new Error(`Unknown range command: ${command}. Valid: row, col, hline, vline, line, rect, box, border, fill, circle, ring, expr, x=, y=`);
+  }
+  return tiles;
+}
 async function handleUpdateTerrain(args, ctx) {
   const parsed = CombatTools.UPDATE_TERRAIN.inputSchema.parse(args);
   let engine = getCombatManager().get(`${ctx.sessionId}:${parsed.encounterId}`);
@@ -59928,15 +60550,26 @@ async function handleUpdateTerrain(args, ctx) {
   }
   const terrainArray = state.terrain[terrainKey];
   let modified = 0;
+  const gridWidth = parsed.gridWidth ?? 100;
+  const gridHeight = parsed.gridHeight ?? 100;
+  let allTiles = parsed.tiles ? [...parsed.tiles] : [];
+  if (parsed.ranges) {
+    for (const range of parsed.ranges) {
+      const expanded = parseRangeShortcut(range, gridWidth, gridHeight);
+      allTiles.push(...expanded);
+    }
+  }
   if (parsed.operation === "add") {
-    for (const tile of parsed.tiles) {
-      if (!terrainArray.includes(tile)) {
+    const existingSet = new Set(terrainArray);
+    for (const tile of allTiles) {
+      if (!existingSet.has(tile)) {
         terrainArray.push(tile);
+        existingSet.add(tile);
         modified++;
       }
     }
   } else {
-    const tileSet = new Set(parsed.tiles);
+    const tileSet = new Set(allTiles);
     const originalLength = terrainArray.length;
     state.terrain[terrainKey] = terrainArray.filter((t) => !tileSet.has(t));
     modified = originalLength - state.terrain[terrainKey].length;
@@ -59945,12 +60578,22 @@ async function handleUpdateTerrain(args, ctx) {
   const repo = new EncounterRepository(db);
   repo.saveState(parsed.encounterId, state);
   const stateJson = buildStateJson(state, parsed.encounterId);
-  let output = `\\n\u26CF\uFE0F TERRAIN UPDATED\\n`;
-  output += `\u251C\u2500 Operation: ${parsed.operation.toUpperCase()}\\n`;
-  output += `\u251C\u2500 Type: ${parsed.terrainType}\\n`;
-  output += `\u251C\u2500 Tiles modified: ${modified}\\n`;
-  output += `\u2514\u2500 Total ${parsed.terrainType}: ${state.terrain[terrainKey].length}\\n`;
-  output += `\\n\\n<!-- STATE_JSON\\n${JSON.stringify(stateJson)}\\nSTATE_JSON -->`;
+  let output = `
+\u26CF\uFE0F TERRAIN UPDATED
+`;
+  output += `\u251C\u2500 Operation: ${parsed.operation.toUpperCase()}
+`;
+  output += `\u251C\u2500 Type: ${parsed.terrainType}
+`;
+  output += `\u251C\u2500 Tiles modified: ${modified}
+`;
+  output += `\u2514\u2500 Total ${parsed.terrainType}: ${state.terrain[terrainKey].length}
+`;
+  output += `
+
+<!-- STATE_JSON
+${JSON.stringify(stateJson)}
+STATE_JSON -->`;
   return {
     content: [{
       type: "text",
@@ -60346,8 +60989,17 @@ async function handleGenerateTerrainPattern(args, ctx) {
   if (!state.props) {
     state.props = [];
   }
-  const patternGen = getPatternGenerator(parsed.pattern);
-  const result = patternGen(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height);
+  let result;
+  if (parsed.pattern === "maze") {
+    const { generateMaze: generateMaze2 } = await Promise.resolve().then(() => (init_terrain_patterns(), terrain_patterns_exports));
+    result = generateMaze2(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height, parsed.seed, parsed.corridorWidth ?? 1);
+  } else if (parsed.pattern === "maze_rooms") {
+    const { generateMazeWithRooms: generateMazeWithRooms2 } = await Promise.resolve().then(() => (init_terrain_patterns(), terrain_patterns_exports));
+    result = generateMazeWithRooms2(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height, parsed.seed, parsed.roomCount ?? 5);
+  } else {
+    const patternGen = getPatternGenerator(parsed.pattern);
+    result = patternGen(parsed.origin.x, parsed.origin.y, parsed.width, parsed.height, parsed.seed);
+  }
   state.terrain.obstacles.push(...result.obstacles);
   if (!state.terrain.water)
     state.terrain.water = [];
@@ -61720,7 +62372,7 @@ var CRUDTools = {
   // World tools
   CREATE_WORLD: {
     name: "create_world",
-    description: "Create a new world in the database with name, seed, and dimensions.",
+    description: 'Create a new world in the database with name, seed, and dimensions. Example: { "name": "New World", "seed": "abc", "width": 50, "height": 50 }',
     inputSchema: WorldSchema.omit({ id: true, createdAt: true, updatedAt: true })
   },
   GET_WORLD: {
@@ -74632,21 +75284,24 @@ STR:${stats.str} DEX:${stats.dex} CON:${stats.con} INT:${stats.int} WIS:${stats.
       const encounter = db.prepare("SELECT * FROM encounters WHERE id = ?").get(parsed.encounterId);
       if (encounter && encounter.status === "active") {
         const state = typeof encounter.state === "string" ? JSON.parse(encounter.state) : encounter.state;
-        let combatSummary = `\u26A0\uFE0F COMBAT ACTIVE (Round ${state.round})`;
-        const participants = state.participants || [];
-        const activeCount = participants.filter((p) => p.hp > 0).length;
-        combatSummary += `
-${activeCount} active combatants.`;
-        if (state.currentTurn !== void 0 && participants[state.currentTurn]) {
+        if (state && typeof state === "object") {
+          const round = state.round ?? 1;
+          let combatSummary = `\u26A0\uFE0F COMBAT ACTIVE (Round ${round})`;
+          const participants = state.participants || [];
+          const activeCount = participants.filter((p) => p.hp > 0).length;
           combatSummary += `
+${activeCount} active combatants.`;
+          if (state.currentTurn !== void 0 && participants[state.currentTurn]) {
+            combatSummary += `
 Current Turn: ${participants[state.currentTurn].name}`;
+          }
+          sections.push({
+            title: "\u2694\uFE0F COMBAT SITUATION",
+            content: combatSummary,
+            priority: 100
+            // Highest priority
+          });
         }
-        sections.push({
-          title: "\u2694\uFE0F COMBAT SITUATION",
-          content: combatSummary,
-          priority: 100
-          // Highest priority
-        });
       }
     } catch (e) {
       console.warn("Failed to load combat context", e);
@@ -75505,6 +76160,6959 @@ async function handleGetNarrativeContextNotes(args, _ctx) {
     content: [{
       type: "text",
       text: contextText.trim() || "(No narrative notes found for this world)"
+    }]
+  };
+}
+
+// dist/server/composite-tools.js
+init_zod();
+var import_crypto12 = require("crypto");
+init_character_repo();
+
+// dist/schema/poi.js
+init_zod();
+var POICategorySchema = external_exports.enum([
+  "settlement",
+  // Cities, towns, villages
+  "fortification",
+  // Castles, forts, towers
+  "dungeon",
+  // Dungeons, caves, lairs
+  "landmark",
+  // Ruins, monuments, natural wonders
+  "religious",
+  // Temples, shrines, sacred groves
+  "commercial",
+  // Markets, trading posts, inns
+  "natural",
+  // Notable terrain features
+  "hidden"
+  // Secret locations (require discovery)
+]);
+var POIDiscoveryStateSchema = external_exports.enum([
+  "unknown",
+  // Not yet discovered - hidden from map
+  "rumored",
+  // Heard about but not visited - shown as "?"
+  "discovered",
+  // Visited at least once - shown on map
+  "explored",
+  // Fully explored - all rooms visited
+  "mapped"
+  // Player has created detailed notes
+]);
+var POIIconSchema = external_exports.enum([
+  "city",
+  "town",
+  "village",
+  "castle",
+  "fort",
+  "tower",
+  "dungeon",
+  "cave",
+  "ruins",
+  "temple",
+  "shrine",
+  "inn",
+  "market",
+  "mine",
+  "farm",
+  "camp",
+  "portal",
+  "monument",
+  "tree",
+  // Notable tree (world tree, etc.)
+  "mountain",
+  // Peak or notable mountain
+  "lake",
+  "waterfall",
+  "bridge",
+  "crossroads",
+  "unknown"
+  // Generic "?" icon
+]);
+var POISchema = external_exports.object({
+  id: external_exports.string().uuid(),
+  // World Map Position
+  worldId: external_exports.string().describe("World this POI belongs to"),
+  regionId: external_exports.string().optional().describe("Region containing this POI"),
+  x: external_exports.number().int().min(0).describe("World grid X coordinate"),
+  y: external_exports.number().int().min(0).describe("World grid Y coordinate"),
+  // Identity
+  name: external_exports.string().min(1).max(100),
+  description: external_exports.string().max(500).optional().describe("Brief description for map tooltip"),
+  category: POICategorySchema,
+  icon: POIIconSchema,
+  // Linked Entities
+  structureId: external_exports.string().optional().describe("ID of the world-level Structure (if generated)"),
+  networkId: external_exports.string().uuid().optional().describe("ID of the NodeNetwork (room graph) for this POI"),
+  entranceRoomId: external_exports.string().uuid().optional().describe("ID of the entry RoomNode (where players spawn when visiting)"),
+  // Discovery & Visibility
+  discoveryState: POIDiscoveryStateSchema.default("unknown"),
+  discoveredBy: external_exports.array(external_exports.string().uuid()).default([]).describe("Character IDs who have discovered this POI"),
+  discoveryDC: external_exports.number().int().min(0).max(30).optional().describe("Perception/Investigation DC to discover if hidden"),
+  // Hierarchical POIs (e.g., dungeon with sub-levels)
+  parentPOIId: external_exports.string().uuid().optional().describe("Parent POI for nested locations"),
+  childPOIIds: external_exports.array(external_exports.string().uuid()).default([]).describe("Child POIs (sub-levels, annexes)"),
+  // Metadata
+  population: external_exports.number().int().min(0).default(0).describe("Population for settlements"),
+  level: external_exports.number().int().min(1).max(20).optional().describe("Suggested character level for dungeons"),
+  tags: external_exports.array(external_exports.string()).default([]).describe('Searchable tags (e.g., "goblin", "abandoned", "haunted")'),
+  createdAt: external_exports.string().datetime(),
+  updatedAt: external_exports.string().datetime()
+});
+var MapLayerSchema = external_exports.object({
+  layerId: external_exports.string(),
+  layerName: external_exports.string(),
+  visible: external_exports.boolean().default(true),
+  opacity: external_exports.number().min(0).max(1).default(1),
+  // POIs in this layer
+  pois: external_exports.array(external_exports.object({
+    id: external_exports.string(),
+    x: external_exports.number(),
+    y: external_exports.number(),
+    name: external_exports.string(),
+    icon: POIIconSchema,
+    category: POICategorySchema,
+    discoveryState: POIDiscoveryStateSchema,
+    hasNetwork: external_exports.boolean(),
+    // Can be entered
+    population: external_exports.number().optional()
+  }))
+});
+var MapVisualizationSchema = external_exports.object({
+  worldId: external_exports.string(),
+  worldName: external_exports.string(),
+  width: external_exports.number(),
+  height: external_exports.number(),
+  // Base layers (from worldgen)
+  terrainLayer: external_exports.object({
+    biomes: external_exports.array(external_exports.string()),
+    // Biome palette
+    tiles: external_exports.array(external_exports.array(external_exports.number()))
+    // [biomeIdx, elevation, regionId, hasRiver, hasStructure]
+  }),
+  // Region overlay
+  regions: external_exports.array(external_exports.object({
+    id: external_exports.number(),
+    name: external_exports.string(),
+    biome: external_exports.string(),
+    capitalX: external_exports.number(),
+    capitalY: external_exports.number(),
+    color: external_exports.string().optional()
+  })),
+  // POI layers
+  poiLayers: external_exports.array(MapLayerSchema),
+  // Active character position (optional)
+  playerPosition: external_exports.object({
+    characterId: external_exports.string(),
+    x: external_exports.number(),
+    y: external_exports.number(),
+    roomId: external_exports.string().optional()
+  }).optional(),
+  // Fog of war (tiles discovered by player)
+  discoveredTiles: external_exports.array(external_exports.string()).optional()
+  // "x,y" format
+});
+
+// dist/storage/repos/poi.repo.js
+var POIRepository = class {
+  db;
+  constructor(db) {
+    this.db = db;
+    this.ensureSchema();
+  }
+  /**
+   * Ensure the POI table exists with all required columns
+   */
+  ensureSchema() {
+    this.db.exec(`
+            CREATE TABLE IF NOT EXISTS pois (
+                id TEXT PRIMARY KEY,
+                world_id TEXT NOT NULL,
+                region_id TEXT,
+                x INTEGER NOT NULL,
+                y INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                category TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                structure_id TEXT,
+                network_id TEXT,
+                entrance_room_id TEXT,
+                discovery_state TEXT NOT NULL DEFAULT 'unknown',
+                discovered_by TEXT NOT NULL DEFAULT '[]',
+                discovery_dc INTEGER,
+                parent_poi_id TEXT,
+                child_poi_ids TEXT NOT NULL DEFAULT '[]',
+                population INTEGER NOT NULL DEFAULT 0,
+                level INTEGER,
+                tags TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        `);
+    this.db.exec(`
+            CREATE INDEX IF NOT EXISTS idx_pois_world ON pois(world_id);
+            CREATE INDEX IF NOT EXISTS idx_pois_coords ON pois(world_id, x, y);
+            CREATE INDEX IF NOT EXISTS idx_pois_category ON pois(world_id, category);
+            CREATE INDEX IF NOT EXISTS idx_pois_discovery ON pois(world_id, discovery_state);
+            CREATE INDEX IF NOT EXISTS idx_pois_network ON pois(network_id);
+            CREATE INDEX IF NOT EXISTS idx_pois_structure ON pois(structure_id);
+        `);
+  }
+  // ============================================================
+  // CRUD OPERATIONS
+  // ============================================================
+  create(poi) {
+    const validated = POISchema.parse(poi);
+    const stmt = this.db.prepare(`
+            INSERT INTO pois (
+                id, world_id, region_id, x, y, name, description,
+                category, icon, structure_id, network_id, entrance_room_id,
+                discovery_state, discovered_by, discovery_dc,
+                parent_poi_id, child_poi_ids, population, level, tags,
+                created_at, updated_at
+            ) VALUES (
+                @id, @worldId, @regionId, @x, @y, @name, @description,
+                @category, @icon, @structureId, @networkId, @entranceRoomId,
+                @discoveryState, @discoveredBy, @discoveryDC,
+                @parentPOIId, @childPOIIds, @population, @level, @tags,
+                @createdAt, @updatedAt
+            )
+        `);
+    stmt.run({
+      id: validated.id,
+      worldId: validated.worldId,
+      regionId: validated.regionId || null,
+      x: validated.x,
+      y: validated.y,
+      name: validated.name,
+      description: validated.description || null,
+      category: validated.category,
+      icon: validated.icon,
+      structureId: validated.structureId || null,
+      networkId: validated.networkId || null,
+      entranceRoomId: validated.entranceRoomId || null,
+      discoveryState: validated.discoveryState,
+      discoveredBy: JSON.stringify(validated.discoveredBy),
+      discoveryDC: validated.discoveryDC ?? null,
+      parentPOIId: validated.parentPOIId || null,
+      childPOIIds: JSON.stringify(validated.childPOIIds),
+      population: validated.population,
+      level: validated.level ?? null,
+      tags: JSON.stringify(validated.tags),
+      createdAt: validated.createdAt,
+      updatedAt: validated.updatedAt
+    });
+  }
+  /**
+   * Create multiple POIs in a single transaction.
+   * Optimized for worldgen POI placement.
+   *
+   * @param pois - Array of POIs to create
+   * @returns Number of POIs created
+   *
+   * @example
+   * const pois = [
+   *   { id: 'poi-1', worldId: 'w1', name: 'Capital', category: 'settlement', icon: 'city', x: 50, y: 50, ... },
+   *   { id: 'poi-2', worldId: 'w1', name: 'Dark Cave', category: 'dungeon', icon: 'cave', x: 30, y: 70, ... },
+   * ];
+   * poiRepo.createBatch(pois);
+   */
+  createBatch(pois) {
+    if (pois.length === 0)
+      return 0;
+    const stmt = this.db.prepare(`
+            INSERT INTO pois (
+                id, world_id, region_id, x, y, name, description,
+                category, icon, structure_id, network_id, entrance_room_id,
+                discovery_state, discovered_by, discovery_dc,
+                parent_poi_id, child_poi_ids, population, level, tags,
+                created_at, updated_at
+            ) VALUES (
+                @id, @worldId, @regionId, @x, @y, @name, @description,
+                @category, @icon, @structureId, @networkId, @entranceRoomId,
+                @discoveryState, @discoveredBy, @discoveryDC,
+                @parentPOIId, @childPOIIds, @population, @level, @tags,
+                @createdAt, @updatedAt
+            )
+        `);
+    const insertMany = this.db.transaction((toInsert) => {
+      let count = 0;
+      for (const poi of toInsert) {
+        const validated = POISchema.parse(poi);
+        stmt.run({
+          id: validated.id,
+          worldId: validated.worldId,
+          regionId: validated.regionId || null,
+          x: validated.x,
+          y: validated.y,
+          name: validated.name,
+          description: validated.description || null,
+          category: validated.category,
+          icon: validated.icon,
+          structureId: validated.structureId || null,
+          networkId: validated.networkId || null,
+          entranceRoomId: validated.entranceRoomId || null,
+          discoveryState: validated.discoveryState,
+          discoveredBy: JSON.stringify(validated.discoveredBy),
+          discoveryDC: validated.discoveryDC ?? null,
+          parentPOIId: validated.parentPOIId || null,
+          childPOIIds: JSON.stringify(validated.childPOIIds),
+          population: validated.population,
+          level: validated.level ?? null,
+          tags: JSON.stringify(validated.tags),
+          createdAt: validated.createdAt,
+          updatedAt: validated.updatedAt
+        });
+        count++;
+      }
+      return count;
+    });
+    return insertMany(pois);
+  }
+  /**
+   * Delete all POIs for a world
+   */
+  deleteByWorldId(worldId) {
+    const stmt = this.db.prepare("DELETE FROM pois WHERE world_id = ?");
+    const result = stmt.run(worldId);
+    return result.changes;
+  }
+  findById(id) {
+    const stmt = this.db.prepare("SELECT * FROM pois WHERE id = ?");
+    const row = stmt.get(id);
+    if (!row)
+      return null;
+    return this.rowToPOI(row);
+  }
+  findByWorldId(worldId) {
+    const stmt = this.db.prepare("SELECT * FROM pois WHERE world_id = ? ORDER BY name");
+    const rows = stmt.all(worldId);
+    return rows.map((row) => this.rowToPOI(row));
+  }
+  findByCoordinates(worldId, x, y) {
+    const stmt = this.db.prepare("SELECT * FROM pois WHERE world_id = ? AND x = ? AND y = ?");
+    const row = stmt.get(worldId, x, y);
+    if (!row)
+      return null;
+    return this.rowToPOI(row);
+  }
+  findByCategory(worldId, category) {
+    const stmt = this.db.prepare("SELECT * FROM pois WHERE world_id = ? AND category = ? ORDER BY name");
+    const rows = stmt.all(worldId, category);
+    return rows.map((row) => this.rowToPOI(row));
+  }
+  findByNetworkId(networkId) {
+    const stmt = this.db.prepare("SELECT * FROM pois WHERE network_id = ?");
+    const row = stmt.get(networkId);
+    if (!row)
+      return null;
+    return this.rowToPOI(row);
+  }
+  findByStructureId(structureId) {
+    const stmt = this.db.prepare("SELECT * FROM pois WHERE structure_id = ?");
+    const row = stmt.get(structureId);
+    if (!row)
+      return null;
+    return this.rowToPOI(row);
+  }
+  update(id, updates) {
+    const existing = this.findById(id);
+    if (!existing)
+      return null;
+    const updated = {
+      ...existing,
+      ...updates,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const validated = POISchema.parse(updated);
+    const stmt = this.db.prepare(`
+            UPDATE pois SET
+                region_id = ?, x = ?, y = ?, name = ?, description = ?,
+                category = ?, icon = ?, structure_id = ?, network_id = ?,
+                entrance_room_id = ?, discovery_state = ?, discovered_by = ?,
+                discovery_dc = ?, parent_poi_id = ?, child_poi_ids = ?,
+                population = ?, level = ?, tags = ?, updated_at = ?
+            WHERE id = ?
+        `);
+    stmt.run(validated.regionId || null, validated.x, validated.y, validated.name, validated.description || null, validated.category, validated.icon, validated.structureId || null, validated.networkId || null, validated.entranceRoomId || null, validated.discoveryState, JSON.stringify(validated.discoveredBy), validated.discoveryDC ?? null, validated.parentPOIId || null, JSON.stringify(validated.childPOIIds), validated.population, validated.level ?? null, JSON.stringify(validated.tags), validated.updatedAt, id);
+    return validated;
+  }
+  delete(id) {
+    const stmt = this.db.prepare("DELETE FROM pois WHERE id = ?");
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+  // ============================================================
+  // DISCOVERY OPERATIONS
+  // ============================================================
+  /**
+   * Mark a POI as discovered by a character
+   */
+  discoverPOI(poiId, characterId) {
+    const poi = this.findById(poiId);
+    if (!poi)
+      return null;
+    if (!poi.discoveredBy.includes(characterId)) {
+      poi.discoveredBy.push(characterId);
+    }
+    if (poi.discoveryState === "unknown") {
+      poi.discoveryState = "discovered";
+    }
+    return this.update(poiId, {
+      discoveredBy: poi.discoveredBy,
+      discoveryState: poi.discoveryState
+    });
+  }
+  /**
+   * Get all POIs discovered by a character
+   */
+  findDiscoveredByCharacter(worldId, characterId) {
+    const stmt = this.db.prepare(`SELECT * FROM pois WHERE world_id = ? AND discovered_by LIKE ? ORDER BY name`);
+    const rows = stmt.all(worldId, `%"${characterId}"%`);
+    return rows.map((row) => this.rowToPOI(row));
+  }
+  /**
+   * Get POIs in a specific discovery state
+   */
+  findByDiscoveryState(worldId, state) {
+    const stmt = this.db.prepare("SELECT * FROM pois WHERE world_id = ? AND discovery_state = ? ORDER BY name");
+    const rows = stmt.all(worldId, state);
+    return rows.map((row) => this.rowToPOI(row));
+  }
+  // ============================================================
+  // SPATIAL QUERIES
+  // ============================================================
+  /**
+   * Find POIs within a bounding box
+   */
+  findInBoundingBox(worldId, minX, maxX, minY, maxY) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM pois
+            WHERE world_id = ?
+              AND x >= ? AND x <= ?
+              AND y >= ? AND y <= ?
+            ORDER BY x, y
+        `);
+    const rows = stmt.all(worldId, minX, maxX, minY, maxY);
+    return rows.map((row) => this.rowToPOI(row));
+  }
+  /**
+   * Find POIs within a radius of a point
+   */
+  findNearby(worldId, x, y, radius) {
+    const stmt = this.db.prepare(`
+            SELECT *,
+                   ((x - ?) * (x - ?) + (y - ?) * (y - ?)) as dist_sq
+            FROM pois
+            WHERE world_id = ?
+              AND x >= ? AND x <= ?
+              AND y >= ? AND y <= ?
+            ORDER BY dist_sq
+        `);
+    const rows = stmt.all(
+      x,
+      x,
+      y,
+      y,
+      // For distance calculation
+      worldId,
+      x - radius,
+      x + radius,
+      y - radius,
+      y + radius
+    );
+    const radiusSq = radius * radius;
+    return rows.filter((row) => row.dist_sq <= radiusSq).map((row) => this.rowToPOI(row));
+  }
+  /**
+   * Find the nearest POI to a point
+   */
+  findNearest(worldId, x, y) {
+    const stmt = this.db.prepare(`
+            SELECT *,
+                   ((x - ?) * (x - ?) + (y - ?) * (y - ?)) as dist_sq
+            FROM pois
+            WHERE world_id = ?
+            ORDER BY dist_sq
+            LIMIT 1
+        `);
+    const row = stmt.get(x, x, y, y, worldId);
+    if (!row)
+      return null;
+    return this.rowToPOI(row);
+  }
+  // ============================================================
+  // LINKING OPERATIONS
+  // ============================================================
+  /**
+   * Link a POI to a NodeNetwork
+   */
+  linkToNetwork(poiId, networkId, entranceRoomId) {
+    return this.update(poiId, {
+      networkId,
+      entranceRoomId
+    });
+  }
+  /**
+   * Link a POI to a Structure
+   */
+  linkToStructure(poiId, structureId) {
+    return this.update(poiId, { structureId });
+  }
+  /**
+   * Add a child POI (sub-location)
+   */
+  addChildPOI(parentId, childId) {
+    const parent = this.findById(parentId);
+    if (!parent)
+      return null;
+    if (!parent.childPOIIds.includes(childId)) {
+      parent.childPOIIds.push(childId);
+    }
+    this.update(childId, { parentPOIId: parentId });
+    return this.update(parentId, { childPOIIds: parent.childPOIIds });
+  }
+  // ============================================================
+  // SEARCH & FILTER
+  // ============================================================
+  /**
+   * Search POIs by tag
+   */
+  findByTag(worldId, tag) {
+    const stmt = this.db.prepare(`SELECT * FROM pois WHERE world_id = ? AND tags LIKE ? ORDER BY name`);
+    const rows = stmt.all(worldId, `%"${tag}"%`);
+    return rows.map((row) => this.rowToPOI(row));
+  }
+  /**
+   * Full-text search on name and description
+   */
+  search(worldId, query) {
+    const stmt = this.db.prepare(`
+            SELECT * FROM pois
+            WHERE world_id = ?
+              AND (name LIKE ? OR description LIKE ?)
+            ORDER BY name
+        `);
+    const pattern = `%${query}%`;
+    const rows = stmt.all(worldId, pattern, pattern);
+    return rows.map((row) => this.rowToPOI(row));
+  }
+  // ============================================================
+  // HELPERS
+  // ============================================================
+  rowToPOI(row) {
+    return POISchema.parse({
+      id: row.id,
+      worldId: row.world_id,
+      regionId: row.region_id || void 0,
+      x: row.x,
+      y: row.y,
+      name: row.name,
+      description: row.description || void 0,
+      category: row.category,
+      icon: row.icon,
+      structureId: row.structure_id || void 0,
+      networkId: row.network_id || void 0,
+      entranceRoomId: row.entrance_room_id || void 0,
+      discoveryState: row.discovery_state,
+      discoveredBy: JSON.parse(row.discovered_by),
+      discoveryDC: row.discovery_dc ?? void 0,
+      parentPOIId: row.parent_poi_id || void 0,
+      childPOIIds: JSON.parse(row.child_poi_ids),
+      population: row.population,
+      level: row.level ?? void 0,
+      tags: JSON.parse(row.tags),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    });
+  }
+};
+
+// dist/data/creature-presets.js
+var CREATURE_PRESETS = {
+  // ─────────────────────────────────────────────────────────────────────────
+  // HUMANOIDS - Low CR
+  // ─────────────────────────────────────────────────────────────────────────
+  goblin: {
+    name: "Goblin",
+    stats: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
+    hp: 7,
+    maxHp: 7,
+    ac: 15,
+    // Leather armor + shield
+    level: 1,
+    characterType: "enemy",
+    race: "Goblin",
+    size: "small",
+    speed: 30,
+    stealthBonus: 6,
+    cr: 0.25,
+    xpValue: 50,
+    defaultAttack: {
+      name: "Scimitar",
+      damage: "1d6+2",
+      damageType: "slashing",
+      toHit: 4
+    },
+    traits: ["Nimble Escape: Disengage or Hide as bonus action"]
+  },
+  hobgoblin: {
+    name: "Hobgoblin",
+    stats: { str: 13, dex: 12, con: 12, int: 10, wis: 10, cha: 9 },
+    hp: 11,
+    maxHp: 11,
+    ac: 18,
+    // Chain mail + shield
+    level: 1,
+    characterType: "enemy",
+    race: "Hobgoblin",
+    size: "medium",
+    speed: 30,
+    cr: 0.5,
+    xpValue: 100,
+    defaultAttack: {
+      name: "Longsword",
+      damage: "1d8+1",
+      damageType: "slashing",
+      toHit: 3
+    },
+    traits: ["Martial Advantage: Extra 2d6 damage once per turn if ally is within 5 ft of target"]
+  },
+  bugbear: {
+    name: "Bugbear",
+    stats: { str: 15, dex: 14, con: 13, int: 8, wis: 11, cha: 9 },
+    hp: 27,
+    maxHp: 27,
+    ac: 16,
+    // Hide armor + shield
+    level: 3,
+    characterType: "enemy",
+    race: "Bugbear",
+    size: "medium",
+    speed: 30,
+    stealthBonus: 6,
+    perceptionBonus: 2,
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Morningstar",
+      damage: "2d8+2",
+      damageType: "piercing",
+      toHit: 4
+    },
+    traits: ["Surprise Attack: Extra 2d6 damage if creature is surprised", "Brute: Extra damage die on melee hits"]
+  },
+  orc: {
+    name: "Orc",
+    stats: { str: 16, dex: 12, con: 16, int: 7, wis: 11, cha: 10 },
+    hp: 15,
+    maxHp: 15,
+    ac: 13,
+    // Hide armor
+    level: 1,
+    characterType: "enemy",
+    race: "Orc",
+    size: "medium",
+    speed: 30,
+    cr: 0.5,
+    xpValue: 100,
+    defaultAttack: {
+      name: "Greataxe",
+      damage: "1d12+3",
+      damageType: "slashing",
+      toHit: 5
+    },
+    traits: ["Aggressive: Bonus action to move up to speed toward hostile creature"]
+  },
+  bandit: {
+    name: "Bandit",
+    stats: { str: 11, dex: 12, con: 12, int: 10, wis: 10, cha: 10 },
+    hp: 11,
+    maxHp: 11,
+    ac: 12,
+    // Leather armor
+    level: 1,
+    characterType: "enemy",
+    race: "Human",
+    characterClass: "rogue",
+    size: "medium",
+    speed: 30,
+    cr: 0.125,
+    xpValue: 25,
+    defaultAttack: {
+      name: "Scimitar",
+      damage: "1d6+1",
+      damageType: "slashing",
+      toHit: 3
+    }
+  },
+  bandit_captain: {
+    name: "Bandit Captain",
+    stats: { str: 15, dex: 16, con: 14, int: 14, wis: 11, cha: 14 },
+    hp: 65,
+    maxHp: 65,
+    ac: 15,
+    // Studded leather
+    level: 5,
+    characterType: "enemy",
+    race: "Human",
+    characterClass: "fighter",
+    size: "medium",
+    speed: 30,
+    cr: 2,
+    xpValue: 450,
+    defaultAttack: {
+      name: "Scimitar",
+      damage: "1d6+3",
+      damageType: "slashing",
+      toHit: 5
+    },
+    traits: ["Multiattack: Three melee attacks or two ranged"]
+  },
+  thug: {
+    name: "Thug",
+    stats: { str: 15, dex: 11, con: 14, int: 10, wis: 10, cha: 11 },
+    hp: 32,
+    maxHp: 32,
+    ac: 11,
+    // Leather armor
+    level: 2,
+    characterType: "enemy",
+    race: "Human",
+    size: "medium",
+    speed: 30,
+    cr: 0.5,
+    xpValue: 100,
+    defaultAttack: {
+      name: "Mace",
+      damage: "1d6+2",
+      damageType: "bludgeoning",
+      toHit: 4
+    },
+    traits: ["Pack Tactics: Advantage when ally is within 5 ft of target"]
+  },
+  cultist: {
+    name: "Cultist",
+    stats: { str: 11, dex: 12, con: 10, int: 10, wis: 11, cha: 10 },
+    hp: 9,
+    maxHp: 9,
+    ac: 12,
+    // Leather armor
+    level: 1,
+    characterType: "enemy",
+    race: "Human",
+    size: "medium",
+    speed: 30,
+    cr: 0.125,
+    xpValue: 25,
+    defaultAttack: {
+      name: "Scimitar",
+      damage: "1d6+1",
+      damageType: "slashing",
+      toHit: 3
+    },
+    traits: ["Dark Devotion: Advantage on saves vs charmed/frightened"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // UNDEAD
+  // ─────────────────────────────────────────────────────────────────────────
+  skeleton: {
+    name: "Skeleton",
+    stats: { str: 10, dex: 14, con: 15, int: 6, wis: 8, cha: 5 },
+    hp: 13,
+    maxHp: 13,
+    ac: 13,
+    // Armor scraps
+    level: 1,
+    characterType: "enemy",
+    race: "Undead",
+    size: "medium",
+    speed: 30,
+    vulnerabilities: ["bludgeoning"],
+    immunities: ["poison"],
+    cr: 0.25,
+    xpValue: 50,
+    defaultAttack: {
+      name: "Shortsword",
+      damage: "1d6+2",
+      damageType: "piercing",
+      toHit: 4
+    }
+  },
+  zombie: {
+    name: "Zombie",
+    stats: { str: 13, dex: 6, con: 16, int: 3, wis: 6, cha: 5 },
+    hp: 22,
+    maxHp: 22,
+    ac: 8,
+    level: 1,
+    characterType: "enemy",
+    race: "Undead",
+    size: "medium",
+    speed: 20,
+    immunities: ["poison"],
+    cr: 0.25,
+    xpValue: 50,
+    defaultAttack: {
+      name: "Slam",
+      damage: "1d6+1",
+      damageType: "bludgeoning",
+      toHit: 3
+    },
+    traits: ["Undead Fortitude: DC 5 + damage CON save to stay at 1 HP instead of 0"]
+  },
+  ghoul: {
+    name: "Ghoul",
+    stats: { str: 13, dex: 15, con: 10, int: 7, wis: 10, cha: 6 },
+    hp: 22,
+    maxHp: 22,
+    ac: 12,
+    level: 2,
+    characterType: "enemy",
+    race: "Undead",
+    size: "medium",
+    speed: 30,
+    immunities: ["poison"],
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Claws",
+      damage: "2d4+2",
+      damageType: "slashing",
+      toHit: 4
+    },
+    traits: ["Paralyzing Touch: DC 10 CON save or paralyzed for 1 minute"]
+  },
+  wight: {
+    name: "Wight",
+    stats: { str: 15, dex: 14, con: 16, int: 10, wis: 13, cha: 15 },
+    hp: 45,
+    maxHp: 45,
+    ac: 14,
+    // Studded leather
+    level: 4,
+    characterType: "enemy",
+    race: "Undead",
+    size: "medium",
+    speed: 30,
+    resistances: ["necrotic", "nonmagical bludgeoning/piercing/slashing"],
+    immunities: ["poison"],
+    cr: 3,
+    xpValue: 700,
+    defaultAttack: {
+      name: "Longsword",
+      damage: "1d8+2",
+      damageType: "slashing",
+      toHit: 4
+    },
+    traits: ["Life Drain: Necrotic attack reduces max HP", "Sunlight Sensitivity: Disadvantage in sunlight"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // BEASTS
+  // ─────────────────────────────────────────────────────────────────────────
+  wolf: {
+    name: "Wolf",
+    stats: { str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
+    hp: 11,
+    maxHp: 11,
+    ac: 13,
+    // Natural armor
+    level: 1,
+    characterType: "enemy",
+    race: "Beast",
+    size: "medium",
+    speed: 40,
+    perceptionBonus: 3,
+    stealthBonus: 4,
+    cr: 0.25,
+    xpValue: 50,
+    defaultAttack: {
+      name: "Bite",
+      damage: "2d4+2",
+      damageType: "piercing",
+      toHit: 4
+    },
+    traits: ["Pack Tactics: Advantage when ally within 5 ft", "Keen Hearing and Smell: Advantage on Perception"]
+  },
+  dire_wolf: {
+    name: "Dire Wolf",
+    stats: { str: 17, dex: 15, con: 15, int: 3, wis: 12, cha: 7 },
+    hp: 37,
+    maxHp: 37,
+    ac: 14,
+    level: 3,
+    characterType: "enemy",
+    race: "Beast",
+    size: "large",
+    speed: 50,
+    perceptionBonus: 3,
+    stealthBonus: 4,
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Bite",
+      damage: "2d6+3",
+      damageType: "piercing",
+      toHit: 5
+    },
+    traits: ["Pack Tactics", "Keen Hearing and Smell", "Knockdown: DC 13 STR or prone"]
+  },
+  giant_spider: {
+    name: "Giant Spider",
+    stats: { str: 14, dex: 16, con: 12, int: 2, wis: 11, cha: 4 },
+    hp: 26,
+    maxHp: 26,
+    ac: 14,
+    level: 2,
+    characterType: "enemy",
+    race: "Beast",
+    size: "large",
+    speed: 30,
+    stealthBonus: 7,
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Bite",
+      damage: "1d8+3",
+      damageType: "piercing",
+      toHit: 5
+    },
+    traits: ["Spider Climb", "Web Sense", "Web Walker", "Poison: DC 11 CON or 2d8 poison damage"]
+  },
+  giant_rat: {
+    name: "Giant Rat",
+    stats: { str: 7, dex: 15, con: 11, int: 2, wis: 10, cha: 4 },
+    hp: 7,
+    maxHp: 7,
+    ac: 12,
+    level: 1,
+    characterType: "enemy",
+    race: "Beast",
+    size: "small",
+    speed: 30,
+    cr: 0.125,
+    xpValue: 25,
+    defaultAttack: {
+      name: "Bite",
+      damage: "1d4+2",
+      damageType: "piercing",
+      toHit: 4
+    },
+    traits: ["Pack Tactics", "Keen Smell"]
+  },
+  bear_black: {
+    name: "Black Bear",
+    stats: { str: 15, dex: 10, con: 14, int: 2, wis: 12, cha: 7 },
+    hp: 19,
+    maxHp: 19,
+    ac: 11,
+    level: 2,
+    characterType: "enemy",
+    race: "Beast",
+    size: "medium",
+    speed: 40,
+    perceptionBonus: 3,
+    cr: 0.5,
+    xpValue: 100,
+    defaultAttack: {
+      name: "Claws",
+      damage: "2d4+2",
+      damageType: "slashing",
+      toHit: 4
+    },
+    traits: ["Multiattack: Bite and claws", "Keen Smell"]
+  },
+  bear_brown: {
+    name: "Brown Bear",
+    stats: { str: 19, dex: 10, con: 16, int: 2, wis: 13, cha: 7 },
+    hp: 34,
+    maxHp: 34,
+    ac: 11,
+    level: 3,
+    characterType: "enemy",
+    race: "Beast",
+    size: "large",
+    speed: 40,
+    perceptionBonus: 3,
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Claws",
+      damage: "2d6+4",
+      damageType: "slashing",
+      toHit: 6
+    },
+    traits: ["Multiattack: Bite and claws", "Keen Smell"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // DRAGONS (Wyrmlings)
+  // ─────────────────────────────────────────────────────────────────────────
+  dragon_wyrmling_red: {
+    name: "Red Dragon Wyrmling",
+    stats: { str: 19, dex: 10, con: 17, int: 12, wis: 11, cha: 15 },
+    hp: 75,
+    maxHp: 75,
+    ac: 17,
+    level: 6,
+    characterType: "enemy",
+    race: "Dragon",
+    size: "medium",
+    speed: 30,
+    immunities: ["fire"],
+    perceptionBonus: 4,
+    stealthBonus: 2,
+    cr: 4,
+    xpValue: 1100,
+    defaultAttack: {
+      name: "Bite",
+      damage: "1d10+4",
+      damageType: "piercing",
+      toHit: 6
+    },
+    traits: ["Fire Breath: 15 ft cone, 7d6 fire, DC 13 DEX half"]
+  },
+  dragon_wyrmling_white: {
+    name: "White Dragon Wyrmling",
+    stats: { str: 14, dex: 10, con: 14, int: 5, wis: 10, cha: 11 },
+    hp: 32,
+    maxHp: 32,
+    ac: 16,
+    level: 4,
+    characterType: "enemy",
+    race: "Dragon",
+    size: "medium",
+    speed: 30,
+    immunities: ["cold"],
+    perceptionBonus: 4,
+    stealthBonus: 2,
+    cr: 2,
+    xpValue: 450,
+    defaultAttack: {
+      name: "Bite",
+      damage: "1d10+2",
+      damageType: "piercing",
+      toHit: 4
+    },
+    traits: ["Cold Breath: 15 ft cone, 5d8 cold, DC 12 CON half"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONSTRUCTS
+  // ─────────────────────────────────────────────────────────────────────────
+  animated_armor: {
+    name: "Animated Armor",
+    stats: { str: 14, dex: 11, con: 13, int: 1, wis: 3, cha: 1 },
+    hp: 33,
+    maxHp: 33,
+    ac: 18,
+    // Natural armor
+    level: 3,
+    characterType: "enemy",
+    race: "Construct",
+    size: "medium",
+    speed: 25,
+    immunities: ["poison", "psychic"],
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Slam",
+      damage: "1d6+2",
+      damageType: "bludgeoning",
+      toHit: 4
+    },
+    traits: ["Antimagic Susceptibility: Incapacitated in antimagic", "False Appearance: Looks like normal armor"]
+  },
+  flying_sword: {
+    name: "Flying Sword",
+    stats: { str: 12, dex: 15, con: 11, int: 1, wis: 5, cha: 1 },
+    hp: 17,
+    maxHp: 17,
+    ac: 17,
+    // Natural armor
+    level: 1,
+    characterType: "enemy",
+    race: "Construct",
+    size: "small",
+    speed: 50,
+    immunities: ["poison", "psychic"],
+    cr: 0.25,
+    xpValue: 50,
+    defaultAttack: {
+      name: "Longsword",
+      damage: "1d8+1",
+      damageType: "slashing",
+      toHit: 3
+    },
+    traits: ["Antimagic Susceptibility", "False Appearance"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // MONSTROSITIES
+  // ─────────────────────────────────────────────────────────────────────────
+  mimic: {
+    name: "Mimic",
+    stats: { str: 17, dex: 12, con: 15, int: 5, wis: 13, cha: 8 },
+    hp: 58,
+    maxHp: 58,
+    ac: 12,
+    level: 4,
+    characterType: "enemy",
+    race: "Monstrosity",
+    size: "medium",
+    speed: 15,
+    immunities: ["acid"],
+    stealthBonus: 5,
+    cr: 2,
+    xpValue: 450,
+    defaultAttack: {
+      name: "Pseudopod",
+      damage: "1d8+3",
+      damageType: "bludgeoning",
+      toHit: 5
+    },
+    traits: ["Shapechanger: Polymorph into object", "Adhesive: Grapples on hit", "False Appearance", "Grappler"]
+  },
+  owlbear: {
+    name: "Owlbear",
+    stats: { str: 20, dex: 12, con: 17, int: 3, wis: 12, cha: 7 },
+    hp: 59,
+    maxHp: 59,
+    ac: 13,
+    level: 5,
+    characterType: "enemy",
+    race: "Monstrosity",
+    size: "large",
+    speed: 40,
+    perceptionBonus: 3,
+    cr: 3,
+    xpValue: 700,
+    defaultAttack: {
+      name: "Claws",
+      damage: "2d8+5",
+      damageType: "slashing",
+      toHit: 7
+    },
+    traits: ["Multiattack: Beak and claws", "Keen Sight and Smell"]
+  },
+  harpy: {
+    name: "Harpy",
+    stats: { str: 12, dex: 13, con: 12, int: 7, wis: 10, cha: 13 },
+    hp: 38,
+    maxHp: 38,
+    ac: 11,
+    level: 3,
+    characterType: "enemy",
+    race: "Monstrosity",
+    size: "medium",
+    speed: 20,
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Claws",
+      damage: "2d4+1",
+      damageType: "slashing",
+      toHit: 3
+    },
+    traits: ["Multiattack: Claws and club", "Luring Song: DC 11 WIS or charmed"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // DEMONS & FIENDS
+  // ─────────────────────────────────────────────────────────────────────────
+  imp: {
+    name: "Imp",
+    stats: { str: 6, dex: 17, con: 13, int: 11, wis: 12, cha: 14 },
+    hp: 10,
+    maxHp: 10,
+    ac: 13,
+    level: 2,
+    characterType: "enemy",
+    race: "Fiend",
+    size: "tiny",
+    speed: 20,
+    resistances: ["cold", "nonmagical bludgeoning/piercing/slashing"],
+    immunities: ["fire", "poison"],
+    stealthBonus: 5,
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Sting",
+      damage: "1d4+3",
+      damageType: "piercing",
+      toHit: 5
+    },
+    traits: ["Shapechanger", "Devils Sight", "Magic Resistance", "Poison Sting: DC 11 CON or 3d6 poison"]
+  },
+  quasit: {
+    name: "Quasit",
+    stats: { str: 5, dex: 17, con: 10, int: 7, wis: 10, cha: 10 },
+    hp: 7,
+    maxHp: 7,
+    ac: 13,
+    level: 2,
+    characterType: "enemy",
+    race: "Fiend",
+    size: "tiny",
+    speed: 40,
+    resistances: ["cold", "fire", "lightning", "nonmagical bludgeoning/piercing/slashing"],
+    immunities: ["poison"],
+    stealthBonus: 5,
+    cr: 1,
+    xpValue: 200,
+    defaultAttack: {
+      name: "Claws",
+      damage: "1d4+3",
+      damageType: "slashing",
+      toHit: 5
+    },
+    traits: ["Shapechanger", "Magic Resistance", "Poison Claws: DC 10 CON or 2d4 poison"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // GIANTS
+  // ─────────────────────────────────────────────────────────────────────────
+  ogre: {
+    name: "Ogre",
+    stats: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 },
+    hp: 59,
+    maxHp: 59,
+    ac: 11,
+    // Hide armor
+    level: 4,
+    characterType: "enemy",
+    race: "Giant",
+    size: "large",
+    speed: 40,
+    cr: 2,
+    xpValue: 450,
+    defaultAttack: {
+      name: "Greatclub",
+      damage: "2d8+4",
+      damageType: "bludgeoning",
+      toHit: 6
+    }
+  },
+  troll: {
+    name: "Troll",
+    stats: { str: 18, dex: 13, con: 20, int: 7, wis: 9, cha: 7 },
+    hp: 84,
+    maxHp: 84,
+    ac: 15,
+    level: 6,
+    characterType: "enemy",
+    race: "Giant",
+    size: "large",
+    speed: 30,
+    perceptionBonus: 2,
+    cr: 5,
+    xpValue: 1800,
+    defaultAttack: {
+      name: "Claws",
+      damage: "2d6+4",
+      damageType: "slashing",
+      toHit: 7
+    },
+    traits: ["Multiattack: Bite and 2 claws", "Regeneration: 10 HP per turn unless fire/acid damage", "Keen Smell"]
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // ELEMENTALS
+  // ─────────────────────────────────────────────────────────────────────────
+  fire_elemental: {
+    name: "Fire Elemental",
+    stats: { str: 10, dex: 17, con: 16, int: 6, wis: 10, cha: 7 },
+    hp: 102,
+    maxHp: 102,
+    ac: 13,
+    level: 8,
+    characterType: "enemy",
+    race: "Elemental",
+    size: "large",
+    speed: 50,
+    resistances: ["nonmagical bludgeoning/piercing/slashing"],
+    immunities: ["fire", "poison"],
+    cr: 5,
+    xpValue: 1800,
+    defaultAttack: {
+      name: "Touch",
+      damage: "2d6+3",
+      damageType: "fire",
+      toHit: 6
+    },
+    traits: ["Fire Form: Move through 1-inch spaces", "Illumination: Bright light 30 ft", "Water Susceptibility: 1 cold damage per gallon"]
+  },
+  water_elemental: {
+    name: "Water Elemental",
+    stats: { str: 18, dex: 14, con: 18, int: 5, wis: 10, cha: 8 },
+    hp: 114,
+    maxHp: 114,
+    ac: 14,
+    level: 8,
+    characterType: "enemy",
+    race: "Elemental",
+    size: "large",
+    speed: 30,
+    resistances: ["acid", "nonmagical bludgeoning/piercing/slashing"],
+    immunities: ["poison"],
+    cr: 5,
+    xpValue: 1800,
+    defaultAttack: {
+      name: "Slam",
+      damage: "2d8+4",
+      damageType: "bludgeoning",
+      toHit: 7
+    },
+    traits: ["Water Form: Move through 1-inch spaces", "Freeze: 1 cold damage freezes 1 ft", "Whelm: Engulf and drown"]
+  }
+};
+var CREATURE_VARIANTS = {
+  goblin: {
+    warrior: {
+      nameSuffix: " Warrior",
+      hpModifier: 3,
+      acModifier: 0,
+      equipment: ["scimitar", "shield"]
+    },
+    archer: {
+      nameSuffix: " Archer",
+      hpModifier: 0,
+      acModifier: -2,
+      // No shield
+      defaultAttack: {
+        name: "Shortbow",
+        damage: "1d6+2",
+        damageType: "piercing",
+        toHit: 4
+      },
+      equipment: ["shortbow"]
+    },
+    boss: {
+      namePrefix: "Goblin ",
+      nameSuffix: " Boss",
+      hpModifier: 15,
+      acModifier: 2,
+      statModifiers: { str: 2, con: 2, cha: 4 },
+      equipment: ["scimitar", "shield"]
+    },
+    shaman: {
+      nameSuffix: " Shaman",
+      hpModifier: 5,
+      acModifier: -3,
+      // No armor
+      statModifiers: { wis: 4, cha: 2 },
+      equipment: ["quarterstaff"]
+    }
+  },
+  skeleton: {
+    warrior: {
+      nameSuffix: " Warrior",
+      hpModifier: 5,
+      acModifier: 2,
+      equipment: ["shortsword", "shield"]
+    },
+    archer: {
+      nameSuffix: " Archer",
+      hpModifier: 0,
+      defaultAttack: {
+        name: "Shortbow",
+        damage: "1d6+2",
+        damageType: "piercing",
+        toHit: 4
+      },
+      equipment: ["shortbow"]
+    },
+    mage: {
+      nameSuffix: " Mage",
+      hpModifier: 10,
+      statModifiers: { int: 6, wis: 4 }
+    }
+  },
+  orc: {
+    warrior: {
+      nameSuffix: " Warrior",
+      hpModifier: 5,
+      equipment: ["greataxe"]
+    },
+    berserker: {
+      nameSuffix: " Berserker",
+      hpModifier: 10,
+      acModifier: -2,
+      statModifiers: { str: 2, con: 2 },
+      equipment: ["greataxe"]
+    },
+    warleader: {
+      namePrefix: "Orc ",
+      nameSuffix: " War Chief",
+      hpModifier: 30,
+      acModifier: 3,
+      statModifiers: { str: 4, con: 4, cha: 4 },
+      equipment: ["greataxe", "chainmail"]
+    }
+  },
+  bandit: {
+    thug: {
+      nameSuffix: " Thug",
+      hpModifier: 10,
+      statModifiers: { str: 2 },
+      equipment: ["mace"]
+    },
+    archer: {
+      nameSuffix: " Archer",
+      hpModifier: 0,
+      defaultAttack: {
+        name: "Light Crossbow",
+        damage: "1d8+1",
+        damageType: "piercing",
+        toHit: 3
+      },
+      equipment: ["light_crossbow"]
+    }
+  },
+  hobgoblin: {
+    warrior: {
+      nameSuffix: " Warrior",
+      hpModifier: 5,
+      equipment: ["longsword", "shield", "chainmail"]
+    },
+    captain: {
+      namePrefix: "Hobgoblin ",
+      nameSuffix: " Captain",
+      hpModifier: 30,
+      acModifier: 2,
+      statModifiers: { str: 2, con: 2, cha: 4 },
+      equipment: ["longsword", "shield", "chainmail"]
+    },
+    archer: {
+      nameSuffix: " Archer",
+      hpModifier: 0,
+      acModifier: -4,
+      defaultAttack: {
+        name: "Longbow",
+        damage: "1d8+1",
+        damageType: "piercing",
+        toHit: 3
+      },
+      equipment: ["longbow"]
+    }
+  },
+  zombie: {
+    fast: {
+      namePrefix: "Fast ",
+      hpModifier: -5,
+      statModifiers: { dex: 6 }
+    },
+    brute: {
+      nameSuffix: " Brute",
+      hpModifier: 15,
+      acModifier: 2,
+      statModifiers: { str: 4, con: 4 }
+    }
+  },
+  wolf: {
+    alpha: {
+      namePrefix: "Alpha ",
+      hpModifier: 10,
+      acModifier: 1,
+      statModifiers: { str: 2, con: 2, cha: 4 }
+    },
+    dire: {
+      namePrefix: "Dire ",
+      hpModifier: 26,
+      acModifier: 1,
+      statModifiers: { str: 5, con: 3 }
+    }
+  }
+};
+function getCreaturePreset(name) {
+  const normalized = name.toLowerCase().replace(/[\s-]/g, "_");
+  return CREATURE_PRESETS[normalized] || null;
+}
+function parseCreatureTemplate(template) {
+  const [base, variant] = template.toLowerCase().split(":");
+  return { base: base.replace(/[\s-]/g, "_"), variant };
+}
+function expandCreatureTemplate(template, nameOverride) {
+  const { base, variant } = parseCreatureTemplate(template);
+  const basePreset = getCreaturePreset(base);
+  if (!basePreset) {
+    return null;
+  }
+  if (!variant) {
+    if (nameOverride) {
+      return { ...basePreset, name: nameOverride };
+    }
+    return { ...basePreset };
+  }
+  const variantDef = CREATURE_VARIANTS[base]?.[variant];
+  if (!variantDef) {
+    console.warn(`Unknown variant "${variant}" for "${base}", using base preset`);
+    if (nameOverride) {
+      return { ...basePreset, name: nameOverride };
+    }
+    return { ...basePreset };
+  }
+  const expanded = {
+    ...basePreset,
+    name: nameOverride || `${variantDef.namePrefix || ""}${basePreset.name}${variantDef.nameSuffix || ""}`,
+    hp: basePreset.hp + (variantDef.hpModifier || 0),
+    maxHp: basePreset.maxHp + (variantDef.hpModifier || 0),
+    ac: basePreset.ac + (variantDef.acModifier || 0)
+  };
+  if (variantDef.statModifiers) {
+    expanded.stats = {
+      str: basePreset.stats.str + (variantDef.statModifiers.str || 0),
+      dex: basePreset.stats.dex + (variantDef.statModifiers.dex || 0),
+      con: basePreset.stats.con + (variantDef.statModifiers.con || 0),
+      int: basePreset.stats.int + (variantDef.statModifiers.int || 0),
+      wis: basePreset.stats.wis + (variantDef.statModifiers.wis || 0),
+      cha: basePreset.stats.cha + (variantDef.statModifiers.cha || 0)
+    };
+  }
+  if (variantDef.defaultAttack) {
+    expanded.defaultAttack = variantDef.defaultAttack;
+  }
+  return expanded;
+}
+
+// dist/data/encounter-presets.js
+var ENCOUNTER_PRESETS = {
+  goblin_ambush: {
+    id: "goblin_ambush",
+    name: "Goblin Ambush",
+    description: "A group of goblins attacks from hiding, with archers providing cover fire.",
+    difficulty: "easy",
+    recommendedLevel: { min: 1, max: 3 },
+    participants: [
+      { template: "goblin:warrior", position: "5,8" },
+      { template: "goblin:warrior", position: "7,8" },
+      { template: "goblin:archer", position: "4,4" },
+      { template: "goblin:archer", position: "8,4" }
+    ],
+    terrain: {
+      obstacles: ["3,3", "3,4", "9,3", "9,4"],
+      // Rocks for archer cover
+      difficultTerrain: ["5,6", "6,6", "7,6"]
+      // Underbrush
+    },
+    partyPositions: ["6,12", "7,12", "5,13", "8,13"],
+    tags: ["goblin", "ambush", "forest", "road"],
+    narrativeHook: "Rustling in the bushes... then arrows fly from the treeline!"
+  },
+  goblin_lair: {
+    id: "goblin_lair",
+    name: "Goblin Lair",
+    description: "The party discovers a goblin hideout with a boss and his minions.",
+    difficulty: "medium",
+    recommendedLevel: { min: 1, max: 4 },
+    participants: [
+      { template: "goblin:boss", name: "Griknak the Cruel", position: "10,3" },
+      { template: "goblin:warrior", position: "8,5" },
+      { template: "goblin:warrior", position: "12,5" },
+      { template: "goblin:shaman", position: "10,2" },
+      { template: "goblin:archer", position: "6,3" },
+      { template: "goblin:archer", position: "14,3" }
+    ],
+    terrain: {
+      obstacles: ["5,0", "5,1", "5,2", "15,0", "15,1", "15,2"],
+      // Cave walls
+      difficultTerrain: ["9,4", "10,4", "11,4"]
+      // Debris
+    },
+    partyPositions: ["10,10", "9,11", "11,11", "10,12"],
+    tags: ["goblin", "lair", "cave", "boss"],
+    narrativeHook: "The stench of goblins fills the cave. Their leader sits on a crude throne of bones."
+  },
+  hobgoblin_patrol: {
+    id: "hobgoblin_patrol",
+    name: "Hobgoblin Patrol",
+    description: "A disciplined hobgoblin patrol with a captain leading warriors.",
+    difficulty: "medium",
+    recommendedLevel: { min: 2, max: 5 },
+    participants: [
+      { template: "hobgoblin:captain", name: "Sergeant Korgath", position: "10,5" },
+      { template: "hobgoblin:warrior", position: "8,6" },
+      { template: "hobgoblin:warrior", position: "12,6" },
+      { template: "hobgoblin:warrior", position: "9,7" },
+      { template: "hobgoblin:warrior", position: "11,7" },
+      { template: "hobgoblin:archer", position: "10,3" }
+    ],
+    terrain: {
+      obstacles: ["5,5", "15,5"]
+      // Road markers/posts
+    },
+    partyPositions: ["10,12", "9,13", "11,13", "10,14"],
+    tags: ["hobgoblin", "patrol", "road", "military"],
+    narrativeHook: "The marching boots of hobgoblins echo down the road. Their captain barks orders."
+  },
+  bugbear_ambush: {
+    id: "bugbear_ambush",
+    name: "Bugbear Ambush",
+    description: "Bugbears strike from surprise with devastating first hits.",
+    difficulty: "hard",
+    recommendedLevel: { min: 2, max: 5 },
+    participants: [
+      { template: "bugbear", name: "Skullcrusher", position: "5,5" },
+      { template: "bugbear", position: "8,4" },
+      { template: "bugbear", position: "11,5" },
+      { template: "goblin:warrior", position: "7,8" },
+      { template: "goblin:warrior", position: "9,8" }
+    ],
+    terrain: {
+      obstacles: ["4,3", "5,3", "10,3", "11,3"],
+      // Boulders
+      difficultTerrain: ["6,6", "7,6", "8,6", "9,6", "10,6"]
+      // Thick brush
+    },
+    partyPositions: ["8,12", "7,13", "9,13", "8,14"],
+    tags: ["bugbear", "goblin", "ambush", "surprise", "forest"],
+    narrativeHook: "Massive shapes burst from hiding! The bugbears' first strikes are devastating."
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // ORC ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  orc_raiding_party: {
+    id: "orc_raiding_party",
+    name: "Orc Raiding Party",
+    description: "Aggressive orcs looking for plunder and violence.",
+    difficulty: "medium",
+    recommendedLevel: { min: 2, max: 5 },
+    participants: [
+      { template: "orc:warrior", position: "6,6" },
+      { template: "orc:warrior", position: "8,6" },
+      { template: "orc:warrior", position: "10,6" },
+      { template: "orc:berserker", name: "Gromm Bloodrage", position: "8,4" }
+    ],
+    terrain: {
+      difficultTerrain: ["7,8", "8,8", "9,8"]
+      // Churned ground
+    },
+    partyPositions: ["8,12", "7,13", "9,13", "8,14"],
+    tags: ["orc", "raid", "aggressive", "open"],
+    narrativeHook: "WAAAGH! The orcs charge with reckless fury!"
+  },
+  orc_warband: {
+    id: "orc_warband",
+    name: "Orc Warband",
+    description: "A full orc warband with a war chief leading the charge.",
+    difficulty: "deadly",
+    recommendedLevel: { min: 3, max: 6 },
+    participants: [
+      { template: "orc:warleader", name: "Warchief Gorgul", position: "10,4" },
+      { template: "orc:berserker", position: "8,5" },
+      { template: "orc:berserker", position: "12,5" },
+      { template: "orc:warrior", position: "7,6" },
+      { template: "orc:warrior", position: "9,6" },
+      { template: "orc:warrior", position: "11,6" },
+      { template: "orc:warrior", position: "13,6" }
+    ],
+    terrain: {
+      obstacles: ["5,4", "5,5", "15,4", "15,5"],
+      // War banners/totems
+      difficultTerrain: ["8,8", "9,8", "10,8", "11,8", "12,8"]
+    },
+    partyPositions: ["10,12", "8,13", "12,13", "10,14"],
+    tags: ["orc", "warband", "boss", "deadly"],
+    narrativeHook: "The Warchief raises his bloody greataxe. His warriors roar in response!"
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // UNDEAD ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  skeleton_patrol: {
+    id: "skeleton_patrol",
+    name: "Skeleton Patrol",
+    description: "Animated skeletons guarding ancient ruins.",
+    difficulty: "easy",
+    recommendedLevel: { min: 1, max: 3 },
+    participants: [
+      { template: "skeleton:warrior", position: "6,6" },
+      { template: "skeleton:warrior", position: "10,6" },
+      { template: "skeleton:archer", position: "5,4" },
+      { template: "skeleton:archer", position: "11,4" }
+    ],
+    terrain: {
+      obstacles: ["4,3", "5,3", "11,3", "12,3"],
+      // Broken pillars
+      difficultTerrain: ["7,5", "8,5", "9,5"]
+      // Rubble
+    },
+    partyPositions: ["8,12", "7,13", "9,13", "8,14"],
+    tags: ["skeleton", "undead", "ruins", "patrol"],
+    narrativeHook: "Bones rattle as the skeletons turn their empty eye sockets toward you."
+  },
+  zombie_horde: {
+    id: "zombie_horde",
+    name: "Zombie Horde",
+    description: "A shambling mass of undead slowly closing in.",
+    difficulty: "medium",
+    recommendedLevel: { min: 1, max: 4 },
+    participants: [
+      { template: "zombie", position: "6,5" },
+      { template: "zombie", position: "8,5" },
+      { template: "zombie", position: "10,5" },
+      { template: "zombie", position: "7,6" },
+      { template: "zombie", position: "9,6" },
+      { template: "zombie:brute", name: "Hulking Corpse", position: "8,4" }
+    ],
+    terrain: {
+      difficultTerrain: ["6,7", "7,7", "8,7", "9,7", "10,7"]
+      // Graveyard mud
+    },
+    partyPositions: ["8,12", "6,13", "10,13", "8,14"],
+    tags: ["zombie", "undead", "horde", "graveyard"],
+    narrativeHook: "The dead rise from their graves, moaning hungrily..."
+  },
+  crypt_guardians: {
+    id: "crypt_guardians",
+    name: "Crypt Guardians",
+    description: "Powerful undead defending an ancient tomb.",
+    difficulty: "hard",
+    recommendedLevel: { min: 3, max: 6 },
+    participants: [
+      { template: "wight", name: "Tomb Warden", position: "10,3" },
+      { template: "ghoul", position: "7,5" },
+      { template: "ghoul", position: "13,5" },
+      { template: "skeleton:warrior", position: "8,6" },
+      { template: "skeleton:warrior", position: "12,6" },
+      { template: "skeleton:mage", position: "10,4" }
+    ],
+    terrain: {
+      obstacles: ["5,2", "5,3", "15,2", "15,3"],
+      // Sarcophagi
+      difficultTerrain: ["9,5", "10,5", "11,5"]
+      // Ancient dust
+    },
+    partyPositions: ["10,10", "8,11", "12,11", "10,12"],
+    tags: ["wight", "ghoul", "skeleton", "undead", "crypt", "boss"],
+    narrativeHook: "Cold air emanates from the Tomb Warden as it draws its blackened blade."
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // BEAST ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  wolf_pack: {
+    id: "wolf_pack",
+    name: "Wolf Pack",
+    description: "A pack of hungry wolves with their alpha.",
+    difficulty: "easy",
+    recommendedLevel: { min: 1, max: 3 },
+    participants: [
+      { template: "wolf:alpha", name: "Alpha", position: "8,5" },
+      { template: "wolf", position: "6,6" },
+      { template: "wolf", position: "10,6" },
+      { template: "wolf", position: "7,7" },
+      { template: "wolf", position: "9,7" }
+    ],
+    terrain: {
+      obstacles: ["4,4", "12,4"],
+      // Trees
+      difficultTerrain: ["5,6", "6,6", "10,6", "11,6"]
+      // Underbrush
+    },
+    partyPositions: ["8,12", "7,13", "9,13", "8,14"],
+    tags: ["wolf", "beast", "pack", "forest", "wilderness"],
+    narrativeHook: "Yellow eyes gleam in the darkness. The pack has found its prey."
+  },
+  spider_nest: {
+    id: "spider_nest",
+    name: "Spider Nest",
+    description: "Giant spiders lurking in webbed terrain.",
+    difficulty: "medium",
+    recommendedLevel: { min: 2, max: 5 },
+    participants: [
+      { template: "giant_spider", position: "8,4" },
+      { template: "giant_spider", position: "10,6" },
+      { template: "giant_spider", position: "6,6" }
+    ],
+    terrain: {
+      difficultTerrain: [
+        "5,3",
+        "6,3",
+        "7,3",
+        "8,3",
+        "9,3",
+        "10,3",
+        "11,3",
+        "5,4",
+        "6,4",
+        "10,4",
+        "11,4",
+        "5,5",
+        "11,5"
+      ],
+      // Web coverage
+      obstacles: ["4,2", "12,2"]
+      // Cocooned victims
+    },
+    partyPositions: ["8,10", "7,11", "9,11", "8,12"],
+    tags: ["spider", "beast", "cave", "dungeon", "web"],
+    narrativeHook: "Webs cover everything. Something large moves in the darkness above..."
+  },
+  owlbear_territory: {
+    id: "owlbear_territory",
+    name: "Owlbear Territory",
+    description: "The party stumbles into an owlbear's hunting ground.",
+    difficulty: "hard",
+    recommendedLevel: { min: 3, max: 5 },
+    participants: [
+      { template: "owlbear", name: "Razorfeather", position: "8,5" }
+    ],
+    terrain: {
+      obstacles: ["4,3", "5,3", "11,3", "12,3"],
+      // Dense trees
+      difficultTerrain: ["6,6", "7,6", "8,6", "9,6", "10,6"]
+      // Thick underbrush
+    },
+    partyPositions: ["8,12", "7,13", "9,13", "8,14"],
+    tags: ["owlbear", "beast", "solo", "forest"],
+    narrativeHook: "A terrifying screech echoes through the trees. The owlbear charges!"
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // BANDIT ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  bandit_roadblock: {
+    id: "bandit_roadblock",
+    name: "Bandit Roadblock",
+    description: "Bandits demand toll or threaten violence.",
+    difficulty: "easy",
+    recommendedLevel: { min: 1, max: 3 },
+    participants: [
+      { template: "bandit", position: "7,6" },
+      { template: "bandit", position: "9,6" },
+      { template: "bandit:thug", name: "Big Marcus", position: "8,5" },
+      { template: "bandit:archer", position: "5,4" },
+      { template: "bandit:archer", position: "11,4" }
+    ],
+    terrain: {
+      obstacles: ["6,7", "7,7", "9,7", "10,7"]
+      // Overturned cart
+    },
+    partyPositions: ["8,12", "7,13", "9,13", "8,14"],
+    tags: ["bandit", "road", "robbery", "human"],
+    narrativeHook: '"Your gold or your life!" A scarred thug steps forward, cracking his knuckles.'
+  },
+  bandit_camp: {
+    id: "bandit_camp",
+    name: "Bandit Camp",
+    description: "Raiding a bandit encampment with their captain.",
+    difficulty: "medium",
+    recommendedLevel: { min: 2, max: 5 },
+    participants: [
+      { template: "bandit_captain", name: "Captain Redhand", position: "10,3" },
+      { template: "bandit:thug", position: "8,5" },
+      { template: "bandit:thug", position: "12,5" },
+      { template: "bandit", position: "7,6" },
+      { template: "bandit", position: "9,6" },
+      { template: "bandit", position: "11,6" },
+      { template: "bandit:archer", position: "6,4" },
+      { template: "bandit:archer", position: "14,4" }
+    ],
+    terrain: {
+      obstacles: ["5,2", "5,3", "15,2", "15,3"],
+      // Tents
+      difficultTerrain: ["8,4", "9,4", "10,4", "11,4", "12,4"]
+      // Camp debris
+    },
+    partyPositions: ["10,12", "8,13", "12,13", "10,14"],
+    tags: ["bandit", "camp", "boss", "raid"],
+    narrativeHook: 'Captain Redhand draws twin blades. "Kill them all! Leave no witnesses!"'
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // TAVERN/URBAN ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  tavern_brawl: {
+    id: "tavern_brawl",
+    name: "Tavern Brawl",
+    description: "A bar fight escalates into a full combat.",
+    difficulty: "easy",
+    recommendedLevel: { min: 1, max: 3 },
+    participants: [
+      { template: "thug", position: "6,6" },
+      { template: "thug", position: "8,5" },
+      { template: "thug", position: "10,6" },
+      { template: "bandit", name: "Drunk Patron", position: "7,7" },
+      { template: "bandit", name: "Angry Sailor", position: "9,7" }
+    ],
+    terrain: {
+      obstacles: ["5,5", "11,5"],
+      // Tables
+      difficultTerrain: ["6,7", "7,7", "9,7", "10,7"]
+      // Broken chairs/bottles
+    },
+    partyPositions: ["8,10", "7,11", "9,11", "8,12"],
+    tags: ["thug", "bandit", "tavern", "urban", "brawl", "nonlethal"],
+    narrativeHook: '"You spilled my drink!" A chair flies across the room as chaos erupts!'
+  },
+  cult_ritual: {
+    id: "cult_ritual",
+    name: "Cult Ritual",
+    description: "Interrupting a dark ritual in progress.",
+    difficulty: "medium",
+    recommendedLevel: { min: 2, max: 5 },
+    participants: [
+      { template: "cultist", position: "8,4" },
+      { template: "cultist", position: "10,4" },
+      { template: "cultist", position: "7,5" },
+      { template: "cultist", position: "11,5" },
+      { template: "cultist", position: "9,3", name: "Cult Leader" }
+    ],
+    terrain: {
+      obstacles: ["9,4"],
+      // Ritual altar
+      difficultTerrain: ["8,5", "9,5", "10,5"]
+      // Ritual circle
+    },
+    partyPositions: ["9,10", "8,11", "10,11", "9,12"],
+    tags: ["cultist", "ritual", "urban", "dungeon"],
+    narrativeHook: "Chanting fills the chamber. Dark energy swirls around the altar..."
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // DUNGEON ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  animated_guardians: {
+    id: "animated_guardians",
+    name: "Animated Guardians",
+    description: "Magical constructs guarding a wizard's tower.",
+    difficulty: "medium",
+    recommendedLevel: { min: 2, max: 5 },
+    participants: [
+      { template: "animated_armor", position: "7,5" },
+      { template: "animated_armor", position: "11,5" },
+      { template: "flying_sword", position: "8,4" },
+      { template: "flying_sword", position: "10,4" }
+    ],
+    terrain: {
+      obstacles: ["6,3", "12,3"]
+      // Pillars
+    },
+    partyPositions: ["9,10", "8,11", "10,11", "9,12"],
+    tags: ["construct", "animated", "dungeon", "tower", "magic"],
+    narrativeHook: "The suits of armor creak to life. Swords float menacingly in the air!"
+  },
+  mimic_trap: {
+    id: "mimic_trap",
+    name: "Mimic Trap",
+    description: "What appears to be treasure is actually a deadly mimic.",
+    difficulty: "hard",
+    recommendedLevel: { min: 3, max: 6 },
+    participants: [
+      { template: "mimic", name: "Treasure Chest", position: "9,5" }
+    ],
+    terrain: {
+      obstacles: ["6,3", "12,3"]
+      // Real chests (for confusion)
+    },
+    partyPositions: ["9,10", "8,11", "10,11", "9,12"],
+    tags: ["mimic", "trap", "dungeon", "surprise", "solo"],
+    narrativeHook: "The treasure chest's lid opens... revealing rows of teeth!"
+  },
+  troll_bridge: {
+    id: "troll_bridge",
+    name: "Troll Bridge",
+    description: "A troll guards the only crossing.",
+    difficulty: "deadly",
+    recommendedLevel: { min: 4, max: 7 },
+    participants: [
+      { template: "troll", name: "Grukk the Bridge Keeper", position: "9,5" }
+    ],
+    terrain: {
+      water: [
+        "0,6",
+        "1,6",
+        "2,6",
+        "3,6",
+        "4,6",
+        "5,6",
+        "13,6",
+        "14,6",
+        "15,6",
+        "16,6",
+        "17,6",
+        "18,6",
+        "0,7",
+        "1,7",
+        "2,7",
+        "3,7",
+        "4,7",
+        "5,7",
+        "13,7",
+        "14,7",
+        "15,7",
+        "16,7",
+        "17,7",
+        "18,7"
+      ],
+      // River on both sides
+      obstacles: ["6,5", "7,5", "11,5", "12,5"]
+      // Bridge railings
+    },
+    partyPositions: ["9,10", "8,11", "10,11", "9,12"],
+    tags: ["troll", "bridge", "solo", "regeneration"],
+    narrativeHook: '"PAY TOLL OR GRUKK EAT YOU!" The massive troll blocks the bridge.'
+  },
+  dragon_wyrmling_lair: {
+    id: "dragon_wyrmling_lair",
+    name: "Dragon Wyrmling Lair",
+    description: "A young dragon's first hoard.",
+    difficulty: "deadly",
+    recommendedLevel: { min: 3, max: 6 },
+    participants: [
+      { template: "dragon_wyrmling_red", name: "Flamescale", position: "10,3" }
+    ],
+    terrain: {
+      obstacles: ["5,2", "6,2", "14,2", "15,2"],
+      // Cave walls
+      difficultTerrain: ["8,4", "9,4", "10,4", "11,4", "12,4"]
+      // Gold coins/treasure
+    },
+    partyPositions: ["10,10", "8,11", "12,11", "10,12"],
+    tags: ["dragon", "wyrmling", "lair", "solo", "fire", "boss"],
+    narrativeHook: `Smoke curls from the wyrmling's nostrils. "MORE TREASURE FOR MY HOARD!"`
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // FIEND ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  imp_swarm: {
+    id: "imp_swarm",
+    name: "Imp Swarm",
+    description: "Pesky imps harassing the party.",
+    difficulty: "medium",
+    recommendedLevel: { min: 2, max: 4 },
+    participants: [
+      { template: "imp", position: "6,5" },
+      { template: "imp", position: "8,4" },
+      { template: "imp", position: "10,4" },
+      { template: "imp", position: "12,5" }
+    ],
+    partyPositions: ["9,10", "8,11", "10,11", "9,12"],
+    tags: ["imp", "fiend", "flying", "annoying"],
+    narrativeHook: "Cackling laughter fills the air as tiny winged devils appear!"
+  },
+  // ═══════════════════════════════════════════════════════════════════════
+  // ELEMENTAL ENCOUNTERS
+  // ═══════════════════════════════════════════════════════════════════════
+  elemental_breach: {
+    id: "elemental_breach",
+    name: "Elemental Breach",
+    description: "Elementals pour through a planar rift.",
+    difficulty: "deadly",
+    recommendedLevel: { min: 5, max: 8 },
+    participants: [
+      { template: "fire_elemental", position: "7,5" },
+      { template: "water_elemental", position: "11,5" }
+    ],
+    terrain: {
+      difficultTerrain: ["8,4", "9,4", "10,4"]
+      // Planar rift energy
+    },
+    partyPositions: ["9,10", "8,11", "10,11", "9,12"],
+    tags: ["elemental", "fire", "water", "planar", "magic"],
+    narrativeHook: "The air crackles as beings of pure elemental fury emerge from the rift!"
+  }
+};
+function getEncounterPreset(id) {
+  const normalized = id.toLowerCase().replace(/[\s-]/g, "_");
+  return ENCOUNTER_PRESETS[normalized] || null;
+}
+function listEncounterPresets() {
+  return Object.keys(ENCOUNTER_PRESETS);
+}
+function getEncountersForLevel(level) {
+  return Object.values(ENCOUNTER_PRESETS).filter((e) => level >= e.recommendedLevel.min && level <= e.recommendedLevel.max);
+}
+function scaleEncounter(preset, _partyLevel, partySize) {
+  const scaledPreset = { ...preset, participants: [...preset.participants] };
+  const sizeFactor = partySize / 4;
+  if (sizeFactor > 1) {
+    const minions = scaledPreset.participants.filter((p) => !p.name && !p.template.includes("boss") && !p.template.includes("captain"));
+    const extraCount = Math.floor((sizeFactor - 1) * minions.length);
+    for (let i = 0; i < extraCount && minions.length > 0; i++) {
+      const template = minions[i % minions.length];
+      const [x, y] = template.position.split(",").map(Number);
+      scaledPreset.participants.push({
+        ...template,
+        position: `${x + 1 + i},${y}`
+      });
+    }
+  }
+  return scaledPreset;
+}
+
+// dist/data/location-presets.js
+var LOCATION_PRESETS = {
+  generic_tavern: {
+    id: "generic_tavern",
+    name: "The Weary Traveler",
+    description: "A modest tavern serving locals and travelers alike. Warm hearth, cold ale, and hot rumors.",
+    category: "commercial",
+    icon: "inn",
+    networkType: "cluster",
+    rooms: [
+      {
+        id: "common_room",
+        name: "Common Room",
+        description: "A warm common room with a crackling fireplace, several wooden tables, and a long bar. The smell of roasted meat and spilled ale permeates the air.",
+        biome: "urban",
+        localX: 1,
+        localY: 1,
+        exits: [
+          { direction: "north", targetRoomId: "kitchen" },
+          { direction: "east", targetRoomId: "private_room" },
+          { direction: "up", targetRoomId: "rooms_hallway" },
+          { direction: "south", targetRoomId: "entrance" }
+        ]
+      },
+      {
+        id: "entrance",
+        name: "Tavern Entrance",
+        description: "The main entrance to the tavern. A worn wooden door leads outside, and a notice board is nailed to the wall.",
+        biome: "urban",
+        localX: 1,
+        localY: 0,
+        exits: [
+          { direction: "north", targetRoomId: "common_room" }
+        ]
+      },
+      {
+        id: "kitchen",
+        name: "Kitchen",
+        description: "A busy kitchen with a large hearth, hanging pots, and shelves of ingredients. Steam rises from bubbling stews.",
+        biome: "urban",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "south", targetRoomId: "common_room" },
+          { direction: "east", targetRoomId: "storage" }
+        ]
+      },
+      {
+        id: "storage",
+        name: "Storage Room",
+        description: "A dusty storage room filled with barrels, crates, and sacks. The air is cool and dry.",
+        biome: "urban",
+        localX: 2,
+        localY: 2,
+        exits: [
+          { direction: "west", targetRoomId: "kitchen" }
+        ]
+      },
+      {
+        id: "private_room",
+        name: "Private Dining Room",
+        description: "A small private room with a single table and comfortable chairs. Curtains can be drawn for privacy.",
+        biome: "urban",
+        localX: 2,
+        localY: 1,
+        exits: [
+          { direction: "west", targetRoomId: "common_room" }
+        ]
+      },
+      {
+        id: "rooms_hallway",
+        name: "Upstairs Hallway",
+        description: "A narrow hallway with several doors leading to guest rooms. The floorboards creak underfoot.",
+        biome: "urban",
+        localX: 1,
+        localY: 1,
+        exits: [
+          { direction: "down", targetRoomId: "common_room" },
+          { direction: "east", targetRoomId: "guest_room_1" },
+          { direction: "west", targetRoomId: "guest_room_2" }
+        ]
+      },
+      {
+        id: "guest_room_1",
+        name: "Guest Room",
+        description: "A simple but clean guest room with a bed, small table, and washbasin.",
+        biome: "urban",
+        localX: 2,
+        localY: 1,
+        exits: [
+          { direction: "west", targetRoomId: "rooms_hallway" }
+        ]
+      },
+      {
+        id: "guest_room_2",
+        name: "Guest Room",
+        description: "A cozy guest room with two beds, suitable for traveling companions.",
+        biome: "urban",
+        localX: 0,
+        localY: 1,
+        exits: [
+          { direction: "east", targetRoomId: "rooms_hallway" }
+        ]
+      }
+    ],
+    npcs: [
+      { template: "commoner", name: "Barnaby", roomId: "common_room", role: "bartender", behavior: "friendly" },
+      { template: "commoner", roomId: "common_room", role: "patron" },
+      { template: "commoner", roomId: "common_room", role: "patron" },
+      { template: "commoner", roomId: "kitchen", role: "cook", behavior: "busy" }
+    ],
+    tags: ["tavern", "inn", "urban", "social", "rest", "rumors"],
+    narrativeHook: "The tavern is bustling tonight. A bard plays in the corner, and you catch snippets of conversation about strange happenings in the nearby forest."
+  },
+  rough_tavern: {
+    id: "rough_tavern",
+    name: "The Broken Bottle",
+    description: "A seedy tavern in the rough part of town. Shadowy corners hide questionable dealings.",
+    category: "commercial",
+    icon: "inn",
+    networkType: "cluster",
+    rooms: [
+      {
+        id: "common_room",
+        name: "Common Room",
+        description: "A dim, smoky room with sticky tables and suspicious stains. The clientele watches newcomers with wary eyes.",
+        biome: "urban",
+        localX: 1,
+        localY: 1,
+        exits: [
+          { direction: "north", targetRoomId: "back_room", exitType: "LOCKED", lockDC: 15 },
+          { direction: "south", targetRoomId: "entrance" }
+        ]
+      },
+      {
+        id: "entrance",
+        name: "Tavern Entrance",
+        description: "A heavy door reinforced with iron bands. A half-orc bouncer eyes you up.",
+        biome: "urban",
+        localX: 1,
+        localY: 0,
+        exits: [
+          { direction: "north", targetRoomId: "common_room" }
+        ]
+      },
+      {
+        id: "back_room",
+        name: "Back Room",
+        description: "A private room for special clients. A card game is in progress, and gold changes hands.",
+        biome: "urban",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "south", targetRoomId: "common_room" },
+          { direction: "down", targetRoomId: "cellar", exitType: "HIDDEN" }
+        ]
+      },
+      {
+        id: "cellar",
+        name: "Secret Cellar",
+        description: "A hidden cellar accessed through a trapdoor. Crates of contraband line the walls.",
+        biome: "urban",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "up", targetRoomId: "back_room" }
+        ]
+      }
+    ],
+    npcs: [
+      { template: "thug", name: "Grok", roomId: "entrance", role: "bouncer", behavior: "intimidating" },
+      { template: "spy", name: "Whisper", roomId: "common_room", role: "information broker", behavior: "cautious" },
+      { template: "bandit_captain", roomId: "back_room", role: "crime boss", behavior: "calculating" }
+    ],
+    tags: ["tavern", "urban", "criminal", "thieves_guild", "underground"],
+    narrativeHook: `The bartender slides a drink toward you without being asked. "First one's free," she says. "Information costs extra."`
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DUNGEON ENTRANCE PRESETS
+  // ═══════════════════════════════════════════════════════════════════════════
+  dungeon_entrance: {
+    id: "dungeon_entrance",
+    name: "Ancient Ruins Entrance",
+    description: "Crumbling stone stairs descend into darkness. The air grows cold and stale.",
+    category: "dungeon",
+    icon: "ruins",
+    networkType: "linear",
+    rooms: [
+      {
+        id: "entrance",
+        name: "Ruined Entrance",
+        description: "Weathered stone pillars frame a dark passage leading underground. Vines and moss cover the ancient stonework.",
+        biome: "dungeon",
+        localX: 0,
+        localY: 0,
+        exits: [
+          { direction: "down", targetRoomId: "antechamber" }
+        ]
+      },
+      {
+        id: "antechamber",
+        name: "Antechamber",
+        description: "A small chamber at the bottom of the stairs. Faded murals depict scenes of a forgotten civilization. Torch sconces line the walls.",
+        biome: "dungeon",
+        localX: 0,
+        localY: 1,
+        exits: [
+          { direction: "up", targetRoomId: "entrance" },
+          { direction: "north", targetRoomId: "first_corridor" }
+        ]
+      },
+      {
+        id: "first_corridor",
+        name: "Stone Corridor",
+        description: "A long stone corridor stretches into darkness. The walls are lined with empty alcoves.",
+        biome: "dungeon",
+        localX: 0,
+        localY: 2,
+        exits: [
+          { direction: "south", targetRoomId: "antechamber" },
+          { direction: "east", targetRoomId: "guard_room" },
+          { direction: "north", targetRoomId: "trapped_hall", exitType: "HIDDEN" }
+        ]
+      },
+      {
+        id: "guard_room",
+        name: "Guard Room",
+        description: "An old guard station with rusted weapon racks and overturned furniture. Something moved in the shadows.",
+        biome: "dungeon",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "west", targetRoomId: "first_corridor" }
+        ]
+      },
+      {
+        id: "trapped_hall",
+        name: "Trapped Hallway",
+        description: "This corridor has pressure plates visible in the dusty floor. Holes in the walls suggest dart traps.",
+        biome: "dungeon",
+        localX: 0,
+        localY: 3,
+        exits: [
+          { direction: "south", targetRoomId: "first_corridor" },
+          { direction: "north", targetRoomId: "treasure_room", exitType: "LOCKED", lockDC: 18 }
+        ]
+      },
+      {
+        id: "treasure_room",
+        name: "Treasure Chamber",
+        description: "A sealed chamber containing ancient treasures... and possibly their guardian.",
+        biome: "dungeon",
+        localX: 0,
+        localY: 4,
+        exits: [
+          { direction: "south", targetRoomId: "trapped_hall" }
+        ]
+      }
+    ],
+    suggestedLevel: { min: 1, max: 5 },
+    tags: ["dungeon", "ruins", "underground", "traps", "treasure"],
+    narrativeHook: "The stairs descend into darkness. Your torchlight reveals ancient carvings - warnings in a language long forgotten."
+  },
+  cave_entrance: {
+    id: "cave_entrance",
+    name: "Dark Cave Entrance",
+    description: "A natural cave opening leading into the mountainside. Strange sounds echo from within.",
+    category: "natural",
+    icon: "cave",
+    networkType: "cluster",
+    rooms: [
+      {
+        id: "entrance",
+        name: "Cave Mouth",
+        description: "A large natural cave opening. Daylight illuminates the first few feet before giving way to darkness. Animal tracks mark the dusty floor.",
+        biome: "cavern",
+        localX: 0,
+        localY: 0,
+        exits: [
+          { direction: "north", targetRoomId: "entry_cavern" }
+        ]
+      },
+      {
+        id: "entry_cavern",
+        name: "Entry Cavern",
+        description: "A spacious natural cavern with stalactites hanging from the ceiling. Multiple passages branch off into the darkness.",
+        biome: "cavern",
+        localX: 0,
+        localY: 1,
+        exits: [
+          { direction: "south", targetRoomId: "entrance" },
+          { direction: "east", targetRoomId: "narrow_passage" },
+          { direction: "west", targetRoomId: "water_chamber" },
+          { direction: "north", targetRoomId: "beast_lair" }
+        ]
+      },
+      {
+        id: "narrow_passage",
+        name: "Narrow Passage",
+        description: "A tight squeeze between rock walls. Medium or larger creatures must squeeze through.",
+        biome: "cavern",
+        localX: 1,
+        localY: 1,
+        exits: [
+          { direction: "west", targetRoomId: "entry_cavern" },
+          { direction: "east", targetRoomId: "crystal_grotto" }
+        ]
+      },
+      {
+        id: "crystal_grotto",
+        name: "Crystal Grotto",
+        description: "A beautiful cavern where natural crystals grow from the walls. They glow faintly with magical energy.",
+        biome: "cavern",
+        localX: 2,
+        localY: 1,
+        exits: [
+          { direction: "west", targetRoomId: "narrow_passage" }
+        ]
+      },
+      {
+        id: "water_chamber",
+        name: "Underground Pool",
+        description: "A cavern with a deep pool of crystal-clear water. The ceiling is low, and dripping water echoes loudly.",
+        biome: "cavern",
+        localX: -1,
+        localY: 1,
+        exits: [
+          { direction: "east", targetRoomId: "entry_cavern" }
+        ]
+      },
+      {
+        id: "beast_lair",
+        name: "Beast Lair",
+        description: "A large chamber littered with bones and refuse. Something lives here... something big.",
+        biome: "cavern",
+        localX: 0,
+        localY: 2,
+        exits: [
+          { direction: "south", targetRoomId: "entry_cavern" }
+        ]
+      }
+    ],
+    suggestedLevel: { min: 1, max: 4 },
+    tags: ["cave", "natural", "underground", "beast", "wilderness"],
+    narrativeHook: "The cave mouth looms before you. A low growl echoes from somewhere deep within."
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // URBAN / SOCIAL PRESETS
+  // ═══════════════════════════════════════════════════════════════════════════
+  town_square: {
+    id: "town_square",
+    name: "Market Square",
+    description: "The bustling heart of the town where merchants hawk their wares and townsfolk gather.",
+    category: "settlement",
+    icon: "market",
+    networkType: "cluster",
+    rooms: [
+      {
+        id: "square_center",
+        name: "Town Square",
+        description: "A large open square with a central fountain. Market stalls ring the perimeter, and townsfolk bustle about their business.",
+        biome: "urban",
+        localX: 1,
+        localY: 1,
+        exits: [
+          { direction: "north", targetRoomId: "general_store" },
+          { direction: "south", targetRoomId: "town_hall" },
+          { direction: "east", targetRoomId: "blacksmith" },
+          { direction: "west", targetRoomId: "temple" }
+        ]
+      },
+      {
+        id: "general_store",
+        name: "General Store",
+        description: "A well-stocked shop selling everything from rations to rope. The shopkeeper greets customers warmly.",
+        biome: "urban",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "south", targetRoomId: "square_center" }
+        ]
+      },
+      {
+        id: "blacksmith",
+        name: "Blacksmith",
+        description: "Heat radiates from the forge where a muscular smith hammers glowing metal. Weapons and armor line the walls.",
+        biome: "urban",
+        localX: 2,
+        localY: 1,
+        exits: [
+          { direction: "west", targetRoomId: "square_center" }
+        ]
+      },
+      {
+        id: "temple",
+        name: "Town Temple",
+        description: "A modest temple offering blessings and healing. Incense burns before the altar.",
+        biome: "divine",
+        localX: 0,
+        localY: 1,
+        exits: [
+          { direction: "east", targetRoomId: "square_center" }
+        ]
+      },
+      {
+        id: "town_hall",
+        name: "Town Hall",
+        description: "The seat of local government. A notice board outside lists bounties and proclamations.",
+        biome: "urban",
+        localX: 1,
+        localY: 0,
+        exits: [
+          { direction: "north", targetRoomId: "square_center" }
+        ]
+      }
+    ],
+    npcs: [
+      { template: "commoner", name: "Marcus", roomId: "general_store", role: "shopkeeper", behavior: "friendly" },
+      { template: "commoner", name: "Greta", roomId: "blacksmith", role: "blacksmith", behavior: "gruff" },
+      { template: "priest", name: "Father Aldric", roomId: "temple", role: "priest", behavior: "pious" },
+      { template: "noble", name: "Mayor Thorne", roomId: "town_hall", role: "mayor", behavior: "politician" },
+      { template: "guard", roomId: "square_center", role: "town guard" },
+      { template: "guard", roomId: "square_center", role: "town guard" }
+    ],
+    tags: ["town", "urban", "market", "social", "shopping", "quests"],
+    narrativeHook: "The market is alive with activity. A town crier announces news, while children play near the fountain."
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WILDERNESS PRESETS
+  // ═══════════════════════════════════════════════════════════════════════════
+  forest_clearing: {
+    id: "forest_clearing",
+    name: "Forest Clearing",
+    description: "A peaceful clearing in the deep forest, touched by dappled sunlight.",
+    category: "natural",
+    icon: "tree",
+    networkType: "cluster",
+    rooms: [
+      {
+        id: "clearing_center",
+        name: "Sunlit Clearing",
+        description: "A circular clearing where sunlight filters through the canopy. Wildflowers carpet the ground, and birdsong fills the air.",
+        biome: "forest",
+        localX: 1,
+        localY: 1,
+        exits: [
+          { direction: "north", targetRoomId: "ancient_tree" },
+          { direction: "south", targetRoomId: "forest_path" },
+          { direction: "east", targetRoomId: "berry_bushes" },
+          { direction: "west", targetRoomId: "stream" }
+        ]
+      },
+      {
+        id: "forest_path",
+        name: "Forest Path",
+        description: "A winding dirt path leading through the trees. It continues both directions into the forest.",
+        biome: "forest",
+        localX: 1,
+        localY: 0,
+        exits: [
+          { direction: "north", targetRoomId: "clearing_center" }
+        ]
+      },
+      {
+        id: "ancient_tree",
+        name: "Ancient Oak",
+        description: "A massive ancient oak tree dominates this area. Its gnarled trunk is easily 30 feet across. Offerings are piled at its roots.",
+        biome: "forest",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "south", targetRoomId: "clearing_center" },
+          { direction: "up", targetRoomId: "tree_hollow", exitType: "HIDDEN" }
+        ]
+      },
+      {
+        id: "tree_hollow",
+        name: "Tree Hollow",
+        description: "A hidden hollow within the ancient tree. Fey creatures may have once lived here.",
+        biome: "forest",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "down", targetRoomId: "ancient_tree" }
+        ]
+      },
+      {
+        id: "berry_bushes",
+        name: "Berry Thicket",
+        description: "Dense bushes laden with ripe berries. Animal tracks suggest this is a popular feeding spot.",
+        biome: "forest",
+        localX: 2,
+        localY: 1,
+        exits: [
+          { direction: "west", targetRoomId: "clearing_center" }
+        ]
+      },
+      {
+        id: "stream",
+        name: "Forest Stream",
+        description: "A clear stream babbles over smooth stones. The water is cold and refreshing.",
+        biome: "forest",
+        localX: 0,
+        localY: 1,
+        exits: [
+          { direction: "east", targetRoomId: "clearing_center" }
+        ]
+      }
+    ],
+    tags: ["forest", "wilderness", "nature", "fey", "peaceful", "rest"],
+    narrativeHook: "The clearing feels untouched by time. As sunlight shifts through the leaves, you could swear you hear distant music..."
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMP / REST PRESETS
+  // ═══════════════════════════════════════════════════════════════════════════
+  roadside_camp: {
+    id: "roadside_camp",
+    name: "Roadside Camp",
+    description: "A small campsite set up beside the road, suitable for a night of rest.",
+    category: "landmark",
+    icon: "camp",
+    networkType: "cluster",
+    rooms: [
+      {
+        id: "campfire",
+        name: "Campfire",
+        description: "A crackling campfire provides warmth and light. Bedrolls are arranged around it.",
+        biome: "forest",
+        localX: 1,
+        localY: 1,
+        exits: [
+          { direction: "south", targetRoomId: "road" },
+          { direction: "north", targetRoomId: "treeline" }
+        ]
+      },
+      {
+        id: "road",
+        name: "Road",
+        description: "The main road continues east and west. The camp is just off to the side.",
+        biome: "forest",
+        localX: 1,
+        localY: 0,
+        exits: [
+          { direction: "north", targetRoomId: "campfire" }
+        ]
+      },
+      {
+        id: "treeline",
+        name: "Treeline",
+        description: "The edge of the forest provides cover from prying eyes on the road.",
+        biome: "forest",
+        localX: 1,
+        localY: 2,
+        exits: [
+          { direction: "south", targetRoomId: "campfire" }
+        ]
+      }
+    ],
+    tags: ["camp", "rest", "road", "travel", "wilderness"],
+    narrativeHook: "The fire crackles as night settles in. Who will take first watch?"
+  }
+};
+function getLocationPreset(presetId) {
+  return LOCATION_PRESETS[presetId];
+}
+function listLocationPresets() {
+  return Object.values(LOCATION_PRESETS).map((preset) => ({
+    id: preset.id,
+    name: preset.name,
+    category: preset.category,
+    tags: preset.tags
+  }));
+}
+
+// dist/data/items/weapons-phb.js
+var SIMPLE_MELEE = {
+  club: {
+    name: "Club",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d4",
+    damageType: "bludgeoning",
+    properties: ["light"],
+    weight: 2,
+    value: 0.1,
+    // 1 sp = 0.1 gp
+    tags: ["melee", "one-handed", "bludgeon", "simple"],
+    source: "PHB"
+  },
+  dagger: {
+    name: "Dagger",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d4",
+    damageType: "piercing",
+    properties: ["finesse", "light", "thrown"],
+    range: { normal: 20, long: 60 },
+    weight: 1,
+    value: 2,
+    tags: ["melee", "ranged", "one-handed", "blade", "simple", "finesse"],
+    source: "PHB"
+  },
+  greatclub: {
+    name: "Greatclub",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d8",
+    damageType: "bludgeoning",
+    properties: ["two_handed"],
+    weight: 10,
+    value: 0.2,
+    // 2 sp
+    tags: ["melee", "two-handed", "bludgeon", "simple"],
+    source: "PHB"
+  },
+  handaxe: {
+    name: "Handaxe",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d6",
+    damageType: "slashing",
+    properties: ["light", "thrown"],
+    range: { normal: 20, long: 60 },
+    weight: 2,
+    value: 5,
+    tags: ["melee", "ranged", "one-handed", "axe", "simple"],
+    source: "PHB"
+  },
+  javelin: {
+    name: "Javelin",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d6",
+    damageType: "piercing",
+    properties: ["thrown"],
+    range: { normal: 30, long: 120 },
+    weight: 2,
+    value: 0.5,
+    // 5 sp
+    tags: ["melee", "ranged", "one-handed", "spear", "simple"],
+    source: "PHB"
+  },
+  light_hammer: {
+    name: "Light Hammer",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d4",
+    damageType: "bludgeoning",
+    properties: ["light", "thrown"],
+    range: { normal: 20, long: 60 },
+    weight: 2,
+    value: 2,
+    tags: ["melee", "ranged", "one-handed", "hammer", "simple"],
+    source: "PHB"
+  },
+  mace: {
+    name: "Mace",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d6",
+    damageType: "bludgeoning",
+    properties: [],
+    weight: 4,
+    value: 5,
+    tags: ["melee", "one-handed", "bludgeon", "simple"],
+    source: "PHB"
+  },
+  quarterstaff: {
+    name: "Quarterstaff",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d6",
+    damageType: "bludgeoning",
+    properties: ["versatile", "monk"],
+    versatileDamage: "1d8",
+    weight: 4,
+    value: 0.2,
+    // 2 sp
+    tags: ["melee", "one-handed", "two-handed", "staff", "simple", "monk"],
+    source: "PHB"
+  },
+  sickle: {
+    name: "Sickle",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d4",
+    damageType: "slashing",
+    properties: ["light"],
+    weight: 2,
+    value: 1,
+    tags: ["melee", "one-handed", "blade", "simple"],
+    source: "PHB"
+  },
+  spear: {
+    name: "Spear",
+    type: "weapon",
+    category: "simple_melee",
+    damage: "1d6",
+    damageType: "piercing",
+    properties: ["thrown", "versatile", "monk"],
+    range: { normal: 20, long: 60 },
+    versatileDamage: "1d8",
+    weight: 3,
+    value: 1,
+    tags: ["melee", "ranged", "one-handed", "two-handed", "spear", "simple", "monk"],
+    source: "PHB"
+  }
+};
+var SIMPLE_RANGED = {
+  light_crossbow: {
+    name: "Light Crossbow",
+    type: "weapon",
+    category: "simple_ranged",
+    damage: "1d8",
+    damageType: "piercing",
+    properties: ["ammunition", "loading", "two_handed"],
+    range: { normal: 80, long: 320 },
+    weight: 5,
+    value: 25,
+    tags: ["ranged", "two-handed", "crossbow", "simple"],
+    source: "PHB"
+  },
+  dart: {
+    name: "Dart",
+    type: "weapon",
+    category: "simple_ranged",
+    damage: "1d4",
+    damageType: "piercing",
+    properties: ["finesse", "thrown"],
+    range: { normal: 20, long: 60 },
+    weight: 0.25,
+    value: 0.05,
+    // 5 cp
+    tags: ["ranged", "thrown", "simple", "finesse"],
+    source: "PHB"
+  },
+  shortbow: {
+    name: "Shortbow",
+    type: "weapon",
+    category: "simple_ranged",
+    damage: "1d6",
+    damageType: "piercing",
+    properties: ["ammunition", "two_handed"],
+    range: { normal: 80, long: 320 },
+    weight: 2,
+    value: 25,
+    tags: ["ranged", "two-handed", "bow", "simple"],
+    source: "PHB"
+  },
+  sling: {
+    name: "Sling",
+    type: "weapon",
+    category: "simple_ranged",
+    damage: "1d4",
+    damageType: "bludgeoning",
+    properties: ["ammunition"],
+    range: { normal: 30, long: 120 },
+    weight: 0,
+    value: 0.1,
+    // 1 sp
+    tags: ["ranged", "one-handed", "simple"],
+    source: "PHB"
+  }
+};
+var MARTIAL_MELEE = {
+  battleaxe: {
+    name: "Battleaxe",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d8",
+    damageType: "slashing",
+    properties: ["versatile"],
+    versatileDamage: "1d10",
+    weight: 4,
+    value: 10,
+    tags: ["melee", "one-handed", "two-handed", "axe", "martial"],
+    source: "PHB"
+  },
+  flail: {
+    name: "Flail",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d8",
+    damageType: "bludgeoning",
+    properties: [],
+    weight: 2,
+    value: 10,
+    tags: ["melee", "one-handed", "bludgeon", "martial"],
+    source: "PHB"
+  },
+  glaive: {
+    name: "Glaive",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d10",
+    damageType: "slashing",
+    properties: ["heavy", "reach", "two_handed"],
+    weight: 6,
+    value: 20,
+    tags: ["melee", "two-handed", "polearm", "reach", "martial"],
+    source: "PHB"
+  },
+  greataxe: {
+    name: "Greataxe",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d12",
+    damageType: "slashing",
+    properties: ["heavy", "two_handed"],
+    weight: 7,
+    value: 30,
+    tags: ["melee", "two-handed", "axe", "martial"],
+    source: "PHB"
+  },
+  greatsword: {
+    name: "Greatsword",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "2d6",
+    damageType: "slashing",
+    properties: ["heavy", "two_handed"],
+    weight: 6,
+    value: 50,
+    tags: ["melee", "two-handed", "blade", "martial"],
+    source: "PHB"
+  },
+  halberd: {
+    name: "Halberd",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d10",
+    damageType: "slashing",
+    properties: ["heavy", "reach", "two_handed"],
+    weight: 6,
+    value: 20,
+    tags: ["melee", "two-handed", "polearm", "reach", "martial"],
+    source: "PHB"
+  },
+  lance: {
+    name: "Lance",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d12",
+    damageType: "piercing",
+    properties: ["reach", "special"],
+    weight: 6,
+    value: 10,
+    description: "You have disadvantage when you use a lance to attack a target within 5 feet of you. Also, a lance requires two hands to wield when you aren't mounted.",
+    tags: ["melee", "one-handed", "two-handed", "reach", "martial", "mounted"],
+    source: "PHB"
+  },
+  longsword: {
+    name: "Longsword",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d8",
+    damageType: "slashing",
+    properties: ["versatile"],
+    versatileDamage: "1d10",
+    weight: 3,
+    value: 15,
+    tags: ["melee", "one-handed", "two-handed", "blade", "martial"],
+    source: "PHB"
+  },
+  maul: {
+    name: "Maul",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "2d6",
+    damageType: "bludgeoning",
+    properties: ["heavy", "two_handed"],
+    weight: 10,
+    value: 10,
+    tags: ["melee", "two-handed", "bludgeon", "hammer", "martial"],
+    source: "PHB"
+  },
+  morningstar: {
+    name: "Morningstar",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d8",
+    damageType: "piercing",
+    properties: [],
+    weight: 4,
+    value: 15,
+    tags: ["melee", "one-handed", "bludgeon", "martial"],
+    source: "PHB"
+  },
+  pike: {
+    name: "Pike",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d10",
+    damageType: "piercing",
+    properties: ["heavy", "reach", "two_handed"],
+    weight: 18,
+    value: 5,
+    tags: ["melee", "two-handed", "polearm", "reach", "martial"],
+    source: "PHB"
+  },
+  rapier: {
+    name: "Rapier",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d8",
+    damageType: "piercing",
+    properties: ["finesse"],
+    weight: 2,
+    value: 25,
+    tags: ["melee", "one-handed", "blade", "martial", "finesse"],
+    source: "PHB"
+  },
+  scimitar: {
+    name: "Scimitar",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d6",
+    damageType: "slashing",
+    properties: ["finesse", "light"],
+    weight: 3,
+    value: 25,
+    tags: ["melee", "one-handed", "blade", "martial", "finesse"],
+    source: "PHB"
+  },
+  shortsword: {
+    name: "Shortsword",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d6",
+    damageType: "piercing",
+    properties: ["finesse", "light"],
+    weight: 2,
+    value: 10,
+    tags: ["melee", "one-handed", "blade", "martial", "finesse"],
+    source: "PHB"
+  },
+  trident: {
+    name: "Trident",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d6",
+    damageType: "piercing",
+    properties: ["thrown", "versatile"],
+    range: { normal: 20, long: 60 },
+    versatileDamage: "1d8",
+    weight: 4,
+    value: 5,
+    tags: ["melee", "ranged", "one-handed", "two-handed", "spear", "martial"],
+    source: "PHB"
+  },
+  war_pick: {
+    name: "War Pick",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d8",
+    damageType: "piercing",
+    properties: [],
+    weight: 2,
+    value: 5,
+    tags: ["melee", "one-handed", "martial"],
+    source: "PHB"
+  },
+  warhammer: {
+    name: "Warhammer",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d8",
+    damageType: "bludgeoning",
+    properties: ["versatile"],
+    versatileDamage: "1d10",
+    weight: 2,
+    value: 15,
+    tags: ["melee", "one-handed", "two-handed", "hammer", "martial"],
+    source: "PHB"
+  },
+  whip: {
+    name: "Whip",
+    type: "weapon",
+    category: "martial_melee",
+    damage: "1d4",
+    damageType: "slashing",
+    properties: ["finesse", "reach"],
+    weight: 3,
+    value: 2,
+    tags: ["melee", "one-handed", "reach", "martial", "finesse"],
+    source: "PHB"
+  }
+};
+var MARTIAL_RANGED = {
+  blowgun: {
+    name: "Blowgun",
+    type: "weapon",
+    category: "martial_ranged",
+    damage: "1",
+    damageType: "piercing",
+    properties: ["ammunition", "loading"],
+    range: { normal: 25, long: 100 },
+    weight: 1,
+    value: 10,
+    tags: ["ranged", "one-handed", "martial"],
+    source: "PHB"
+  },
+  hand_crossbow: {
+    name: "Hand Crossbow",
+    type: "weapon",
+    category: "martial_ranged",
+    damage: "1d6",
+    damageType: "piercing",
+    properties: ["ammunition", "light", "loading"],
+    range: { normal: 30, long: 120 },
+    weight: 3,
+    value: 75,
+    tags: ["ranged", "one-handed", "crossbow", "martial"],
+    source: "PHB"
+  },
+  heavy_crossbow: {
+    name: "Heavy Crossbow",
+    type: "weapon",
+    category: "martial_ranged",
+    damage: "1d10",
+    damageType: "piercing",
+    properties: ["ammunition", "heavy", "loading", "two_handed"],
+    range: { normal: 100, long: 400 },
+    weight: 18,
+    value: 50,
+    tags: ["ranged", "two-handed", "crossbow", "martial"],
+    source: "PHB"
+  },
+  longbow: {
+    name: "Longbow",
+    type: "weapon",
+    category: "martial_ranged",
+    damage: "1d8",
+    damageType: "piercing",
+    properties: ["ammunition", "heavy", "two_handed"],
+    range: { normal: 150, long: 600 },
+    weight: 2,
+    value: 50,
+    tags: ["ranged", "two-handed", "bow", "martial"],
+    source: "PHB"
+  },
+  net: {
+    name: "Net",
+    type: "weapon",
+    category: "martial_ranged",
+    damage: "0",
+    damageType: "bludgeoning",
+    properties: ["thrown", "special"],
+    range: { normal: 5, long: 15 },
+    weight: 3,
+    value: 1,
+    description: "A Large or smaller creature hit by a net is restrained until it is freed. A net has no effect on creatures that are formless, or creatures that are Huge or larger. A creature can use its action to make a DC 10 Strength check, freeing itself or another creature within its reach on a success. Dealing 5 slashing damage to the net (AC 10) also frees the creature without harming it, ending the effect and destroying the net.",
+    tags: ["ranged", "thrown", "martial", "control"],
+    source: "PHB"
+  }
+};
+var WEAPONS = {
+  ...SIMPLE_MELEE,
+  ...SIMPLE_RANGED,
+  ...MARTIAL_MELEE,
+  ...MARTIAL_RANGED
+};
+var WeaponsPHB = {
+  id: "weapons-phb",
+  name: "Player's Handbook Weapons",
+  source: "PHB",
+  version: "1.0.0",
+  presets: WEAPONS
+};
+
+// dist/data/items/armor-phb.js
+var ARMOR = {
+  // -------------------------------------------------------------------------
+  // LIGHT ARMOR
+  // -------------------------------------------------------------------------
+  padded: {
+    name: "Padded Armor",
+    type: "armor",
+    category: "light",
+    ac: 11,
+    // maxDexBonus: undefined (light armor has no limit)
+    stealthDisadvantage: true,
+    weight: 8,
+    value: 5,
+    donTime: "1 minute",
+    doffTime: "1 minute",
+    tags: ["light", "cloth", "cheap", "stealth-penalty"],
+    source: "PHB",
+    description: "Padded armor consists of quilted layers of cloth and batting."
+  },
+  leather: {
+    name: "Leather Armor",
+    type: "armor",
+    category: "light",
+    ac: 11,
+    weight: 10,
+    value: 10,
+    donTime: "1 minute",
+    doffTime: "1 minute",
+    tags: ["light", "leather", "flexible", "basic"],
+    source: "PHB",
+    description: "The breastplate and shoulder protectors of this armor are made of leather that has been stiffened by being boiled in oil. The rest of the armor is made of softer and more flexible materials."
+  },
+  studded_leather: {
+    name: "Studded Leather",
+    type: "armor",
+    category: "light",
+    ac: 12,
+    weight: 13,
+    value: 45,
+    donTime: "1 minute",
+    doffTime: "1 minute",
+    tags: ["light", "leather", "reinforced", "studded"],
+    source: "PHB",
+    description: "Made from tough but flexible leather, studded leather is reinforced with close-set rivets or spikes."
+  },
+  // -------------------------------------------------------------------------
+  // MEDIUM ARMOR
+  // -------------------------------------------------------------------------
+  hide: {
+    name: "Hide Armor",
+    type: "armor",
+    category: "medium",
+    ac: 12,
+    maxDexBonus: 2,
+    weight: 12,
+    value: 10,
+    donTime: "5 minutes",
+    doffTime: "1 minute",
+    tags: ["medium", "hide", "crude", "cheap", "tribal"],
+    source: "PHB",
+    description: "This crude armor consists of thick furs and pelts. It is commonly worn by barbarian tribes, evil humanoids, and other folk who lack access to the tools and materials needed to create better armor."
+  },
+  chain_shirt: {
+    name: "Chain Shirt",
+    type: "armor",
+    category: "medium",
+    ac: 13,
+    maxDexBonus: 2,
+    weight: 20,
+    value: 50,
+    donTime: "5 minutes",
+    doffTime: "1 minute",
+    tags: ["medium", "chain", "metal", "flexible"],
+    source: "PHB",
+    description: "Made of interlocking metal rings, a chain shirt is worn between layers of clothing or leather. This armor offers modest protection to the wearer's upper body and allows the sound of the rings rubbing against one another to be muffled by outer layers."
+  },
+  scale_mail: {
+    name: "Scale Mail",
+    type: "armor",
+    category: "medium",
+    ac: 14,
+    maxDexBonus: 2,
+    stealthDisadvantage: true,
+    weight: 45,
+    value: 50,
+    donTime: "5 minutes",
+    doffTime: "1 minute",
+    tags: ["medium", "scale", "metal", "stealth-penalty", "heavy-medium"],
+    source: "PHB",
+    description: "This armor consists of a coat and leggings (and perhaps a separate skirt) of leather covered with overlapping pieces of metal, much like the scales of a fish. The suit includes gauntlets."
+  },
+  breastplate: {
+    name: "Breastplate",
+    type: "armor",
+    category: "medium",
+    ac: 14,
+    maxDexBonus: 2,
+    weight: 20,
+    value: 400,
+    donTime: "5 minutes",
+    doffTime: "1 minute",
+    tags: ["medium", "metal", "plate", "expensive", "mobility"],
+    source: "PHB",
+    description: "This armor consists of a fitted metal chest piece worn with supple leather. Although it leaves the legs and arms relatively unprotected, this armor provides good protection for the wearer's vital organs while leaving the wearer relatively unencumbered."
+  },
+  half_plate: {
+    name: "Half Plate",
+    type: "armor",
+    category: "medium",
+    ac: 15,
+    maxDexBonus: 2,
+    stealthDisadvantage: true,
+    weight: 40,
+    value: 750,
+    donTime: "5 minutes",
+    doffTime: "1 minute",
+    tags: ["medium", "plate", "metal", "stealth-penalty", "heavy-medium", "expensive"],
+    source: "PHB",
+    description: "Half plate consists of shaped metal plates that cover most of the wearer's body. It does not include leg protection beyond simple greaves that are attached with leather straps."
+  },
+  // -------------------------------------------------------------------------
+  // HEAVY ARMOR
+  // -------------------------------------------------------------------------
+  ring_mail: {
+    name: "Ring Mail",
+    type: "armor",
+    category: "heavy",
+    ac: 14,
+    maxDexBonus: 0,
+    stealthDisadvantage: true,
+    weight: 40,
+    value: 30,
+    donTime: "10 minutes",
+    doffTime: "5 minutes",
+    tags: ["heavy", "metal", "rings", "stealth-penalty", "cheap-heavy"],
+    source: "PHB",
+    description: "This armor is leather armor with heavy rings sewn into it. The rings help reinforce the armor against blows from swords and axes. Ring mail is inferior to chain mail, and it's usually worn only by those who can't afford better armor."
+  },
+  chain_mail: {
+    name: "Chain Mail",
+    type: "armor",
+    category: "heavy",
+    ac: 16,
+    maxDexBonus: 0,
+    minStrength: 13,
+    stealthDisadvantage: true,
+    weight: 55,
+    value: 75,
+    donTime: "10 minutes",
+    doffTime: "5 minutes",
+    tags: ["heavy", "chain", "metal", "stealth-penalty", "str-requirement"],
+    source: "PHB",
+    description: "Made of interlocking metal rings, chain mail includes a layer of quilted fabric worn underneath the mail to prevent chafing and to cushion the impact of blows. The suit includes gauntlets."
+  },
+  splint: {
+    name: "Splint Armor",
+    type: "armor",
+    category: "heavy",
+    ac: 17,
+    maxDexBonus: 0,
+    minStrength: 15,
+    stealthDisadvantage: true,
+    weight: 60,
+    value: 200,
+    donTime: "10 minutes",
+    doffTime: "5 minutes",
+    tags: ["heavy", "metal", "plate", "stealth-penalty", "str-requirement", "expensive"],
+    source: "PHB",
+    description: "This armor is made of narrow vertical strips of metal riveted to a backing of leather that is worn over cloth padding. Flexible chain mail protects the joints."
+  },
+  plate: {
+    name: "Plate Armor",
+    type: "armor",
+    category: "heavy",
+    ac: 18,
+    maxDexBonus: 0,
+    minStrength: 15,
+    stealthDisadvantage: true,
+    weight: 65,
+    value: 1500,
+    donTime: "10 minutes",
+    doffTime: "5 minutes",
+    tags: ["heavy", "plate", "metal", "stealth-penalty", "str-requirement", "expensive", "best-ac"],
+    source: "PHB",
+    description: "Plate consists of shaped, interlocking metal plates to cover the entire body. A suit of plate includes gauntlets, heavy leather boots, a visored helmet, and thick layers of padding underneath the armor. Buckles and straps distribute the weight over the body."
+  },
+  // -------------------------------------------------------------------------
+  // SHIELD
+  // -------------------------------------------------------------------------
+  shield: {
+    name: "Shield",
+    type: "armor",
+    category: "shield",
+    ac: 2,
+    // AC bonus, not base AC
+    weight: 6,
+    value: 10,
+    donTime: "1 action",
+    doffTime: "1 action",
+    tags: ["shield", "ac-bonus", "one-hand", "basic"],
+    source: "PHB",
+    description: "A shield is made from wood or metal and is carried in one hand. Wielding a shield increases your Armor Class by 2. You can benefit from only one shield at a time."
+  }
+};
+var ArmorPHB = {
+  id: "armor-phb",
+  name: "Player's Handbook Armor",
+  source: "PHB",
+  version: "1.0.0",
+  presets: ARMOR
+};
+
+// dist/data/items/gear-phb.js
+var BACKPACK = {
+  name: "Backpack",
+  type: "gear",
+  subtype: "container",
+  weight: 5,
+  value: 2,
+  capacity: 30,
+  // 1 cubic foot (30 lbs of gear)
+  description: "A leather pack with shoulder straps. Holds 1 cubic foot or 30 pounds of gear.",
+  tags: ["container", "storage", "essential"],
+  source: "PHB"
+};
+var POUCH = {
+  name: "Pouch",
+  type: "gear",
+  subtype: "container",
+  weight: 1,
+  value: 0.5,
+  capacity: 6,
+  // 1/5 cubic foot (6 lbs)
+  description: "A cloth or leather pouch. Holds 1/5 cubic foot or 6 pounds of gear, such as a belt pouch.",
+  tags: ["container", "storage", "belt", "small"],
+  source: "PHB"
+};
+var SACK = {
+  name: "Sack",
+  type: "gear",
+  subtype: "container",
+  weight: 0.5,
+  value: 0.01,
+  capacity: 30,
+  // 1 cubic foot (30 lbs)
+  description: "A simple cloth sack. Holds 1 cubic foot or 30 pounds of gear.",
+  tags: ["container", "storage", "cheap"],
+  source: "PHB"
+};
+var CHEST = {
+  name: "Chest",
+  type: "gear",
+  subtype: "container",
+  weight: 25,
+  value: 5,
+  capacity: 300,
+  // 12 cubic feet (300 lbs)
+  description: "A wooden chest with a hinged lid. Holds 12 cubic feet or 300 pounds of gear.",
+  tags: ["container", "storage", "large", "lockable"],
+  source: "PHB"
+};
+var BARREL = {
+  name: "Barrel",
+  type: "gear",
+  subtype: "container",
+  weight: 70,
+  value: 2,
+  capacity: 40,
+  // 40 gallons of liquid
+  description: "A wooden barrel. Holds 40 gallons of liquid or 4 cubic feet of solid goods.",
+  tags: ["container", "storage", "liquid", "large"],
+  source: "PHB"
+};
+var BASKET = {
+  name: "Basket",
+  type: "gear",
+  subtype: "container",
+  weight: 2,
+  value: 0.4,
+  capacity: 40,
+  // 2 cubic feet (40 lbs)
+  description: "A woven wicker basket. Holds 2 cubic feet or 40 pounds of gear.",
+  tags: ["container", "storage"],
+  source: "PHB"
+};
+var BOTTLE_GLASS = {
+  name: "Bottle, Glass",
+  type: "gear",
+  subtype: "container",
+  weight: 2,
+  value: 2,
+  capacity: 1.5,
+  // 1.5 pints of liquid
+  description: "A glass bottle with a cork. Holds 1\xBD pints of liquid.",
+  tags: ["container", "liquid", "fragile"],
+  source: "PHB"
+};
+var FLASK_TANKARD = {
+  name: "Flask or Tankard",
+  type: "gear",
+  subtype: "container",
+  weight: 1,
+  value: 0.02,
+  capacity: 1,
+  // 1 pint
+  description: "A metal or ceramic drinking vessel. Holds 1 pint of liquid.",
+  tags: ["container", "liquid", "drinking"],
+  source: "PHB"
+};
+var JUG_PITCHER = {
+  name: "Jug or Pitcher",
+  type: "gear",
+  subtype: "container",
+  weight: 4,
+  value: 0.02,
+  capacity: 1,
+  // 1 gallon
+  description: "A ceramic jug or pitcher. Holds 1 gallon of liquid.",
+  tags: ["container", "liquid"],
+  source: "PHB"
+};
+var VIAL = {
+  name: "Vial",
+  type: "gear",
+  subtype: "container",
+  weight: 0,
+  value: 1,
+  capacity: 0.25,
+  // 4 ounces
+  description: "A small glass vial. Holds 4 ounces of liquid.",
+  tags: ["container", "liquid", "small", "potion"],
+  source: "PHB"
+};
+var WATERSKIN = {
+  name: "Waterskin",
+  type: "gear",
+  subtype: "container",
+  weight: 5,
+  // when full
+  value: 0.2,
+  capacity: 4,
+  // 4 pints (0.5 gallons)
+  description: "A leather waterskin. Holds 4 pints (\xBD gallon) of liquid. Weighs 5 lbs when full.",
+  tags: ["container", "liquid", "water", "essential"],
+  source: "PHB"
+};
+var CANDLE = {
+  name: "Candle",
+  type: "consumable",
+  subtype: "light",
+  weight: 0,
+  value: 0.01,
+  uses: 1,
+  effect: "Sheds bright light in a 5-foot radius and dim light for an additional 5 feet. Burns for 1 hour.",
+  description: "A wax candle. Burns for 1 hour.",
+  tags: ["light", "consumable", "fire"],
+  source: "PHB"
+};
+var TORCH = {
+  name: "Torch",
+  type: "consumable",
+  subtype: "light",
+  weight: 1,
+  value: 0.01,
+  uses: 1,
+  effect: "Sheds bright light in a 20-foot radius and dim light for an additional 20 feet. Burns for 1 hour. Can be used to make a melee attack (1 fire damage).",
+  description: "A wooden torch soaked in pitch. Burns for 1 hour.",
+  tags: ["light", "consumable", "fire", "weapon"],
+  source: "PHB"
+};
+var LAMP = {
+  name: "Lamp",
+  type: "gear",
+  subtype: "light",
+  weight: 1,
+  value: 0.5,
+  description: "A simple oil lamp. Sheds bright light in a 15-foot radius and dim light for an additional 30 feet. Burns for 6 hours on a flask of oil.",
+  tags: ["light", "oil", "reusable"],
+  source: "PHB"
+};
+var LANTERN_BULLSEYE = {
+  name: "Lantern, Bullseye",
+  type: "gear",
+  subtype: "light",
+  weight: 2,
+  value: 10,
+  description: "A hooded lantern that focuses light. Sheds bright light in a 60-foot cone and dim light for an additional 60 feet. Burns for 6 hours on a flask of oil.",
+  tags: ["light", "oil", "directional", "reusable"],
+  source: "PHB"
+};
+var LANTERN_HOODED = {
+  name: "Lantern, Hooded",
+  type: "gear",
+  subtype: "light",
+  weight: 2,
+  value: 5,
+  description: "A lantern with shutters. Sheds bright light in a 30-foot radius and dim light for an additional 30 feet. Burns for 6 hours on a flask of oil. Can be hooded to reduce light to dim in a 5-foot radius.",
+  tags: ["light", "oil", "adjustable", "reusable"],
+  source: "PHB"
+};
+var OIL_FLASK = {
+  name: "Oil (flask)",
+  type: "consumable",
+  subtype: "light",
+  weight: 1,
+  value: 0.1,
+  uses: 1,
+  effect: "Fuels a lantern for 6 hours or lamp for 6 hours. Can be thrown as a splash weapon (5-foot radius, DC 10 DEX save or take 5 fire damage on first turn, then burn for 2 rounds dealing 5 damage each round).",
+  description: "A clay flask of oil. Used as fuel or as a fire weapon.",
+  tags: ["light", "fuel", "consumable", "fire", "weapon"],
+  source: "PHB"
+};
+var RATIONS = {
+  name: "Rations (1 day)",
+  type: "consumable",
+  subtype: "food",
+  weight: 2,
+  value: 0.5,
+  uses: 1,
+  effect: "Provides sufficient food for one day. Includes dried fruits, hardtack, and jerky.",
+  description: "Dry foods suitable for travel. One day of sustenance.",
+  tags: ["food", "consumable", "survival", "essential"],
+  source: "PHB"
+};
+var POTION_HEALING = {
+  name: "Potion of Healing",
+  type: "consumable",
+  subtype: "potion",
+  weight: 0.5,
+  value: 50,
+  uses: 1,
+  effect: "Restores 2d4+2 hit points. Drinking or administering takes an action.",
+  description: "A red liquid that glimmers when agitated. Restores health when consumed.",
+  tags: ["potion", "healing", "consumable", "magic"],
+  source: "PHB"
+};
+var ANTITOXIN = {
+  name: "Antitoxin (vial)",
+  type: "consumable",
+  subtype: "potion",
+  weight: 0,
+  value: 50,
+  uses: 1,
+  effect: "Grants advantage on saving throws against poison for 1 hour. Does not cure existing poison.",
+  description: "A medicinal vial that helps resist poison.",
+  tags: ["potion", "consumable", "poison", "medicine"],
+  source: "PHB"
+};
+var HOLY_WATER = {
+  name: "Holy Water (flask)",
+  type: "consumable",
+  subtype: "holy",
+  weight: 1,
+  value: 25,
+  uses: 1,
+  effect: "As an action, splash the contents on a creature within 5 feet or throw it up to 20 feet. Make a ranged attack. On hit, undead or fiend takes 2d6 radiant damage.",
+  description: "Water blessed by a cleric. Harmful to undead and fiends.",
+  tags: ["holy", "consumable", "weapon", "undead", "radiant"],
+  source: "PHB"
+};
+var THIEVES_TOOLS = {
+  name: "Thieves' Tools",
+  type: "tool",
+  subtype: "lockpicking",
+  weight: 1,
+  value: 25,
+  description: "A set of small tools including a file, lockpicks, small mirror, narrow scissors, and pliers. Required for picking locks and disarming traps.",
+  tags: ["tool", "lockpicking", "thieves", "essential", "rogue"],
+  source: "PHB"
+};
+var CROWBAR = {
+  name: "Crowbar",
+  type: "tool",
+  subtype: "utility",
+  weight: 5,
+  value: 2,
+  description: "An iron pry bar. Grants advantage on Strength checks where leverage can be applied.",
+  tags: ["tool", "utility", "strength", "leverage"],
+  source: "PHB"
+};
+var HAMMER = {
+  name: "Hammer",
+  type: "tool",
+  subtype: "utility",
+  weight: 3,
+  value: 1,
+  description: "A simple hammer. Used for driving pitons, breaking objects, or general construction.",
+  tags: ["tool", "utility", "construction"],
+  source: "PHB"
+};
+var GRAPPLING_HOOK = {
+  name: "Grappling Hook",
+  type: "gear",
+  subtype: "utility",
+  weight: 4,
+  value: 2,
+  description: "A metal hook with multiple flukes. Can be tied to rope and thrown to catch on ledges. Requires DC 10 Athletics check to secure properly.",
+  tags: ["climbing", "utility", "rope", "exploration"],
+  source: "PHB"
+};
+var PITON = {
+  name: "Piton",
+  type: "gear",
+  subtype: "climbing",
+  weight: 0.25,
+  value: 0.05,
+  description: "A metal spike. Can be driven into rock, wood, or other surfaces to secure rope.",
+  tags: ["climbing", "utility", "spike", "rope"],
+  source: "PHB"
+};
+var ROPE_HEMPEN = {
+  name: "Rope, Hempen (50 feet)",
+  type: "gear",
+  subtype: "utility",
+  weight: 10,
+  value: 1,
+  description: "Fifty feet of hempen rope. Has 2 hit points and can be burst with a DC 17 Strength check.",
+  tags: ["rope", "climbing", "utility", "essential"],
+  source: "PHB"
+};
+var ROPE_SILK = {
+  name: "Rope, Silk (50 feet)",
+  type: "gear",
+  subtype: "utility",
+  weight: 5,
+  value: 10,
+  description: "Fifty feet of silk rope. Has 2 hit points and can be burst with a DC 17 Strength check. Lighter and stronger than hempen rope.",
+  tags: ["rope", "climbing", "utility", "silk", "premium"],
+  source: "PHB"
+};
+var CHAIN = {
+  name: "Chain (10 feet)",
+  type: "gear",
+  subtype: "utility",
+  weight: 10,
+  value: 5,
+  description: "Ten feet of metal chain. Has 10 hit points and can be burst with a DC 20 Strength check.",
+  tags: ["chain", "utility", "binding", "strong"],
+  source: "PHB"
+};
+var MANACLES = {
+  name: "Manacles",
+  type: "gear",
+  subtype: "restraint",
+  weight: 6,
+  value: 2,
+  description: "Metal restraints that bind a Small or Medium creature. DC 20 Strength check to break, DC 20 Dexterity check (thieves' tools) to pick the lock. Comes with one key.",
+  tags: ["restraint", "binding", "metal", "lockable"],
+  source: "PHB"
+};
+var LOCK = {
+  name: "Lock",
+  type: "gear",
+  subtype: "security",
+  weight: 1,
+  value: 10,
+  description: "A metal lock with a key. DC 15 Dexterity check (thieves' tools) to pick.",
+  tags: ["lock", "security", "lockable"],
+  source: "PHB"
+};
+var SHOVEL = {
+  name: "Shovel",
+  type: "tool",
+  subtype: "utility",
+  weight: 5,
+  value: 2,
+  description: "A sturdy shovel. Used for digging trenches, graves, or excavating.",
+  tags: ["tool", "digging", "utility", "excavation"],
+  source: "PHB"
+};
+var PICK_MINERS = {
+  name: "Pick, Miner's",
+  type: "tool",
+  subtype: "utility",
+  weight: 10,
+  value: 2,
+  description: "A heavy mining pick. Used for breaking through rock or hard earth.",
+  tags: ["tool", "mining", "utility", "excavation"],
+  source: "PHB"
+};
+var TINDERBOX = {
+  name: "Tinderbox",
+  type: "gear",
+  subtype: "utility",
+  weight: 1,
+  value: 0.5,
+  description: "A small container with flint, fire steel, and tinder. Lighting a torch takes an action; lighting anything else takes 1 minute.",
+  tags: ["fire", "utility", "essential", "survival"],
+  source: "PHB"
+};
+var MESS_KIT = {
+  name: "Mess Kit",
+  type: "gear",
+  subtype: "kit",
+  weight: 1,
+  value: 0.2,
+  description: "A metal box containing a cup, bowl, plate, fork, knife, and spoon.",
+  tags: ["kit", "cooking", "eating", "camping"],
+  source: "PHB"
+};
+var HEALERS_KIT = {
+  name: "Healer's Kit",
+  type: "tool",
+  subtype: "kit",
+  weight: 3,
+  value: 5,
+  uses: 10,
+  effect: "Used to stabilize a dying creature (DC 10 Medicine check not required). Has 10 uses.",
+  description: "A leather pouch containing bandages, salves, and splints.",
+  tags: ["kit", "healing", "medicine", "tool", "stabilize"],
+  source: "PHB"
+};
+var CLIMBERS_KIT = {
+  name: "Climber's Kit",
+  type: "tool",
+  subtype: "kit",
+  weight: 12,
+  value: 25,
+  description: "Includes pitons, boot tips, gloves, and a harness. While climbing, you can anchor yourself to avoid falling more than 25 feet (if within 25 feet of last anchor point).",
+  tags: ["kit", "climbing", "tool", "safety", "exploration"],
+  source: "PHB"
+};
+var BEDROLL = {
+  name: "Bedroll",
+  type: "gear",
+  subtype: "camping",
+  weight: 7,
+  value: 1,
+  description: "A rolled-up sleeping pad and blanket. Essential for comfortable rest while traveling.",
+  tags: ["camping", "rest", "sleep", "essential"],
+  source: "PHB"
+};
+var BLANKET = {
+  name: "Blanket",
+  type: "gear",
+  subtype: "camping",
+  weight: 3,
+  value: 0.5,
+  description: "A wool blanket. Provides warmth while sleeping or traveling in cold weather.",
+  tags: ["camping", "warmth", "sleep", "cold"],
+  source: "PHB"
+};
+var TENT = {
+  name: "Tent, Two-Person",
+  type: "gear",
+  subtype: "camping",
+  weight: 20,
+  value: 2,
+  description: "A simple canvas tent that sleeps two people.",
+  tags: ["camping", "shelter", "rest", "weather"],
+  source: "PHB"
+};
+var ARCANE_FOCUS_CRYSTAL = {
+  name: "Arcane Focus (Crystal)",
+  type: "gear",
+  subtype: "focus",
+  weight: 1,
+  value: 10,
+  description: "A crystal orb used by sorcerers, warlocks, and wizards as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "arcane", "spellcasting", "crystal", "sorcerer", "warlock", "wizard"],
+  source: "PHB"
+};
+var ARCANE_FOCUS_ORB = {
+  name: "Arcane Focus (Orb)",
+  type: "gear",
+  subtype: "focus",
+  weight: 3,
+  value: 20,
+  description: "A polished orb used by sorcerers, warlocks, and wizards as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "arcane", "spellcasting", "orb", "sorcerer", "warlock", "wizard"],
+  source: "PHB"
+};
+var ARCANE_FOCUS_ROD = {
+  name: "Arcane Focus (Rod)",
+  type: "gear",
+  subtype: "focus",
+  weight: 2,
+  value: 10,
+  description: "A metal rod used by sorcerers, warlocks, and wizards as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "arcane", "spellcasting", "rod", "sorcerer", "warlock", "wizard"],
+  source: "PHB"
+};
+var ARCANE_FOCUS_STAFF = {
+  name: "Arcane Focus (Staff)",
+  type: "gear",
+  subtype: "focus",
+  weight: 4,
+  value: 5,
+  description: "A wooden staff used by sorcerers, warlocks, and wizards as a spellcasting focus. Can replace material components without a cost. Can also be used as a quarterstaff.",
+  tags: ["focus", "arcane", "spellcasting", "staff", "sorcerer", "warlock", "wizard", "weapon"],
+  source: "PHB"
+};
+var ARCANE_FOCUS_WAND = {
+  name: "Arcane Focus (Wand)",
+  type: "gear",
+  subtype: "focus",
+  weight: 1,
+  value: 10,
+  description: "A wand used by sorcerers, warlocks, and wizards as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "arcane", "spellcasting", "wand", "sorcerer", "warlock", "wizard"],
+  source: "PHB"
+};
+var COMPONENT_POUCH = {
+  name: "Component Pouch",
+  type: "gear",
+  subtype: "focus",
+  weight: 2,
+  value: 25,
+  description: "A leather belt pouch with compartments for spell components. Can replace material components without a cost. Used by all spellcasters.",
+  tags: ["focus", "components", "spellcasting", "pouch", "universal"],
+  source: "PHB"
+};
+var HOLY_SYMBOL_AMULET = {
+  name: "Holy Symbol (Amulet)",
+  type: "gear",
+  subtype: "focus",
+  weight: 1,
+  value: 5,
+  description: "A holy symbol worn as an amulet. Used by clerics and paladins as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "holy", "spellcasting", "amulet", "cleric", "paladin", "divine"],
+  source: "PHB"
+};
+var HOLY_SYMBOL_EMBLEM = {
+  name: "Holy Symbol (Emblem)",
+  type: "gear",
+  subtype: "focus",
+  weight: 0,
+  value: 5,
+  description: "A holy symbol worn as an emblem on clothing or a shield. Used by clerics and paladins as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "holy", "spellcasting", "emblem", "cleric", "paladin", "divine"],
+  source: "PHB"
+};
+var HOLY_SYMBOL_RELIQUARY = {
+  name: "Holy Symbol (Reliquary)",
+  type: "gear",
+  subtype: "focus",
+  weight: 2,
+  value: 5,
+  description: "A holy symbol in a small container holding a sacred relic. Used by clerics and paladins as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "holy", "spellcasting", "reliquary", "cleric", "paladin", "divine"],
+  source: "PHB"
+};
+var DRUIDIC_FOCUS_MISTLETOE = {
+  name: "Druidic Focus (Sprig of Mistletoe)",
+  type: "gear",
+  subtype: "focus",
+  weight: 0,
+  value: 1,
+  description: "A sprig of mistletoe used by druids as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "druidic", "spellcasting", "nature", "druid", "plant"],
+  source: "PHB"
+};
+var DRUIDIC_FOCUS_TOTEM = {
+  name: "Druidic Focus (Totem)",
+  type: "gear",
+  subtype: "focus",
+  weight: 0,
+  value: 1,
+  description: "A totem incorporating feathers, fur, bones, and teeth from sacred animals. Used by druids as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "druidic", "spellcasting", "nature", "druid", "totem"],
+  source: "PHB"
+};
+var DRUIDIC_FOCUS_STAFF = {
+  name: "Druidic Focus (Wooden Staff)",
+  type: "gear",
+  subtype: "focus",
+  weight: 4,
+  value: 5,
+  description: "A wooden staff drawn from a living tree. Used by druids as a spellcasting focus. Can replace material components without a cost. Can also be used as a quarterstaff.",
+  tags: ["focus", "druidic", "spellcasting", "nature", "druid", "staff", "weapon"],
+  source: "PHB"
+};
+var DRUIDIC_FOCUS_WAND = {
+  name: "Druidic Focus (Yew Wand)",
+  type: "gear",
+  subtype: "focus",
+  weight: 1,
+  value: 10,
+  description: "A wand made of yew or other special wood. Used by druids as a spellcasting focus. Can replace material components without a cost.",
+  tags: ["focus", "druidic", "spellcasting", "nature", "druid", "wand"],
+  source: "PHB"
+};
+var SPELLBOOK = {
+  name: "Spellbook",
+  type: "gear",
+  subtype: "book",
+  weight: 3,
+  value: 50,
+  description: "A leather-bound tome with 100 blank pages. Essential for wizards to prepare spells. Recording a spell takes 2 hours and 50 gp per spell level.",
+  tags: ["book", "spellcasting", "wizard", "arcane", "essential"],
+  source: "PHB"
+};
+var INK = {
+  name: "Ink (1 ounce bottle)",
+  type: "gear",
+  subtype: "writing",
+  weight: 0,
+  value: 10,
+  description: "A small bottle of black ink. Sufficient for writing approximately 500 pages.",
+  tags: ["writing", "ink", "scribing"],
+  source: "PHB"
+};
+var INK_PEN = {
+  name: "Ink Pen",
+  type: "gear",
+  subtype: "writing",
+  weight: 0,
+  value: 0.02,
+  description: "A wooden pen with a metal nib. Used for writing with ink.",
+  tags: ["writing", "pen", "scribing"],
+  source: "PHB"
+};
+var PAPER = {
+  name: "Paper (one sheet)",
+  type: "gear",
+  subtype: "writing",
+  weight: 0,
+  value: 0.2,
+  description: "A single sheet of paper. More expensive but smoother than parchment.",
+  tags: ["writing", "paper", "scribing"],
+  source: "PHB"
+};
+var PARCHMENT = {
+  name: "Parchment (one sheet)",
+  type: "gear",
+  subtype: "writing",
+  weight: 0,
+  value: 0.1,
+  description: "A single sheet of parchment made from animal skin. Common writing surface.",
+  tags: ["writing", "parchment", "scribing"],
+  source: "PHB"
+};
+var BOOK = {
+  name: "Book",
+  type: "gear",
+  subtype: "book",
+  weight: 5,
+  value: 25,
+  description: "A hardcover book with up to 100 pages. Could contain lore, notes, or records.",
+  tags: ["book", "reading", "knowledge", "lore"],
+  source: "PHB"
+};
+var CASE_MAP_SCROLL = {
+  name: "Case, Map or Scroll",
+  type: "gear",
+  subtype: "container",
+  weight: 1,
+  value: 1,
+  description: "A cylindrical leather case for holding rolled-up maps or scrolls. Holds up to ten sheets.",
+  tags: ["container", "maps", "scrolls", "storage", "waterproof"],
+  source: "PHB"
+};
+var BALL_BEARINGS = {
+  name: "Ball Bearings (bag of 1,000)",
+  type: "gear",
+  subtype: "tactical",
+  weight: 2,
+  value: 1,
+  uses: 1,
+  effect: "As an action, spill on ground to cover 10-foot square. Creatures moving through must succeed DC 10 DEX save or fall prone. Creatures moving at half speed don't need to save.",
+  description: "A bag containing 1,000 small metal ball bearings. Used to create difficult terrain.",
+  tags: ["tactical", "trap", "prone", "crowd control"],
+  source: "PHB"
+};
+var CALTROPS = {
+  name: "Caltrops (bag of 20)",
+  type: "gear",
+  subtype: "tactical",
+  weight: 2,
+  value: 1,
+  uses: 1,
+  effect: "As an action, spread on ground to cover 5-foot square. Creatures moving through take 1 piercing damage and must succeed DC 15 DEX save or stop moving. Takes 1 damage for every 5 feet traveled. DC 10 Perception to spot.",
+  description: "A bag of spiked metal devices designed to slow pursuit.",
+  tags: ["tactical", "trap", "damage", "crowd control", "piercing"],
+  source: "PHB"
+};
+var HUNTING_TRAP = {
+  name: "Hunting Trap",
+  type: "gear",
+  subtype: "tactical",
+  weight: 25,
+  value: 5,
+  uses: 1,
+  effect: "Set with an action. Creature stepping on it must succeed DC 13 DEX save or take 1d4 piercing damage and be restrained. Trapped creature can use action to make DC 13 STR check to free itself. DC 10 Perception to spot.",
+  description: "A metal trap with serrated jaws that spring shut when triggered.",
+  tags: ["tactical", "trap", "restrained", "damage", "piercing"],
+  source: "PHB"
+};
+var MIRROR_STEEL = {
+  name: "Mirror, Steel",
+  type: "gear",
+  subtype: "observation",
+  weight: 0.5,
+  value: 5,
+  description: "A polished steel mirror. Useful for looking around corners, signaling, or checking for invisible creatures.",
+  tags: ["observation", "utility", "detection", "signaling"],
+  source: "PHB"
+};
+var SPYGLASS = {
+  name: "Spyglass",
+  type: "gear",
+  subtype: "observation",
+  weight: 1,
+  value: 1e3,
+  description: "A brass telescope. Objects viewed through it are magnified to twice their size.",
+  tags: ["observation", "magnification", "distance", "scouting", "expensive"],
+  source: "PHB"
+};
+var MAGNIFYING_GLASS = {
+  name: "Magnifying Glass",
+  type: "gear",
+  subtype: "observation",
+  weight: 0,
+  value: 100,
+  description: "A convex lens in a metal frame. Grants advantage on Intelligence (Investigation) checks to appraise or inspect small objects. Can be used to start a fire (takes 5 minutes in bright sunlight).",
+  tags: ["observation", "investigation", "magnification", "fire", "expensive"],
+  source: "PHB"
+};
+var BELL = {
+  name: "Bell",
+  type: "gear",
+  subtype: "alarm",
+  weight: 0,
+  value: 1,
+  description: "A small brass bell. Can be attached to a string or wire as an alarm.",
+  tags: ["alarm", "sound", "detection", "tripwire"],
+  source: "PHB"
+};
+var CHALK = {
+  name: "Chalk (1 piece)",
+  type: "gear",
+  subtype: "marking",
+  weight: 0,
+  value: 0.01,
+  description: "A piece of white chalk. Used for marking surfaces, tracking explored areas, or illustrating plans.",
+  tags: ["marking", "exploration", "utility", "cheap"],
+  source: "PHB"
+};
+var BUCKET = {
+  name: "Bucket",
+  type: "gear",
+  subtype: "container",
+  weight: 2,
+  value: 0.05,
+  capacity: 3,
+  // 3 gallons
+  description: "A wooden or metal bucket. Holds 3 gallons of liquid.",
+  tags: ["container", "liquid", "utility"],
+  source: "PHB"
+};
+var FISHING_TACKLE = {
+  name: "Fishing Tackle",
+  type: "tool",
+  subtype: "utility",
+  weight: 4,
+  value: 1,
+  description: "Includes a wooden rod, silken line, hooks, cork bobbers, lures, and narrow netting. Used for catching fish.",
+  tags: ["tool", "fishing", "survival", "food"],
+  source: "PHB"
+};
+var HOURGLASS = {
+  name: "Hourglass",
+  type: "gear",
+  subtype: "timekeeping",
+  weight: 1,
+  value: 25,
+  description: "A glass timepiece that measures one hour of time.",
+  tags: ["timekeeping", "utility", "time"],
+  source: "PHB"
+};
+var POLE_10FT = {
+  name: "Pole (10-foot)",
+  type: "gear",
+  subtype: "utility",
+  weight: 7,
+  value: 0.05,
+  description: "A ten-foot wooden pole. Essential dungeoneering tool for poking suspicious floors, doors, and objects from a safe distance.",
+  tags: ["utility", "dungeoneering", "detection", "classic"],
+  source: "PHB"
+};
+var SIGNAL_WHISTLE = {
+  name: "Signal Whistle",
+  type: "gear",
+  subtype: "signaling",
+  weight: 0,
+  value: 0.05,
+  description: "A small whistle that produces a loud, piercing sound. Can be heard up to 600 feet away.",
+  tags: ["signaling", "alarm", "sound", "communication"],
+  source: "PHB"
+};
+var SOAP = {
+  name: "Soap",
+  type: "consumable",
+  subtype: "hygiene",
+  weight: 0,
+  value: 0.02,
+  description: "A bar of soap. Used for bathing and cleaning.",
+  tags: ["hygiene", "cleaning", "consumable"],
+  source: "PHB"
+};
+function normalize(name) {
+  return name.toLowerCase().replace(/[',()]/g, "").replace(/\s+/g, "_").replace(/_+/g, "_");
+}
+var gearPhb = {
+  id: "gear-phb",
+  name: "Player's Handbook Adventuring Gear",
+  source: "PHB",
+  version: "1.0.0",
+  presets: {
+    // Containers
+    [normalize(BACKPACK.name)]: BACKPACK,
+    [normalize(POUCH.name)]: POUCH,
+    [normalize(SACK.name)]: SACK,
+    [normalize(CHEST.name)]: CHEST,
+    [normalize(BARREL.name)]: BARREL,
+    [normalize(BASKET.name)]: BASKET,
+    [normalize(BOTTLE_GLASS.name)]: BOTTLE_GLASS,
+    [normalize(FLASK_TANKARD.name)]: FLASK_TANKARD,
+    [normalize(JUG_PITCHER.name)]: JUG_PITCHER,
+    [normalize(VIAL.name)]: VIAL,
+    [normalize(WATERSKIN.name)]: WATERSKIN,
+    [normalize(BUCKET.name)]: BUCKET,
+    [normalize(CASE_MAP_SCROLL.name)]: CASE_MAP_SCROLL,
+    // Light sources
+    [normalize(CANDLE.name)]: CANDLE,
+    [normalize(TORCH.name)]: TORCH,
+    [normalize(LAMP.name)]: LAMP,
+    [normalize(LANTERN_BULLSEYE.name)]: LANTERN_BULLSEYE,
+    [normalize(LANTERN_HOODED.name)]: LANTERN_HOODED,
+    [normalize(OIL_FLASK.name)]: OIL_FLASK,
+    // Consumables
+    [normalize(RATIONS.name)]: RATIONS,
+    [normalize(POTION_HEALING.name)]: POTION_HEALING,
+    [normalize(ANTITOXIN.name)]: ANTITOXIN,
+    [normalize(HOLY_WATER.name)]: HOLY_WATER,
+    [normalize(SOAP.name)]: SOAP,
+    // Tools
+    [normalize(THIEVES_TOOLS.name)]: THIEVES_TOOLS,
+    [normalize(CROWBAR.name)]: CROWBAR,
+    [normalize(HAMMER.name)]: HAMMER,
+    [normalize(GRAPPLING_HOOK.name)]: GRAPPLING_HOOK,
+    [normalize(PITON.name)]: PITON,
+    [normalize(ROPE_HEMPEN.name)]: ROPE_HEMPEN,
+    [normalize(ROPE_SILK.name)]: ROPE_SILK,
+    [normalize(CHAIN.name)]: CHAIN,
+    [normalize(MANACLES.name)]: MANACLES,
+    [normalize(LOCK.name)]: LOCK,
+    [normalize(SHOVEL.name)]: SHOVEL,
+    [normalize(PICK_MINERS.name)]: PICK_MINERS,
+    [normalize(TINDERBOX.name)]: TINDERBOX,
+    [normalize(FISHING_TACKLE.name)]: FISHING_TACKLE,
+    // Kits
+    [normalize(MESS_KIT.name)]: MESS_KIT,
+    [normalize(HEALERS_KIT.name)]: HEALERS_KIT,
+    [normalize(CLIMBERS_KIT.name)]: CLIMBERS_KIT,
+    // Camping
+    [normalize(BEDROLL.name)]: BEDROLL,
+    [normalize(BLANKET.name)]: BLANKET,
+    [normalize(TENT.name)]: TENT,
+    // Arcane focuses
+    [normalize(ARCANE_FOCUS_CRYSTAL.name)]: ARCANE_FOCUS_CRYSTAL,
+    [normalize(ARCANE_FOCUS_ORB.name)]: ARCANE_FOCUS_ORB,
+    [normalize(ARCANE_FOCUS_ROD.name)]: ARCANE_FOCUS_ROD,
+    [normalize(ARCANE_FOCUS_STAFF.name)]: ARCANE_FOCUS_STAFF,
+    [normalize(ARCANE_FOCUS_WAND.name)]: ARCANE_FOCUS_WAND,
+    [normalize(COMPONENT_POUCH.name)]: COMPONENT_POUCH,
+    // Holy symbols
+    [normalize(HOLY_SYMBOL_AMULET.name)]: HOLY_SYMBOL_AMULET,
+    [normalize(HOLY_SYMBOL_EMBLEM.name)]: HOLY_SYMBOL_EMBLEM,
+    [normalize(HOLY_SYMBOL_RELIQUARY.name)]: HOLY_SYMBOL_RELIQUARY,
+    // Druidic focuses
+    [normalize(DRUIDIC_FOCUS_MISTLETOE.name)]: DRUIDIC_FOCUS_MISTLETOE,
+    [normalize(DRUIDIC_FOCUS_TOTEM.name)]: DRUIDIC_FOCUS_TOTEM,
+    [normalize(DRUIDIC_FOCUS_STAFF.name)]: DRUIDIC_FOCUS_STAFF,
+    [normalize(DRUIDIC_FOCUS_WAND.name)]: DRUIDIC_FOCUS_WAND,
+    // Spellbook
+    [normalize(SPELLBOOK.name)]: SPELLBOOK,
+    // Writing
+    [normalize(INK.name)]: INK,
+    [normalize(INK_PEN.name)]: INK_PEN,
+    [normalize(PAPER.name)]: PAPER,
+    [normalize(PARCHMENT.name)]: PARCHMENT,
+    [normalize(BOOK.name)]: BOOK,
+    // Tactical
+    [normalize(BALL_BEARINGS.name)]: BALL_BEARINGS,
+    [normalize(CALTROPS.name)]: CALTROPS,
+    [normalize(HUNTING_TRAP.name)]: HUNTING_TRAP,
+    // Observation
+    [normalize(MIRROR_STEEL.name)]: MIRROR_STEEL,
+    [normalize(SPYGLASS.name)]: SPYGLASS,
+    [normalize(MAGNIFYING_GLASS.name)]: MAGNIFYING_GLASS,
+    [normalize(BELL.name)]: BELL,
+    // Miscellaneous
+    [normalize(CHALK.name)]: CHALK,
+    [normalize(HOURGLASS.name)]: HOURGLASS,
+    [normalize(POLE_10FT.name)]: POLE_10FT,
+    [normalize(SIGNAL_WHISTLE.name)]: SIGNAL_WHISTLE
+  }
+};
+
+// dist/data/items/magic-common.js
+var magicWeapons = {
+  "weapon_plus_1": {
+    name: "+1 Weapon",
+    type: "magic",
+    baseItem: "any weapon",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    attackBonus: 1,
+    damageBonus: 1,
+    description: "You have a +1 bonus to attack and damage rolls made with this magic weapon.",
+    tags: ["weapon", "combat", "enhancement"],
+    source: "DMG"
+  },
+  "longsword_plus_1": {
+    name: "+1 Longsword",
+    type: "magic",
+    baseItem: "longsword",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    attackBonus: 1,
+    damageBonus: 1,
+    weight: 3,
+    description: "You have a +1 bonus to attack and damage rolls made with this magic longsword.",
+    tags: ["weapon", "combat", "enhancement", "martial", "melee"],
+    source: "DMG"
+  },
+  "shortsword_plus_1": {
+    name: "+1 Shortsword",
+    type: "magic",
+    baseItem: "shortsword",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    attackBonus: 1,
+    damageBonus: 1,
+    weight: 2,
+    description: "You have a +1 bonus to attack and damage rolls made with this magic shortsword.",
+    tags: ["weapon", "combat", "enhancement", "martial", "melee", "finesse"],
+    source: "DMG"
+  },
+  "dagger_plus_1": {
+    name: "+1 Dagger",
+    type: "magic",
+    baseItem: "dagger",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    attackBonus: 1,
+    damageBonus: 1,
+    weight: 1,
+    description: "You have a +1 bonus to attack and damage rolls made with this magic dagger.",
+    tags: ["weapon", "combat", "enhancement", "simple", "melee", "thrown", "finesse"],
+    source: "DMG"
+  },
+  "flame_tongue": {
+    name: "Flame Tongue",
+    type: "magic",
+    baseItem: "longsword",
+    rarity: "rare",
+    requiresAttunement: true,
+    weight: 3,
+    description: "You can use a bonus action to speak this magic sword's command word, causing flames to erupt from the blade. These flames shed bright light in a 40-foot radius and dim light for an additional 40 feet. While the sword is ablaze, it deals an extra 2d6 fire damage to any target it hits. The flames last until you use a bonus action to speak the command word again or until you drop or sheathe the sword.",
+    effects: [
+      "Bonus action to ignite/extinguish flames",
+      "+2d6 fire damage while ignited",
+      "Sheds light (40 ft bright, 40 ft dim)"
+    ],
+    tags: ["weapon", "combat", "fire", "martial", "melee", "damage"],
+    source: "DMG"
+  },
+  "javelin_of_lightning": {
+    name: "Javelin of Lightning",
+    type: "magic",
+    baseItem: "javelin",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    weight: 2,
+    description: "This javelin is a magic weapon. When you hurl it and speak its command word, it transforms into a bolt of lightning, forming a line 5 feet wide that extends out from you to a target within 120 feet. Each creature in the line excluding you and the target must make a DC 13 Dexterity saving throw, taking 4d6 lightning damage on a failed save, and half as much damage on a successful one. The lightning bolt turns back into a javelin when it reaches the target. Make a ranged weapon attack against the target. On a hit, the target takes damage from the javelin plus 4d6 lightning damage. The javelin's property can't be used again until the next dawn. In the meantime, the javelin can still be used as a magic weapon.",
+    charges: { max: 1, recharge: "dawn" },
+    effects: [
+      "Command word: transforms into lightning bolt",
+      "Line 5 ft wide, 120 ft long",
+      "DC 13 DEX save, 4d6 lightning damage",
+      "Target takes javelin damage + 4d6 lightning",
+      "Recharges at dawn"
+    ],
+    tags: ["weapon", "combat", "lightning", "ranged", "thrown", "aoe"],
+    source: "DMG"
+  },
+  "vicious_weapon": {
+    name: "Vicious Weapon",
+    type: "magic",
+    baseItem: "any weapon",
+    rarity: "rare",
+    requiresAttunement: false,
+    description: "When you roll a 20 on your attack roll with this magic weapon, the target takes an extra 7 damage of the weapon's type.",
+    effects: [
+      "Critical hit: +7 damage"
+    ],
+    tags: ["weapon", "combat", "damage", "critical"],
+    source: "DMG"
+  }
+};
+var magicArmor = {
+  "armor_plus_1": {
+    name: "+1 Armor",
+    type: "magic",
+    baseItem: "any armor",
+    rarity: "rare",
+    requiresAttunement: false,
+    acBonus: 1,
+    description: "You have a +1 bonus to AC while you wear this armor.",
+    tags: ["armor", "defense", "enhancement", "ac"],
+    source: "DMG"
+  },
+  "shield_plus_1": {
+    name: "+1 Shield",
+    type: "magic",
+    baseItem: "shield",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    acBonus: 1,
+    weight: 6,
+    description: "While holding this shield, you have a +1 bonus to AC. This bonus is in addition to the shield's normal bonus to AC.",
+    tags: ["armor", "shield", "defense", "enhancement", "ac"],
+    source: "DMG"
+  },
+  "mithral_armor": {
+    name: "Mithral Armor",
+    type: "magic",
+    baseItem: "medium or heavy armor",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    description: "Mithral is a light, flexible metal. A mithral chain shirt or breastplate can be worn under normal clothes. If the armor normally imposes disadvantage on Dexterity (Stealth) checks or has a Strength requirement, the mithral version of the armor doesn't.",
+    properties: [
+      "No Stealth disadvantage",
+      "No Strength requirement",
+      "Can be worn under clothes (chain shirt/breastplate)"
+    ],
+    tags: ["armor", "defense", "stealth", "medium", "heavy"],
+    source: "DMG"
+  },
+  "adamantine_armor": {
+    name: "Adamantine Armor",
+    type: "magic",
+    baseItem: "medium or heavy armor",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    description: "This suit of armor is reinforced with adamantine, one of the hardest substances in existence. While you're wearing it, any critical hit against you becomes a normal hit.",
+    effects: [
+      "Immune to critical hits"
+    ],
+    tags: ["armor", "defense", "adamantine", "medium", "heavy", "protection"],
+    source: "DMG"
+  }
+};
+var wondrousItems = {
+  "bag_of_holding": {
+    name: "Bag of Holding",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    weight: 15,
+    description: "This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. The bag weighs 15 pounds, regardless of its contents. Retrieving an item from the bag requires an action. If the bag is overloaded, pierced, or torn, it ruptures and is destroyed, and its contents are scattered in the Astral Plane. If the bag is turned inside out, its contents spill forth, unharmed, but the bag must be put right before it can be used again. Breathing creatures inside the bag can survive up to a number of minutes equal to 10 divided by the number of creatures (minimum 1 minute), after which time they begin to suffocate. Placing a bag of holding inside an extradimensional space created by a handy haversack, portable hole, or similar item instantly destroys both items and opens a gate to the Astral Plane.",
+    properties: [
+      "Capacity: 500 lbs, 64 cubic feet",
+      "Weighs 15 lbs regardless of contents",
+      "Action to retrieve item",
+      "Contains breathable air for limited time",
+      "WARNING: Extradimensional nesting causes explosion"
+    ],
+    tags: ["wondrous", "utility", "storage", "extradimensional"],
+    source: "DMG"
+  },
+  "cloak_of_protection": {
+    name: "Cloak of Protection",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: true,
+    acBonus: 1,
+    saveDCBonus: 1,
+    description: "You gain a +1 bonus to AC and saving throws while you wear this cloak.",
+    tags: ["wondrous", "defense", "ac", "saves", "protection"],
+    source: "DMG"
+  },
+  "ring_of_protection": {
+    name: "Ring of Protection",
+    type: "magic",
+    rarity: "rare",
+    requiresAttunement: true,
+    acBonus: 1,
+    saveDCBonus: 1,
+    description: "You gain a +1 bonus to AC and saving throws while wearing this ring.",
+    tags: ["wondrous", "defense", "ac", "saves", "protection", "ring"],
+    source: "DMG"
+  },
+  "boots_of_elvenkind": {
+    name: "Boots of Elvenkind",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    description: "While you wear these boots, your steps make no sound, regardless of the surface you are moving across. You also have advantage on Dexterity (Stealth) checks that rely on moving silently.",
+    effects: [
+      "Silent movement",
+      "Advantage on Stealth checks (silent movement)"
+    ],
+    tags: ["wondrous", "stealth", "utility", "boots", "advantage"],
+    source: "DMG"
+  },
+  "cloak_of_elvenkind": {
+    name: "Cloak of Elvenkind",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: true,
+    description: "While you wear this cloak with its hood up, Wisdom (Perception) checks made to see you have disadvantage, and you have advantage on Dexterity (Stealth) checks made to hide, as the cloak's color shifts to camouflage you. Pulling the hood up or down requires an action.",
+    effects: [
+      "Hood up: Perception checks to see you have disadvantage",
+      "Hood up: Advantage on Stealth checks to hide",
+      "Camouflage effect"
+    ],
+    tags: ["wondrous", "stealth", "utility", "cloak", "advantage", "disadvantage"],
+    source: "DMG"
+  },
+  "goggles_of_night": {
+    name: "Goggles of Night",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    description: "While wearing these dark lenses, you have darkvision out to a range of 60 feet. If you already have darkvision, wearing the goggles increases its range by 60 feet.",
+    effects: [
+      "Darkvision 60 ft",
+      "Or +60 ft to existing darkvision"
+    ],
+    tags: ["wondrous", "utility", "vision", "darkvision", "goggles"],
+    source: "DMG"
+  },
+  "amulet_of_health": {
+    name: "Amulet of Health",
+    type: "magic",
+    rarity: "rare",
+    requiresAttunement: true,
+    description: "Your Constitution score is 19 while you wear this amulet. It has no effect on you if your Constitution is already 19 or higher.",
+    effects: [
+      "Sets Constitution to 19"
+    ],
+    tags: ["wondrous", "ability score", "constitution", "amulet", "enhancement"],
+    source: "DMG"
+  },
+  "gauntlets_of_ogre_power": {
+    name: "Gauntlets of Ogre Power",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: true,
+    description: "Your Strength score is 19 while you wear these gauntlets. They have no effect on you if your Strength is already 19 or higher.",
+    effects: [
+      "Sets Strength to 19"
+    ],
+    tags: ["wondrous", "ability score", "strength", "gauntlets", "enhancement"],
+    source: "DMG"
+  },
+  "belt_of_giant_strength_hill": {
+    name: "Belt of Giant Strength (Hill)",
+    type: "magic",
+    rarity: "rare",
+    requiresAttunement: true,
+    description: "While wearing this belt, your Strength score changes to 21. The item has no effect on you if your Strength without the belt is equal to or greater than 21.",
+    effects: [
+      "Sets Strength to 21"
+    ],
+    tags: ["wondrous", "ability score", "strength", "belt", "giant", "enhancement"],
+    source: "DMG"
+  },
+  "headband_of_intellect": {
+    name: "Headband of Intellect",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: true,
+    description: "Your Intelligence score is 19 while you wear this headband. It has no effect on you if your Intelligence is already 19 or higher.",
+    effects: [
+      "Sets Intelligence to 19"
+    ],
+    tags: ["wondrous", "ability score", "intelligence", "headband", "enhancement"],
+    source: "DMG"
+  },
+  "periapt_of_wound_closure": {
+    name: "Periapt of Wound Closure",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: true,
+    description: "While you wear this pendant, you stabilize whenever you are dying at the start of your turn. In addition, whenever you roll a Hit Die to regain hit points, double the number of hit points it restores.",
+    effects: [
+      "Auto-stabilize when dying",
+      "Double healing from Hit Dice"
+    ],
+    tags: ["wondrous", "healing", "survival", "periapt", "pendant"],
+    source: "DMG"
+  },
+  "immovable_rod": {
+    name: "Immovable Rod",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    weight: 2,
+    description: "This flat iron rod has a button on one end. You can use an action to press the button, which causes the rod to become magically fixed in place. Until you or another creature uses an action to push the button again, the rod doesn't move, even if it is defying gravity. The rod can hold up to 8,000 pounds of weight. More weight causes the rod to deactivate and fall. A creature can use an action to make a DC 30 Strength check, moving the fixed rod up to 10 feet on a success.",
+    properties: [
+      "Action to activate/deactivate",
+      "Holds up to 8,000 lbs",
+      "DC 30 Strength check to move 10 ft"
+    ],
+    tags: ["wondrous", "utility", "rod", "immovable", "gravity"],
+    source: "DMG"
+  },
+  "rope_of_climbing": {
+    name: "Rope of Climbing",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    weight: 3,
+    description: "This 60-foot length of silk rope weighs 3 pounds and can hold up to 3,000 pounds. If you hold one end of the rope and use an action to speak the command word, the rope animates. As a bonus action, you can command the other end to move toward a destination you choose. That end moves 10 feet on your turn when you first command it and 10 feet on each of your turns until reaching its destination, up to its maximum length away, or until you tell it to stop. You can also tell the rope to fasten itself securely to an object or to unfasten itself, to knot or unknot itself, or to coil itself for carrying. If you tell the rope to knot, large knots appear at 1-foot intervals along the rope. While knotted, the rope shortens to a 50-foot length and grants advantage on checks made to climb it. The rope has AC 20 and 20 hit points. It regains 1 hit point every 5 minutes as long as it has at least 1 hit point. If the rope drops to 0 hit points, it is destroyed.",
+    properties: [
+      "Length: 60 ft (50 ft knotted)",
+      "Capacity: 3,000 lbs",
+      "Action to command, bonus action to move",
+      "Moves 10 ft/turn",
+      "Can fasten, knot, coil",
+      "Knotted: Advantage on climb checks",
+      "AC 20, 20 HP, regenerates 1 HP/5 min"
+    ],
+    tags: ["wondrous", "utility", "rope", "climbing", "movement"],
+    source: "DMG"
+  },
+  "decanter_of_endless_water": {
+    name: "Decanter of Endless Water",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    weight: 2,
+    description: `This stoppered flask sloshes when shaken, as if it contains water. The decanter weighs 2 pounds. You can use an action to remove the stopper and speak one of three command words, whereupon an amount of fresh water or salt water (your choice) pours out of the flask. The water stops pouring out at the start of your next turn. Choose from the following options:
+
+"Stream" produces 1 gallon of water.
+
+"Fountain" produces 5 gallons of water.
+
+"Geyser" produces 30 gallons of water that gushes forth in a geyser 30 feet long and 1 foot wide. As a bonus action while holding the decanter, you can aim the geyser at a creature you can see within 30 feet of you. The target must succeed on a DC 13 Strength saving throw or take 1d4 bludgeoning damage and fall prone. Instead of a creature, you can target an object that isn't being worn or carried and that weighs no more than 200 pounds. The object is either knocked over or pushed up to 15 feet away from you.`,
+    properties: [
+      "Stream: 1 gallon",
+      "Fountain: 5 gallons",
+      "Geyser: 30 gallons, 30 ft long, 1 ft wide",
+      "Geyser combat: DC 13 STR save or 1d4 bludgeoning + prone",
+      "Can knock over objects up to 200 lbs"
+    ],
+    tags: ["wondrous", "utility", "water", "decanter", "combat", "environmental"],
+    source: "DMG"
+  },
+  "sending_stones": {
+    name: "Sending Stones",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    description: "Sending stones come in pairs, with each smooth stone carved to match the other so the pairing is easily recognized. While you touch one stone, you can use an action to cast the sending spell from it. The target is the bearer of the other stone. If no creature bears the other stone, you know that fact as soon as you use the stone and don't cast the spell. Once sending is cast through the stones, they can't be used again until the next dawn.",
+    charges: { max: 1, recharge: "dawn" },
+    effects: [
+      "Cast sending spell to paired stone",
+      "Once per day",
+      "Must touch stone"
+    ],
+    tags: ["wondrous", "utility", "communication", "sending", "stones", "paired"],
+    source: "DMG"
+  }
+};
+var potions = {
+  "potion_of_healing": {
+    name: "Potion of Healing",
+    type: "magic",
+    rarity: "common",
+    requiresAttunement: false,
+    weight: 0.5,
+    description: "You regain 2d4 + 2 hit points when you drink this potion. The potion's red liquid glimmers when agitated.",
+    effects: [
+      "Restores 2d4 + 2 HP",
+      "Action to drink"
+    ],
+    tags: ["potion", "consumable", "healing", "hp"],
+    source: "DMG"
+  },
+  "potion_of_greater_healing": {
+    name: "Potion of Greater Healing",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    weight: 0.5,
+    description: "You regain 4d4 + 4 hit points when you drink this potion. The potion's red liquid glimmers when agitated.",
+    effects: [
+      "Restores 4d4 + 4 HP",
+      "Action to drink"
+    ],
+    tags: ["potion", "consumable", "healing", "hp"],
+    source: "DMG"
+  },
+  "potion_of_superior_healing": {
+    name: "Potion of Superior Healing",
+    type: "magic",
+    rarity: "rare",
+    requiresAttunement: false,
+    weight: 0.5,
+    description: "You regain 8d4 + 8 hit points when you drink this potion. The potion's red liquid glimmers when agitated.",
+    effects: [
+      "Restores 8d4 + 8 HP",
+      "Action to drink"
+    ],
+    tags: ["potion", "consumable", "healing", "hp"],
+    source: "DMG"
+  },
+  "potion_of_supreme_healing": {
+    name: "Potion of Supreme Healing",
+    type: "magic",
+    rarity: "very_rare",
+    requiresAttunement: false,
+    weight: 0.5,
+    description: "You regain 10d4 + 20 hit points when you drink this potion. The potion's red liquid glimmers when agitated.",
+    effects: [
+      "Restores 10d4 + 20 HP",
+      "Action to drink"
+    ],
+    tags: ["potion", "consumable", "healing", "hp"],
+    source: "DMG"
+  },
+  "potion_of_fire_resistance": {
+    name: "Potion of Fire Resistance",
+    type: "magic",
+    rarity: "uncommon",
+    requiresAttunement: false,
+    weight: 0.5,
+    description: "When you drink this potion, you gain resistance to fire damage for 1 hour. The potion's orange liquid flickers, and smoke fills the top of the container and wafts out whenever it is opened.",
+    effects: [
+      "Resistance to fire damage",
+      "Duration: 1 hour"
+    ],
+    tags: ["potion", "consumable", "resistance", "fire", "protection"],
+    source: "DMG"
+  },
+  "potion_of_invisibility": {
+    name: "Potion of Invisibility",
+    type: "magic",
+    rarity: "very_rare",
+    requiresAttunement: false,
+    weight: 0.5,
+    description: "When you drink this potion, you become invisible for 1 hour. Anything you wear or carry is invisible with you. The effect ends early if you attack or cast a spell. This potion's container looks empty but feels as though it holds liquid.",
+    effects: [
+      "Invisibility for 1 hour",
+      "Ends if you attack or cast a spell",
+      "Includes worn/carried items"
+    ],
+    tags: ["potion", "consumable", "invisibility", "stealth", "utility"],
+    source: "DMG"
+  },
+  "potion_of_speed": {
+    name: "Potion of Speed",
+    type: "magic",
+    rarity: "very_rare",
+    requiresAttunement: false,
+    weight: 0.5,
+    description: "When you drink this potion, you gain the effect of the haste spell for 1 minute (no concentration required). The potion's yellow fluid is streaked with black and swirls on its own.",
+    effects: [
+      "Haste effect for 1 minute",
+      "No concentration required",
+      "+2 AC",
+      "Advantage on DEX saves",
+      "Double movement speed",
+      "Extra action (limited)"
+    ],
+    tags: ["potion", "consumable", "haste", "combat", "speed", "buff"],
+    source: "DMG"
+  }
+};
+var allPresets = {
+  ...magicWeapons,
+  ...magicArmor,
+  ...wondrousItems,
+  ...potions
+};
+var magicCommonSource = {
+  id: "magic-common",
+  name: "Magic Items: Common & Uncommon",
+  source: "DMG",
+  version: "1.0.0",
+  presets: allPresets
+};
+
+// dist/data/items/index.js
+var SOURCES = [
+  WeaponsPHB,
+  ArmorPHB,
+  gearPhb,
+  magicCommonSource
+  // Future sources:
+  // WeaponsXGE,
+  // MagicItemsRare,
+  // GearTCE,
+];
+var ALL_PRESETS = /* @__PURE__ */ new Map();
+var TYPE_INDEX = /* @__PURE__ */ new Map();
+var TAG_INDEX = /* @__PURE__ */ new Map();
+var SOURCE_MAP = /* @__PURE__ */ new Map();
+function initializeRegistry() {
+  if (ALL_PRESETS.size > 0)
+    return;
+  for (const source of SOURCES) {
+    for (const [key, preset] of Object.entries(source.presets)) {
+      const normalizedKey = normalizeKey(key);
+      ALL_PRESETS.set(normalizedKey, preset);
+      SOURCE_MAP.set(normalizedKey, source.id);
+      const typeSet = TYPE_INDEX.get(preset.type) || /* @__PURE__ */ new Set();
+      typeSet.add(normalizedKey);
+      TYPE_INDEX.set(preset.type, typeSet);
+      const tags = preset.tags || [];
+      for (const tag of tags) {
+        const tagSet = TAG_INDEX.get(tag.toLowerCase()) || /* @__PURE__ */ new Set();
+        tagSet.add(normalizedKey);
+        TAG_INDEX.set(tag.toLowerCase(), tagSet);
+      }
+    }
+  }
+}
+function normalizeKey(name) {
+  return name.toLowerCase().trim().replace(/['']/g, "").replace(/\s+/g, "_").replace(/[^a-z0-9_+\-]/g, "");
+}
+function generateAliases(key) {
+  const aliases = [key];
+  if (!key.includes("armor") && !key.includes("weapon") && !key.includes("shield")) {
+    aliases.push(`${key}_armor`);
+    aliases.push(`${key}_weapon`);
+  }
+  if (key.startsWith("+")) {
+    aliases.push(key.replace("+", "plus_"));
+    const match = key.match(/^\+(\d+)_(.+)$/);
+    if (match) {
+      aliases.push(`${match[2]}_+${match[1]}`);
+      aliases.push(`${match[2]}_plus_${match[1]}`);
+    }
+  }
+  return aliases;
+}
+function getItemPreset(name) {
+  initializeRegistry();
+  const normalized = normalizeKey(name);
+  if (ALL_PRESETS.has(normalized)) {
+    return ALL_PRESETS.get(normalized);
+  }
+  for (const alias of generateAliases(normalized)) {
+    if (ALL_PRESETS.has(alias)) {
+      return ALL_PRESETS.get(alias);
+    }
+  }
+  const fuzzyMatch = findFuzzyMatch(normalized);
+  if (fuzzyMatch) {
+    return ALL_PRESETS.get(fuzzyMatch);
+  }
+  return null;
+}
+function getArmorPreset(name) {
+  const preset = getItemPreset(name);
+  return preset?.type === "armor" ? preset : null;
+}
+function findFuzzyMatch(searchKey) {
+  let bestMatch = null;
+  let bestScore = 0;
+  Array.from(ALL_PRESETS.keys()).forEach((key) => {
+    const score = fuzzyScore(searchKey, key);
+    if (score > bestScore && score > 0.6) {
+      bestScore = score;
+      bestMatch = key;
+    }
+  });
+  return bestMatch;
+}
+function fuzzyScore(search, target) {
+  if (search === target)
+    return 1;
+  if (target.includes(search))
+    return 0.9;
+  if (search.includes(target))
+    return 0.8;
+  const searchParts = search.split("_");
+  const targetParts = target.split("_");
+  let matchedParts = 0;
+  for (const sp of searchParts) {
+    if (targetParts.some((tp) => tp.includes(sp) || sp.includes(tp))) {
+      matchedParts++;
+    }
+  }
+  return matchedParts / Math.max(searchParts.length, targetParts.length);
+}
+initializeRegistry();
+
+// dist/server/composite-tools.js
+init_terrain_patterns();
+
+// dist/utils/schema-shorthand.js
+init_zod();
+function parsePosition(input) {
+  if (typeof input === "string") {
+    const parts = input.split(",").map((s) => parseInt(s.trim(), 10));
+    return {
+      x: parts[0] || 0,
+      y: parts[1] || 0,
+      z: parts[2] || 0
+    };
+  }
+  return { x: input.x, y: input.y, z: input.z ?? 0 };
+}
+var DAMAGE_TYPES = [
+  "acid",
+  "bludgeoning",
+  "cold",
+  "fire",
+  "force",
+  "lightning",
+  "necrotic",
+  "piercing",
+  "poison",
+  "psychic",
+  "radiant",
+  "slashing",
+  "thunder"
+];
+function parseDamage(input) {
+  const normalized = input.toLowerCase().trim();
+  const regex = /^(\d*)d(\d+)([+-]\d+)?\s*(\w+)?$/;
+  const match = normalized.match(regex);
+  if (!match) {
+    return null;
+  }
+  const count = match[1] ? parseInt(match[1], 10) : 1;
+  const sides = parseInt(match[2], 10);
+  const modifier = match[3] ? parseInt(match[3], 10) : 0;
+  const typeRaw = match[4] || "";
+  let type = "untyped";
+  if (typeRaw) {
+    const matchedType = DAMAGE_TYPES.find((t) => t === typeRaw || t.startsWith(typeRaw));
+    type = matchedType || typeRaw;
+  }
+  const min = count + modifier;
+  const max = count * sides + modifier;
+  const average = Math.floor(count * (sides + 1) / 2 + modifier);
+  const dice = count === 1 ? `d${sides}` : `${count}d${sides}`;
+  return {
+    dice,
+    count,
+    sides,
+    modifier,
+    type,
+    average,
+    min: Math.max(0, min),
+    // Damage can't be negative
+    max
+  };
+}
+var ROUNDS_PER_MINUTE = 10;
+var ROUNDS_PER_HOUR = 600;
+var ROUNDS_PER_DAY = 14400;
+function parseDuration(input) {
+  const normalized = input.toLowerCase().trim();
+  if (normalized === "instant" || normalized === "instantaneous") {
+    return { value: 0, unit: "instantaneous", rounds: 0, display: "Instantaneous" };
+  }
+  if (normalized === "permanent" || normalized === "perm") {
+    return { value: Infinity, unit: "permanent", rounds: Infinity, display: "Permanent" };
+  }
+  if (normalized === "conc" || normalized === "concentration") {
+    return { value: 0, unit: "concentration", rounds: 0, display: "Concentration" };
+  }
+  const regex = /^(\d+)\s*(r|round|rounds|m|min|minute|minutes|h|hour|hours|d|day|days)$/;
+  const match = normalized.match(regex);
+  if (!match) {
+    return null;
+  }
+  const value = parseInt(match[1], 10);
+  const unitRaw = match[2];
+  let unit;
+  let rounds;
+  let display;
+  if (unitRaw === "r" || unitRaw.startsWith("round")) {
+    unit = "rounds";
+    rounds = value;
+    display = value === 1 ? "1 round" : `${value} rounds`;
+  } else if (unitRaw === "m" || unitRaw.startsWith("min")) {
+    unit = "minutes";
+    rounds = value * ROUNDS_PER_MINUTE;
+    display = value === 1 ? "1 minute" : `${value} minutes`;
+  } else if (unitRaw === "h" || unitRaw.startsWith("hour")) {
+    unit = "hours";
+    rounds = value * ROUNDS_PER_HOUR;
+    display = value === 1 ? "1 hour" : `${value} hours`;
+  } else if (unitRaw === "d" || unitRaw.startsWith("day")) {
+    unit = "days";
+    rounds = value * ROUNDS_PER_DAY;
+    display = value === 1 ? "1 day" : `${value} days`;
+  } else {
+    return null;
+  }
+  return { value, unit, rounds, display };
+}
+function parseRange(input) {
+  const normalized = input.toLowerCase().trim().replace(/ft|feet/g, "");
+  if (normalized === "self") {
+    return { normal: 0, long: null, type: "melee" };
+  }
+  if (normalized === "touch") {
+    return { normal: 5, long: null, type: "melee" };
+  }
+  const reachMatch = normalized.match(/^(?:reach\s*)?(\d+)(?:\s*reach)?$/);
+  if (reachMatch && normalized.includes("reach")) {
+    return { normal: parseInt(reachMatch[1], 10), long: null, type: "reach" };
+  }
+  const rangedMatch = normalized.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (rangedMatch) {
+    return {
+      normal: parseInt(rangedMatch[1], 10),
+      long: parseInt(rangedMatch[2], 10),
+      type: "ranged"
+    };
+  }
+  const simpleMatch = normalized.match(/^(\d+)$/);
+  if (simpleMatch) {
+    const range = parseInt(simpleMatch[1], 10);
+    return {
+      normal: range,
+      long: null,
+      type: range <= 10 ? "melee" : "ranged"
+    };
+  }
+  return null;
+}
+function parseAreaOfEffect(input) {
+  const normalized = input.toLowerCase().trim().replace(/ft|feet/g, "");
+  const coneMatch = normalized.match(/^(\d+)\s*cone$/);
+  if (coneMatch) {
+    return { size: parseInt(coneMatch[1], 10), shape: "cone" };
+  }
+  const cubeMatch = normalized.match(/^(\d+)\s*cube$/);
+  if (cubeMatch) {
+    return { size: parseInt(cubeMatch[1], 10), shape: "cube" };
+  }
+  const sphereMatch = normalized.match(/^(\d+)\s*(?:sphere|radius)$/);
+  if (sphereMatch) {
+    return { size: parseInt(sphereMatch[1], 10), shape: "sphere" };
+  }
+  const squareMatch = normalized.match(/^(\d+)\s*square$/);
+  if (squareMatch) {
+    return { size: parseInt(squareMatch[1], 10), shape: "square" };
+  }
+  const lineMatch = normalized.match(/^(\d+)(?:x(\d+))?\s*line(?:\s*(\d+)\s*wide)?$/);
+  if (lineMatch) {
+    const length = parseInt(lineMatch[1], 10);
+    const width = lineMatch[2] ? parseInt(lineMatch[2], 10) : lineMatch[3] ? parseInt(lineMatch[3], 10) : 5;
+    return { size: length, shape: "line", secondarySize: width };
+  }
+  const cylinderMatch = normalized.match(/^(\d+)\s*cylinder(?:\s*(\d+)\s*(?:high|tall))?$/);
+  if (cylinderMatch) {
+    const radius = parseInt(cylinderMatch[1], 10);
+    const height = cylinderMatch[2] ? parseInt(cylinderMatch[2], 10) : radius;
+    return { size: radius, shape: "cylinder", secondarySize: height };
+  }
+  return null;
+}
+var PositionSchema2 = external_exports.union([
+  external_exports.string().regex(/^\d+,\d+(,\d+)?$/, 'Position must be "x,y" or "x,y,z" format'),
+  external_exports.object({
+    x: external_exports.number(),
+    y: external_exports.number(),
+    z: external_exports.number().optional()
+  })
+]).transform(parsePosition);
+var DamageSchema = external_exports.string().refine((val) => parseDamage(val) !== null, { message: 'Invalid damage notation. Use format like "2d6+3 fire"' }).transform((val) => parseDamage(val));
+var DurationSchema = external_exports.string().refine((val) => parseDuration(val) !== null, { message: 'Invalid duration. Use format like "10r", "1m", "1h", "7d", "instant", or "concentration"' }).transform((val) => parseDuration(val));
+var RangeSchema = external_exports.string().refine((val) => parseRange(val) !== null, { message: 'Invalid range. Use format like "30/120", "5ft", "touch", or "10 reach"' }).transform((val) => parseRange(val));
+var AreaOfEffectSchema2 = external_exports.string().refine((val) => parseAreaOfEffect(val) !== null, { message: 'Invalid area of effect. Use format like "20ft cone", "15ft cube", "20ft sphere"' }).transform((val) => parseAreaOfEffect(val));
+
+// dist/server/composite-tools.js
+function buildCharacter(data) {
+  return {
+    id: data.id,
+    name: data.name,
+    stats: data.stats,
+    hp: data.hp,
+    maxHp: data.maxHp,
+    ac: data.ac,
+    level: data.level,
+    xp: 0,
+    characterType: data.characterType,
+    race: data.race,
+    characterClass: data.characterClass,
+    conditions: [],
+    perceptionBonus: 0,
+    stealthBonus: 0,
+    knownSpells: [],
+    preparedSpells: [],
+    cantripsKnown: [],
+    maxSpellLevel: 0,
+    concentratingOn: null,
+    activeSpells: [],
+    resistances: data.resistances || [],
+    vulnerabilities: data.vulnerabilities || [],
+    immunities: data.immunities || [],
+    skillProficiencies: [],
+    saveProficiencies: [],
+    expertise: [],
+    hasLairActions: false,
+    position: data.position,
+    currentRoomId: data.currentRoomId,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
+  };
+}
+function buildItem(data) {
+  return {
+    id: data.id,
+    name: data.name,
+    description: data.description,
+    type: data.type,
+    weight: data.weight ?? 0,
+    value: data.value ?? 0,
+    properties: data.properties,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
+  };
+}
+var parsePosition2 = parsePosition;
+function ensureDb13() {
+  const dbPath = process.env.NODE_ENV === "test" ? ":memory:" : process.env.RPG_DATA_DIR ? `${process.env.RPG_DATA_DIR}/rpg.db` : "rpg.db";
+  const db = getDb(dbPath);
+  return {
+    db,
+    charRepo: new CharacterRepository(db),
+    itemRepo: new ItemRepository(db),
+    inventoryRepo: new InventoryRepository(db),
+    partyRepo: new PartyRepository(db),
+    poiRepo: new POIRepository(db),
+    spatialRepo: new SpatialRepository(db)
+  };
+}
+var CompositeTools = {
+  // ─────────────────────────────────────────────────────────────────────────
+  // SETUP_TACTICAL_ENCOUNTER
+  // ─────────────────────────────────────────────────────────────────────────
+  SETUP_TACTICAL_ENCOUNTER: {
+    name: "setup_tactical_encounter",
+    description: `Create a full combat encounter with creatures from presets and terrain patterns.
+
+REPLACES: create_encounter + N\xD7create_character + N\xD7update_terrain (6-12 calls \u2192 1 call)
+TOKEN SAVINGS: ~90%
+
+Creature templates: "goblin", "goblin:archer", "skeleton:warrior", "orc:berserker"
+Position shorthand: "10,5" instead of {x:10, y:5, z:0}
+
+Example - Goblin Ambush:
+{
+  "seed": "goblin-ambush",
+  "participants": [
+    { "template": "goblin:warrior", "position": "5,5" },
+    { "template": "goblin:warrior", "position": "7,5" },
+    { "template": "goblin:archer", "position": "6,2" },
+    { "template": "hobgoblin:captain", "name": "Grishnak", "position": "6,3" }
+  ],
+  "terrain": {
+    "obstacles": ["3,3", "3,4", "8,3", "8,4"],
+    "difficultTerrain": ["5,6", "6,6", "7,6"]
+  },
+  "partyPositions": ["10,10", "11,10", "10,11", "11,11"]
+}
+
+Available creature templates: goblin, goblin:warrior, goblin:archer, goblin:boss, goblin:shaman,
+skeleton, skeleton:warrior, skeleton:archer, zombie, zombie:brute, orc, orc:warrior, orc:berserker,
+hobgoblin, hobgoblin:captain, wolf, dire_wolf, bandit, bandit_captain, ogre, troll, and more.
+`,
+    inputSchema: external_exports.object({
+      seed: external_exports.string().describe("Seed for deterministic combat"),
+      participants: external_exports.array(external_exports.object({
+        template: external_exports.string().describe('Creature template like "goblin:archer"'),
+        name: external_exports.string().optional().describe("Override the default name"),
+        position: external_exports.union([
+          external_exports.string().regex(/^\d+,\d+(,\d+)?$/).describe('Position as "x,y" or "x,y,z"'),
+          external_exports.object({ x: external_exports.number(), y: external_exports.number(), z: external_exports.number().optional() })
+        ]).describe("Position shorthand or object"),
+        isEnemy: external_exports.boolean().optional().default(true)
+      })).min(1).describe("Enemy creatures to spawn"),
+      terrain: external_exports.object({
+        obstacles: external_exports.array(external_exports.string()).optional().describe('Obstacle positions as "x,y" strings'),
+        difficultTerrain: external_exports.array(external_exports.string()).optional().describe("Difficult terrain positions"),
+        water: external_exports.array(external_exports.string()).optional().describe("Water positions"),
+        pattern: external_exports.string().optional().describe('Terrain pattern name (e.g., "river", "canyon")')
+      }).optional().describe("Terrain configuration"),
+      partyPositions: external_exports.array(external_exports.union([
+        external_exports.string().regex(/^\d+,\d+(,\d+)?$/),
+        external_exports.object({ x: external_exports.number(), y: external_exports.number(), z: external_exports.number().optional() })
+      ])).optional().describe("Starting positions for party members"),
+      partyId: external_exports.string().optional().describe("Party ID to auto-add party members"),
+      gridSize: external_exports.object({
+        width: external_exports.number().int().min(10).max(100).default(20),
+        height: external_exports.number().int().min(10).max(100).default(20)
+      }).optional().describe("Grid dimensions")
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // SPAWN_EQUIPPED_CHARACTER
+  // ─────────────────────────────────────────────────────────────────────────
+  SPAWN_EQUIPPED_CHARACTER: {
+    name: "spawn_equipped_character",
+    description: `Create a character with equipment from presets in a single call.
+
+REPLACES: create_character + N\xD7(create_item + give_item + equip_item) (8-16 calls \u2192 1 call)
+TOKEN SAVINGS: ~85%
+
+Equipment can be preset names or full item specs.
+
+Example - Dwarf Fighter:
+{
+  "name": "Gimli",
+  "race": "Dwarf",
+  "characterClass": "fighter",
+  "level": 5,
+  "stats": { "str": 18, "dex": 12, "con": 16, "int": 10, "wis": 12, "cha": 8 },
+  "equipment": ["battleaxe", "chain_mail", "shield"],
+  "partyId": "fellowship-123"
+}
+
+Example - From creature template:
+{
+  "template": "bandit_captain",
+  "name": "Red Raven",
+  "equipment": ["rapier", "studded_leather"],
+  "characterType": "npc"
+}
+
+Available equipment presets: All PHB weapons (longsword, shortbow, greataxe...),
+armor (chain_mail, plate, leather...), and gear (rope, torch, healers_kit...).
+`,
+    inputSchema: external_exports.object({
+      // Option 1: From template
+      template: external_exports.string().optional().describe("Creature template to use as base stats"),
+      // Option 2: Manual stats
+      name: external_exports.string().describe("Character name"),
+      race: external_exports.string().optional().default("Human"),
+      characterClass: external_exports.string().optional().default("fighter"),
+      level: external_exports.number().int().min(1).max(20).optional().default(1),
+      stats: external_exports.object({
+        str: external_exports.number().int().min(1).max(30),
+        dex: external_exports.number().int().min(1).max(30),
+        con: external_exports.number().int().min(1).max(30),
+        int: external_exports.number().int().min(1).max(30),
+        wis: external_exports.number().int().min(1).max(30),
+        cha: external_exports.number().int().min(1).max(30)
+      }).optional(),
+      hp: external_exports.number().int().min(1).optional(),
+      maxHp: external_exports.number().int().min(1).optional(),
+      ac: external_exports.number().int().min(0).optional(),
+      // Equipment
+      equipment: external_exports.array(external_exports.union([
+        external_exports.string().describe('Item preset name like "longsword" or "chain_mail"'),
+        external_exports.object({
+          preset: external_exports.string(),
+          slot: external_exports.enum(["mainhand", "offhand", "armor", "head", "feet", "accessory"]).optional()
+        })
+      ])).optional().default([]).describe("Equipment presets to create and equip"),
+      // Character type (matches CharacterTypeSchema: pc, npc, enemy, neutral)
+      characterType: external_exports.enum(["pc", "npc", "enemy", "neutral"]).optional().default("pc"),
+      // Party assignment
+      partyId: external_exports.string().optional().describe("Party to add character to"),
+      partyRole: external_exports.enum(["leader", "member", "companion", "hireling"]).optional().default("member")
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // INITIALIZE_SESSION
+  // ─────────────────────────────────────────────────────────────────────────
+  INITIALIZE_SESSION: {
+    name: "initialize_session",
+    description: `Initialize a new game session with world, party, and starting location.
+
+REPLACES: create_world + create_party + N\xD7create_character + move_party (6-10 calls \u2192 1 call)
+
+Example:
+{
+  "worldName": "Forgotten Realms",
+  "partyName": "The Silver Blades",
+  "characters": [
+    { "name": "Valeros", "race": "Human", "characterClass": "fighter", "equipment": ["longsword", "chain_mail", "shield"] },
+    { "name": "Seoni", "race": "Human", "characterClass": "sorcerer", "equipment": ["quarterstaff"] }
+  ],
+  "startingLocation": { "name": "Sandpoint", "x": 50, "y": 50 }
+}
+`,
+    inputSchema: external_exports.object({
+      worldName: external_exports.string().optional().default("New World"),
+      worldSeed: external_exports.string().optional(),
+      partyName: external_exports.string(),
+      characters: external_exports.array(external_exports.object({
+        name: external_exports.string(),
+        race: external_exports.string().optional().default("Human"),
+        characterClass: external_exports.string().optional().default("fighter"),
+        level: external_exports.number().int().min(1).optional().default(1),
+        stats: external_exports.object({
+          str: external_exports.number().int(),
+          dex: external_exports.number().int(),
+          con: external_exports.number().int(),
+          int: external_exports.number().int(),
+          wis: external_exports.number().int(),
+          cha: external_exports.number().int()
+        }).optional(),
+        equipment: external_exports.array(external_exports.string()).optional().default([]),
+        isLeader: external_exports.boolean().optional()
+      })).min(1),
+      startingLocation: external_exports.object({
+        name: external_exports.string(),
+        x: external_exports.number().int().optional(),
+        y: external_exports.number().int().optional()
+      }).optional()
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // SPAWN_POPULATED_LOCATION
+  // ─────────────────────────────────────────────────────────────────────────
+  SPAWN_POPULATED_LOCATION: {
+    name: "spawn_populated_location",
+    description: `Create a complete location with POI, optional room network, and inhabitants in one call.
+
+REPLACES: create_poi + create_network + N\xD7create_room + N\xD7spawn_character + N\xD7(create_item + place_item)
+TOKEN SAVINGS: ~90%
+
+Example - Goblin Cave:
+{
+  "worldId": "world-123",
+  "name": "Shadowfang Cave",
+  "category": "dungeon",
+  "icon": "cave",
+  "position": "50,30",
+  "description": "A dark cave system rumored to house goblin raiders",
+  "level": 3,
+  "tags": ["goblin", "cave", "treasure"],
+  "rooms": [
+    { "name": "Cave Entrance", "description": "A shadowy opening in the hillside...", "biome": "cavern" },
+    { "name": "Guard Chamber", "description": "A small alcove where guards keep watch...", "biome": "cavern", "exits": ["north"] }
+  ],
+  "inhabitants": [
+    { "template": "goblin:warrior", "room": 0, "count": 2 },
+    { "template": "goblin:archer", "room": 1 },
+    { "template": "hobgoblin:captain", "name": "Skullcrusher", "room": 1 }
+  ],
+  "loot": [
+    { "preset": "longsword", "room": 1 },
+    { "preset": "potion_healing", "room": 0, "count": 2 }
+  ]
+}
+
+Example - Village Inn:
+{
+  "worldId": "world-123",
+  "name": "The Prancing Pony",
+  "category": "commercial",
+  "icon": "inn",
+  "position": "100,75",
+  "population": 15,
+  "discoveryState": "discovered",
+  "rooms": [
+    { "name": "Common Room", "description": "A warm tavern with crackling fireplace...", "biome": "urban" },
+    { "name": "Kitchen", "description": "The busy kitchen smells of fresh bread...", "biome": "urban", "exits": ["west"] }
+  ],
+  "inhabitants": [
+    { "name": "Barliman Butterbur", "race": "Human", "characterType": "npc", "room": 0 },
+    { "template": "bandit", "name": "Suspicious Stranger", "characterType": "neutral", "room": 0 }
+  ]
+}
+
+Categories: settlement, fortification, dungeon, landmark, religious, commercial, natural, hidden
+Icons: city, town, village, castle, fort, tower, dungeon, cave, ruins, temple, shrine, inn, market, mine, farm, camp
+Biomes: forest, mountain, urban, dungeon, coastal, cavern, divine, arcane`,
+    inputSchema: external_exports.object({
+      // POI basics
+      worldId: external_exports.string().describe("World ID to create the location in"),
+      name: external_exports.string().min(1).max(100).describe("Location name"),
+      category: external_exports.enum(["settlement", "fortification", "dungeon", "landmark", "religious", "commercial", "natural", "hidden"]).describe("POI category"),
+      icon: external_exports.enum(["city", "town", "village", "castle", "fort", "tower", "dungeon", "cave", "ruins", "temple", "shrine", "inn", "market", "mine", "farm", "camp", "portal", "monument", "tree", "mountain", "lake", "waterfall", "bridge", "crossroads", "unknown"]).describe("Map icon"),
+      position: external_exports.union([
+        external_exports.string().regex(/^\d+,\d+$/).describe('Position as "x,y"'),
+        external_exports.object({ x: external_exports.number().int().min(0), y: external_exports.number().int().min(0) })
+      ]).describe("World map position"),
+      description: external_exports.string().max(500).optional().describe("Brief description for map tooltip"),
+      // POI metadata
+      population: external_exports.number().int().min(0).optional().default(0).describe("Population for settlements"),
+      level: external_exports.number().int().min(1).max(20).optional().describe("Suggested character level for dungeons"),
+      tags: external_exports.array(external_exports.string()).optional().default([]).describe("Searchable tags"),
+      discoveryState: external_exports.enum(["unknown", "rumored", "discovered", "explored", "mapped"]).optional().default("unknown"),
+      discoveryDC: external_exports.number().int().min(0).max(30).optional().describe("DC to discover if hidden"),
+      // Room network (optional)
+      rooms: external_exports.array(external_exports.object({
+        name: external_exports.string().min(1).max(100),
+        description: external_exports.string().min(10).max(2e3).describe("Room description"),
+        biome: external_exports.enum(["forest", "mountain", "urban", "dungeon", "coastal", "cavern", "divine", "arcane"]).optional().default("dungeon"),
+        exits: external_exports.array(external_exports.enum(["north", "south", "east", "west", "up", "down"])).optional().describe("Directions this room connects to (auto-linked sequentially if not specified)")
+      })).optional().describe("Rooms to create (first room is entrance)"),
+      // Inhabitants
+      inhabitants: external_exports.array(external_exports.object({
+        // From template OR manual
+        template: external_exports.string().optional().describe('Creature template like "goblin:warrior"'),
+        name: external_exports.string().optional().describe("Character name (required if no template)"),
+        race: external_exports.string().optional().default("Human"),
+        characterClass: external_exports.string().optional().default("commoner"),
+        level: external_exports.number().int().min(1).optional(),
+        characterType: external_exports.enum(["npc", "enemy", "neutral"]).optional().default("enemy"),
+        // Placement
+        room: external_exports.number().int().min(0).optional().describe("Room index to place in (0 = entrance)"),
+        count: external_exports.number().int().min(1).max(20).optional().default(1).describe("Number to spawn")
+      })).optional().default([]).describe("NPCs/creatures to populate the location"),
+      // Loot/items
+      loot: external_exports.array(external_exports.object({
+        preset: external_exports.string().describe("Item preset name"),
+        room: external_exports.number().int().min(0).optional().describe("Room index to place in"),
+        count: external_exports.number().int().min(1).max(99).optional().default(1)
+      })).optional().default([]).describe("Items to place in the location")
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // SPAWN_PRESET_ENCOUNTER
+  // ─────────────────────────────────────────────────────────────────────────
+  SPAWN_PRESET_ENCOUNTER: {
+    name: "spawn_preset_encounter",
+    description: `Create a complete combat encounter from a preset with a single call.
+
+REPLACES: setup_tactical_encounter with manual participant/terrain specification
+TOKEN SAVINGS: ~95% (one ID vs full encounter specification)
+
+Example - Goblin Ambush:
+{ "preset": "goblin_ambush" }
+
+Example - Scaled for large party:
+{ "preset": "orc_warband", "partySize": 6, "partyLevel": 5 }
+
+Example - Random encounter:
+{ "random": true, "difficulty": "medium", "level": 3 }
+
+Example - Random by tag:
+{ "random": true, "tags": ["undead"], "level": 2 }
+
+Available presets:
+- Goblinoid: goblin_ambush, goblin_lair, hobgoblin_patrol, bugbear_ambush
+- Orc: orc_raiding_party, orc_warband
+- Undead: skeleton_patrol, zombie_horde, crypt_guardians
+- Beast: wolf_pack, spider_nest, owlbear_territory
+- Bandit: bandit_roadblock, bandit_camp
+- Urban: tavern_brawl, cult_ritual
+- Dungeon: animated_guardians, mimic_trap, troll_bridge, dragon_wyrmling_lair
+- Fiend: imp_swarm
+- Elemental: elemental_breach
+
+Difficulties: easy, medium, hard, deadly`,
+    inputSchema: external_exports.object({
+      // Preset selection (one of these required)
+      preset: external_exports.string().optional().describe('Encounter preset ID (e.g., "goblin_ambush")'),
+      random: external_exports.boolean().optional().describe("If true, select random encounter matching criteria"),
+      // Random encounter filters
+      difficulty: external_exports.enum(["easy", "medium", "hard", "deadly"]).optional().describe("Filter random encounters by difficulty"),
+      level: external_exports.number().int().min(1).max(20).optional().describe("Party level for filtering/scaling"),
+      tags: external_exports.array(external_exports.string()).optional().describe('Tags to filter random encounters (e.g., ["undead", "dungeon"])'),
+      // Scaling options
+      partySize: external_exports.number().int().min(1).max(10).optional().default(4).describe("Number of party members (affects encounter scaling)"),
+      partyLevel: external_exports.number().int().min(1).max(20).optional().describe('Party level for scaling (defaults to "level" if set)'),
+      // Party setup
+      partyId: external_exports.string().optional().describe("Party ID to auto-include members in the encounter"),
+      partyPositions: external_exports.array(external_exports.string()).optional().describe("Override party starting positions"),
+      // Combat seed
+      seed: external_exports.string().optional().describe("Seed for deterministic combat (auto-generated if not provided)")
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // REST_PARTY
+  // ─────────────────────────────────────────────────────────────────────────
+  REST_PARTY: {
+    name: "rest_party",
+    description: `Rest entire party at once - heals all members and restores spell slots.
+
+REPLACES: N\xD7take_long_rest or N\xD7take_short_rest (4-6 calls \u2192 1 call)
+TOKEN SAVINGS: ~80%
+
+Long rest (8 hours):
+- Restores ALL party members to max HP
+- Restores all spell slots
+- Clears concentration and active spells
+- Cannot rest while any member is in combat
+
+Short rest (1 hour):
+- Rolls hit dice for healing (configurable per member)
+- Warlocks regain pact magic slots
+- Cannot rest while any member is in combat
+
+Example - Long rest:
+{ "partyId": "party-123", "restType": "long" }
+
+Example - Short rest with hit dice:
+{ "partyId": "party-123", "restType": "short", "hitDicePerMember": 2 }
+
+Example - Short rest with custom allocation:
+{
+  "partyId": "party-123",
+  "restType": "short",
+  "hitDiceAllocation": {
+    "char-id-1": 3,
+    "char-id-2": 1,
+    "char-id-3": 0
+  }
+}`,
+    inputSchema: external_exports.object({
+      partyId: external_exports.string().describe("The party ID"),
+      restType: external_exports.enum(["long", "short"]).describe("Type of rest to take"),
+      hitDicePerMember: external_exports.number().int().min(0).max(20).optional().default(1).describe("Hit dice each member spends on short rest (default: 1)"),
+      hitDiceAllocation: external_exports.record(external_exports.string(), external_exports.number().int().min(0).max(20)).optional().describe("Custom hit dice allocation per character ID (overrides hitDicePerMember)")
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // LOOT_ENCOUNTER
+  // ─────────────────────────────────────────────────────────────────────────
+  LOOT_ENCOUNTER: {
+    name: "loot_encounter",
+    description: `Loot all corpses from an encounter in a single call.
+
+REPLACES: list_corpses_in_encounter + N\xD7loot_corpse (5-10 calls \u2192 1 call)
+TOKEN SAVINGS: ~85%
+
+Automatically:
+- Finds all corpses from the encounter
+- Transfers all loot to specified character (or distributes to party)
+- Optionally includes currency/gold distribution
+- Returns comprehensive loot summary
+
+Example - Single looter:
+{ "encounterId": "encounter-123", "looterId": "char-456" }
+
+Example - Distribute to party:
+{
+  "encounterId": "encounter-123",
+  "partyId": "party-789",
+  "distributeEvenly": true
+}
+
+Example - Selective looting:
+{
+  "encounterId": "encounter-123",
+  "looterId": "char-456",
+  "includeItems": true,
+  "includeCurrency": true,
+  "includeHarvestable": false
+}`,
+    inputSchema: external_exports.object({
+      encounterId: external_exports.string().describe("The encounter ID to loot corpses from"),
+      looterId: external_exports.string().optional().describe("Character ID to receive all loot"),
+      partyId: external_exports.string().optional().describe("Party ID for distributing loot among members"),
+      distributeEvenly: external_exports.boolean().optional().default(false).describe("If true with partyId, distribute items round-robin to party members"),
+      includeItems: external_exports.boolean().optional().default(true).describe("Include equipment and items"),
+      includeCurrency: external_exports.boolean().optional().default(true).describe("Include gold/silver/copper"),
+      includeHarvestable: external_exports.boolean().optional().default(false).describe("Auto-harvest resources (may fail without skill check)")
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // TRAVEL_TO_LOCATION
+  // ─────────────────────────────────────────────────────────────────────────
+  TRAVEL_TO_LOCATION: {
+    name: "travel_to_location",
+    description: `Move a party to a POI on the world map. Combines move_party + discover_poi + enter_room.
+
+TOKEN SAVINGS: ~70% vs separate calls (3 tools \u2192 1)
+
+WHAT THIS TOOL DOES:
+1. Moves party to POI coordinates on world map
+2. Auto-discovers the POI if not yet discovered (with perception check if DC set)
+3. Optionally enters the POI's entrance room if it has a network
+
+Example - Travel to known location:
+{ "partyId": "party-1", "poiId": "poi-tavern-1" }
+
+Example - Travel and auto-enter dungeon:
+{ "partyId": "party-1", "poiId": "poi-dungeon-1", "enterLocation": true }
+
+Example - Travel with discovery bypass:
+{ "partyId": "party-1", "poiId": "poi-hidden-temple", "autoDiscover": true }`,
+    inputSchema: external_exports.object({
+      partyId: external_exports.string().describe("Party ID to move"),
+      poiId: external_exports.string().uuid().describe("POI ID destination"),
+      enterLocation: external_exports.boolean().optional().default(false).describe("If true and POI has a room network, move party leader into entrance room"),
+      autoDiscover: external_exports.boolean().optional().default(false).describe("If true, skip perception check for undiscovered POIs"),
+      discoveringCharacterId: external_exports.string().uuid().optional().describe("Character making discovery check (defaults to party leader)")
+    })
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // SPAWN_PRESET_LOCATION
+  // ─────────────────────────────────────────────────────────────────────────
+  SPAWN_PRESET_LOCATION: {
+    name: "spawn_preset_location",
+    description: `Spawn a complete location from a preset. Creates POI, room network, and optionally NPCs.
+
+TOKEN SAVINGS: ~85% vs manual specification
+
+WHAT THIS TOOL DOES:
+1. Creates a POI at specified world coordinates
+2. Creates a room network with all preset rooms
+3. Links the POI to the network
+4. Optionally spawns preset NPCs
+
+Example - Spawn a tavern:
+{ "preset": "generic_tavern", "worldId": "world-1", "x": 50, "y": 75 }
+
+Example - Spawn dungeon entrance with NPCs:
+{ "preset": "dungeon_entrance", "worldId": "world-1", "x": 100, "y": 200, "spawnNpcs": true }
+
+Example - Custom name:
+{ "preset": "forest_clearing", "worldId": "world-1", "x": 25, "y": 30, "customName": "Whispering Glade" }
+
+Available presets:
+- Taverns: generic_tavern, rough_tavern
+- Dungeons: dungeon_entrance, cave_entrance
+- Urban: town_square
+- Wilderness: forest_clearing, roadside_camp`,
+    inputSchema: external_exports.object({
+      preset: external_exports.string().describe('Location preset ID (e.g., "generic_tavern")'),
+      worldId: external_exports.string().describe("World ID to spawn in"),
+      x: external_exports.number().int().min(0).describe("X coordinate on world map"),
+      y: external_exports.number().int().min(0).describe("Y coordinate on world map"),
+      customName: external_exports.string().optional().describe("Override default location name"),
+      spawnNpcs: external_exports.boolean().optional().default(false).describe("If true, spawn preset NPCs in their rooms"),
+      discoveryState: external_exports.enum(["unknown", "rumored", "discovered", "explored", "mapped"]).optional().default("discovered").describe("Initial discovery state")
+    })
+  }
+};
+async function handleSetupTacticalEncounter(args, _ctx) {
+  const parsed = CompositeTools.SETUP_TACTICAL_ENCOUNTER.inputSchema.parse(args);
+  const { charRepo } = ensureDb13();
+  const combatManager = getCombatManager();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const participants = [];
+  const createdCharacterIds = [];
+  for (let i = 0; i < parsed.participants.length; i++) {
+    const p = parsed.participants[i];
+    const preset = expandCreatureTemplate(p.template, p.name);
+    if (!preset) {
+      throw new Error(`Unknown creature template: ${p.template}`);
+    }
+    const pos = parsePosition2(p.position);
+    const characterId = (0, import_crypto12.randomUUID)();
+    const character = buildCharacter({
+      id: characterId,
+      name: preset.name,
+      stats: preset.stats,
+      hp: preset.hp,
+      maxHp: preset.maxHp,
+      ac: preset.ac,
+      level: preset.level,
+      characterType: preset.characterType,
+      race: preset.race || "Unknown",
+      characterClass: preset.characterClass || "monster",
+      resistances: preset.resistances || [],
+      vulnerabilities: preset.vulnerabilities || [],
+      immunities: preset.immunities || [],
+      position: { x: pos.x, y: pos.y },
+      createdAt: now,
+      updatedAt: now
+    });
+    charRepo.create(character);
+    createdCharacterIds.push(characterId);
+    const dexMod = Math.floor((preset.stats.dex - 10) / 2);
+    participants.push({
+      id: characterId,
+      name: preset.name,
+      hp: preset.hp,
+      maxHp: preset.maxHp,
+      initiative: 0,
+      // Will be rolled
+      initiativeBonus: dexMod,
+      isEnemy: p.isEnemy ?? true,
+      conditions: [],
+      position: pos,
+      size: preset.size || "medium",
+      movementSpeed: preset.speed || 30,
+      movementRemaining: preset.speed || 30,
+      resistances: preset.resistances || [],
+      vulnerabilities: preset.vulnerabilities || [],
+      immunities: preset.immunities || []
+    });
+  }
+  if (parsed.partyId && parsed.partyPositions) {
+    const { partyRepo } = ensureDb13();
+    const party = partyRepo.getPartyWithMembers(parsed.partyId);
+    if (party && party.members) {
+      for (let i = 0; i < party.members.length && i < parsed.partyPositions.length; i++) {
+        const member = party.members[i];
+        const pos = parsePosition2(parsed.partyPositions[i]);
+        const char = member.character;
+        const dexMod = Math.floor((char.stats.dex - 10) / 2);
+        participants.push({
+          id: char.id,
+          name: char.name,
+          hp: char.hp,
+          maxHp: char.maxHp,
+          initiative: 0,
+          initiativeBonus: dexMod,
+          isEnemy: false,
+          conditions: [],
+          position: pos,
+          size: "medium",
+          movementSpeed: 30,
+          movementRemaining: 30,
+          resistances: char.resistances || [],
+          vulnerabilities: char.vulnerabilities || [],
+          immunities: char.immunities || []
+        });
+      }
+    }
+  }
+  let terrain = {
+    obstacles: parsed.terrain?.obstacles || [],
+    difficultTerrain: parsed.terrain?.difficultTerrain,
+    water: parsed.terrain?.water
+  };
+  if (parsed.terrain?.pattern) {
+    const validPatterns = ["river_valley", "canyon", "arena", "mountain_pass", "maze", "maze_rooms"];
+    if (validPatterns.includes(parsed.terrain.pattern)) {
+      const patternGen = getPatternGenerator(parsed.terrain.pattern);
+      const width2 = parsed.gridSize?.width || 20;
+      const height2 = parsed.gridSize?.height || 20;
+      const patternTerrain = patternGen(0, 0, width2, height2);
+      terrain = {
+        obstacles: [...terrain.obstacles, ...patternTerrain.obstacles],
+        difficultTerrain: [...terrain.difficultTerrain || [], ...patternTerrain.difficultTerrain || []],
+        water: [...terrain.water || [], ...patternTerrain.water || []]
+      };
+    }
+  }
+  const encounterId = `encounter-${parsed.seed}-${Date.now()}`;
+  const engine = new CombatEngine(parsed.seed);
+  const encounterState = engine.startEncounter(participants);
+  encounterState.terrain = terrain;
+  combatManager.create(encounterId, engine);
+  const width = parsed.gridSize?.width || 20;
+  const height = parsed.gridSize?.height || 20;
+  const asciiMap = generateEncounterMap({ state: encounterState }, width, height);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        encounterId,
+        round: encounterState.round,
+        participantCount: participants.length,
+        enemyCount: participants.filter((p) => p.isEnemy).length,
+        friendlyCount: participants.filter((p) => !p.isEnemy).length,
+        createdCharacterIds,
+        turnOrder: encounterState.turnOrder.map((id) => {
+          const p = encounterState.participants.find((pp) => pp.id === id);
+          return { id, name: p?.name, initiative: p?.initiative };
+        }),
+        currentTurn: encounterState.turnOrder[0],
+        terrain: {
+          obstacleCount: terrain.obstacles.length,
+          difficultTerrainCount: terrain.difficultTerrain?.length || 0,
+          waterCount: terrain.water?.length || 0
+        },
+        asciiMap
+      }, null, 2)
+    }]
+  };
+}
+async function handleSpawnEquippedCharacter(args, _ctx) {
+  const parsed = CompositeTools.SPAWN_EQUIPPED_CHARACTER.inputSchema.parse(args);
+  const { charRepo, itemRepo, inventoryRepo, partyRepo } = ensureDb13();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const characterId = (0, import_crypto12.randomUUID)();
+  let characterData;
+  if (parsed.template) {
+    const preset = expandCreatureTemplate(parsed.template, parsed.name);
+    if (!preset) {
+      throw new Error(`Unknown creature template: ${parsed.template}`);
+    }
+    characterData = buildCharacter({
+      id: characterId,
+      name: parsed.name || preset.name,
+      stats: parsed.stats || preset.stats,
+      hp: parsed.hp || preset.hp,
+      maxHp: parsed.maxHp || preset.maxHp,
+      ac: parsed.ac || preset.ac,
+      level: parsed.level || preset.level,
+      characterType: parsed.characterType || preset.characterType,
+      race: parsed.race || preset.race || "Unknown",
+      characterClass: parsed.characterClass || preset.characterClass || "monster",
+      resistances: preset.resistances || [],
+      vulnerabilities: preset.vulnerabilities || [],
+      immunities: preset.immunities || [],
+      createdAt: now,
+      updatedAt: now
+    });
+  } else {
+    const stats = parsed.stats || { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+    const conMod = Math.floor((stats.con - 10) / 2);
+    const defaultHp = 10 + conMod + ((parsed.level || 1) - 1) * (5 + conMod);
+    characterData = buildCharacter({
+      id: characterId,
+      name: parsed.name,
+      stats,
+      hp: parsed.hp || defaultHp,
+      maxHp: parsed.maxHp || defaultHp,
+      ac: parsed.ac || 10 + Math.floor((stats.dex - 10) / 2),
+      level: parsed.level || 1,
+      characterType: parsed.characterType || "pc",
+      race: parsed.race || "Human",
+      characterClass: parsed.characterClass || "fighter",
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  charRepo.create(characterData);
+  const equippedItems = [];
+  let calculatedAC = 10 + Math.floor((characterData.stats.dex - 10) / 2);
+  for (const equipSpec of parsed.equipment || []) {
+    const presetName = typeof equipSpec === "string" ? equipSpec : equipSpec.preset;
+    const requestedSlot = typeof equipSpec === "object" ? equipSpec.slot : void 0;
+    const preset = getItemPreset(presetName);
+    if (!preset) {
+      console.warn(`Unknown item preset: ${presetName}, skipping`);
+      continue;
+    }
+    const itemId = (0, import_crypto12.randomUUID)();
+    let itemType;
+    if (preset.type === "weapon")
+      itemType = "weapon";
+    else if (preset.type === "armor")
+      itemType = "armor";
+    else if (preset.type === "gear" || preset.type === "tool")
+      itemType = "misc";
+    else if (preset.type === "consumable")
+      itemType = "consumable";
+    else if (preset.type === "magic")
+      itemType = preset.baseItem ? "weapon" : "misc";
+    else
+      itemType = "misc";
+    const item = buildItem({
+      id: itemId,
+      name: preset.name,
+      description: preset.description || "",
+      type: itemType,
+      weight: preset.weight || 0,
+      value: preset.value || 0,
+      properties: preset,
+      createdAt: now,
+      updatedAt: now
+    });
+    itemRepo.create(item);
+    inventoryRepo.addItem(characterId, itemId, 1);
+    let slot = requestedSlot;
+    if (!slot) {
+      if (preset.type === "weapon") {
+        slot = "mainhand";
+      } else if (preset.type === "armor") {
+        const armorPreset = preset;
+        slot = armorPreset.category === "shield" ? "offhand" : "armor";
+      }
+    }
+    if (slot) {
+      inventoryRepo.equipItem(characterId, itemId, slot);
+      equippedItems.push({ itemId, name: preset.name, slot });
+      if (preset.type === "armor") {
+        const armorPreset = getArmorPreset(presetName);
+        if (armorPreset) {
+          if (armorPreset.category === "shield") {
+            calculatedAC += armorPreset.ac;
+          } else {
+            const dexMod = Math.floor((characterData.stats.dex - 10) / 2);
+            const maxDex = armorPreset.maxDexBonus ?? 99;
+            const effectiveDex = Math.min(dexMod, maxDex);
+            calculatedAC = armorPreset.ac + effectiveDex;
+          }
+        }
+      }
+    } else {
+      equippedItems.push({ itemId, name: preset.name });
+    }
+  }
+  if (calculatedAC !== characterData.ac) {
+    charRepo.update(characterId, { ac: calculatedAC });
+    characterData.ac = calculatedAC;
+  }
+  let partyInfo = null;
+  if (parsed.partyId) {
+    const party = partyRepo.findById(parsed.partyId);
+    if (party) {
+      partyRepo.addMember({
+        id: (0, import_crypto12.randomUUID)(),
+        partyId: parsed.partyId,
+        characterId,
+        role: parsed.partyRole || "member",
+        isActive: false,
+        sharePercentage: 100,
+        joinedAt: now
+      });
+      partyInfo = {
+        partyId: parsed.partyId,
+        partyName: party.name,
+        role: parsed.partyRole || "member"
+      };
+    }
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        character: {
+          id: characterId,
+          name: characterData.name,
+          race: characterData.race,
+          class: characterData.characterClass,
+          level: characterData.level,
+          hp: characterData.hp,
+          maxHp: characterData.maxHp,
+          ac: characterData.ac,
+          stats: characterData.stats,
+          type: characterData.characterType
+        },
+        equipment: equippedItems,
+        party: partyInfo,
+        message: `Created ${characterData.name} (${characterData.race} ${characterData.characterClass}) with ${equippedItems.length} items equipped`
+      }, null, 2)
+    }]
+  };
+}
+async function handleInitializeSession(args, _ctx) {
+  const parsed = CompositeTools.INITIALIZE_SESSION.inputSchema.parse(args);
+  const { charRepo, partyRepo } = ensureDb13();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const partyId = (0, import_crypto12.randomUUID)();
+  partyRepo.create({
+    id: partyId,
+    name: parsed.partyName,
+    status: "active",
+    formation: "standard",
+    currentLocation: parsed.startingLocation?.name,
+    positionX: parsed.startingLocation?.x,
+    positionY: parsed.startingLocation?.y,
+    createdAt: now,
+    updatedAt: now,
+    lastPlayedAt: now
+  });
+  const createdCharacters = [];
+  let leaderId = null;
+  for (const charSpec of parsed.characters) {
+    const characterId = (0, import_crypto12.randomUUID)();
+    const stats = charSpec.stats || { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+    const conMod = Math.floor((stats.con - 10) / 2);
+    const hp = 10 + conMod + ((charSpec.level || 1) - 1) * (5 + conMod);
+    const character = buildCharacter({
+      id: characterId,
+      name: charSpec.name,
+      stats,
+      hp,
+      maxHp: hp,
+      ac: 10 + Math.floor((stats.dex - 10) / 2),
+      level: charSpec.level || 1,
+      characterType: "pc",
+      race: charSpec.race || "Human",
+      characterClass: charSpec.characterClass || "fighter",
+      createdAt: now,
+      updatedAt: now
+    });
+    charRepo.create(character);
+    const role = charSpec.isLeader ? "leader" : "member";
+    partyRepo.addMember({
+      id: (0, import_crypto12.randomUUID)(),
+      partyId,
+      characterId,
+      role,
+      isActive: charSpec.isLeader || false,
+      sharePercentage: 100,
+      joinedAt: now
+    });
+    if (charSpec.isLeader) {
+      leaderId = characterId;
+    }
+    createdCharacters.push({
+      id: characterId,
+      name: charSpec.name,
+      race: charSpec.race || "Human",
+      class: charSpec.characterClass || "fighter",
+      level: charSpec.level || 1
+    });
+  }
+  if (leaderId) {
+    partyRepo.setLeader(partyId, leaderId);
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        session: {
+          partyId,
+          partyName: parsed.partyName,
+          location: parsed.startingLocation?.name || "Unknown",
+          characters: createdCharacters,
+          leaderId
+        },
+        message: `Session initialized: ${parsed.partyName} with ${createdCharacters.length} characters`
+      }, null, 2)
+    }]
+  };
+}
+async function handleSpawnPopulatedLocation(args, _ctx) {
+  const parsed = CompositeTools.SPAWN_POPULATED_LOCATION.inputSchema.parse(args);
+  const { charRepo, itemRepo, spatialRepo, poiRepo } = ensureDb13();
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  let posX;
+  let posY;
+  if (typeof parsed.position === "string") {
+    const parts = parsed.position.split(",");
+    posX = parseInt(parts[0], 10);
+    posY = parseInt(parts[1], 10);
+  } else {
+    posX = parsed.position.x;
+    posY = parsed.position.y;
+  }
+  let networkId;
+  let entranceRoomId;
+  const createdRooms = [];
+  if (parsed.rooms && parsed.rooms.length > 0) {
+    networkId = (0, import_crypto12.randomUUID)();
+    spatialRepo.createNetwork({
+      id: networkId,
+      name: `${parsed.name} Network`,
+      type: "cluster",
+      worldId: parsed.worldId,
+      centerX: posX,
+      centerY: posY,
+      createdAt: now,
+      updatedAt: now
+    });
+    const roomIds = [];
+    for (let i = 0; i < parsed.rooms.length; i++) {
+      const roomSpec = parsed.rooms[i];
+      const roomId = (0, import_crypto12.randomUUID)();
+      roomIds.push(roomId);
+      if (i === 0) {
+        entranceRoomId = roomId;
+      }
+      spatialRepo.create({
+        id: roomId,
+        name: roomSpec.name,
+        baseDescription: roomSpec.description,
+        biomeContext: roomSpec.biome || "dungeon",
+        atmospherics: [],
+        exits: [],
+        entityIds: [],
+        networkId,
+        localX: i % 5,
+        // Simple grid layout
+        localY: Math.floor(i / 5),
+        visitedCount: 0,
+        createdAt: now,
+        updatedAt: now
+      });
+      createdRooms.push({ id: roomId, name: roomSpec.name, index: i });
+    }
+    for (let i = 0; i < roomIds.length - 1; i++) {
+      const currentRoom = parsed.rooms[i];
+      if (!currentRoom.exits || currentRoom.exits.length === 0) {
+        spatialRepo.addExit(roomIds[i], {
+          direction: "north",
+          targetNodeId: roomIds[i + 1],
+          type: "OPEN"
+        });
+        spatialRepo.addExit(roomIds[i + 1], {
+          direction: "south",
+          targetNodeId: roomIds[i],
+          type: "OPEN"
+        });
+      }
+    }
+  }
+  const poiId = (0, import_crypto12.randomUUID)();
+  poiRepo.create({
+    id: poiId,
+    worldId: parsed.worldId,
+    x: posX,
+    y: posY,
+    name: parsed.name,
+    description: parsed.description,
+    category: parsed.category,
+    icon: parsed.icon,
+    networkId,
+    entranceRoomId,
+    discoveryState: parsed.discoveryState || "unknown",
+    discoveredBy: [],
+    discoveryDC: parsed.discoveryDC,
+    childPOIIds: [],
+    population: parsed.population || 0,
+    level: parsed.level,
+    tags: parsed.tags || [],
+    createdAt: now,
+    updatedAt: now
+  });
+  const createdInhabitants = [];
+  for (const inhab of parsed.inhabitants || []) {
+    const count = inhab.count || 1;
+    for (let c = 0; c < count; c++) {
+      const characterId = (0, import_crypto12.randomUUID)();
+      let characterData;
+      if (inhab.template) {
+        const preset = expandCreatureTemplate(inhab.template, inhab.name);
+        if (!preset) {
+          console.warn(`Unknown creature template: ${inhab.template}, skipping`);
+          continue;
+        }
+        const displayName = count > 1 && !inhab.name ? `${preset.name} ${c + 1}` : inhab.name || preset.name;
+        characterData = buildCharacter({
+          id: characterId,
+          name: displayName,
+          stats: preset.stats,
+          hp: preset.hp,
+          maxHp: preset.maxHp,
+          ac: preset.ac,
+          level: inhab.level || preset.level,
+          characterType: inhab.characterType || preset.characterType,
+          race: inhab.race || preset.race || "Unknown",
+          characterClass: inhab.characterClass || preset.characterClass || "monster",
+          resistances: preset.resistances || [],
+          vulnerabilities: preset.vulnerabilities || [],
+          immunities: preset.immunities || [],
+          createdAt: now,
+          updatedAt: now
+        });
+      } else {
+        if (!inhab.name) {
+          console.warn("Inhabitant without template must have a name, skipping");
+          continue;
+        }
+        const stats = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+        const level = inhab.level || 1;
+        const conMod = Math.floor((stats.con - 10) / 2);
+        const hp = 8 + conMod + (level - 1) * (5 + conMod);
+        characterData = buildCharacter({
+          id: characterId,
+          name: inhab.name,
+          stats,
+          hp,
+          maxHp: hp,
+          ac: 10,
+          level,
+          characterType: inhab.characterType || "npc",
+          race: inhab.race || "Human",
+          characterClass: inhab.characterClass || "commoner",
+          createdAt: now,
+          updatedAt: now
+        });
+      }
+      const roomIndex = inhab.room ?? 0;
+      let roomId;
+      let roomName;
+      if (createdRooms.length > 0 && roomIndex < createdRooms.length) {
+        roomId = createdRooms[roomIndex].id;
+        roomName = createdRooms[roomIndex].name;
+        characterData.currentRoomId = roomId;
+      }
+      charRepo.create(characterData);
+      if (roomId) {
+        spatialRepo.addEntityToRoom(roomId, characterId);
+      }
+      createdInhabitants.push({
+        id: characterId,
+        name: characterData.name,
+        template: inhab.template,
+        roomId,
+        roomName
+      });
+    }
+  }
+  const placedLoot = [];
+  for (const lootSpec of parsed.loot || []) {
+    const preset = getItemPreset(lootSpec.preset);
+    if (!preset) {
+      console.warn(`Unknown item preset: ${lootSpec.preset}, skipping`);
+      continue;
+    }
+    const itemId = (0, import_crypto12.randomUUID)();
+    let itemType;
+    if (preset.type === "weapon")
+      itemType = "weapon";
+    else if (preset.type === "armor")
+      itemType = "armor";
+    else if (preset.type === "gear" || preset.type === "tool")
+      itemType = "misc";
+    else if (preset.type === "consumable")
+      itemType = "consumable";
+    else if (preset.type === "magic")
+      itemType = preset.baseItem ? "weapon" : "misc";
+    else
+      itemType = "misc";
+    const item = buildItem({
+      id: itemId,
+      name: preset.name,
+      description: preset.description || "",
+      type: itemType,
+      weight: preset.weight || 0,
+      value: preset.value || 0,
+      properties: preset,
+      createdAt: now,
+      updatedAt: now
+    });
+    itemRepo.create(item);
+    const roomIndex = lootSpec.room ?? 0;
+    let roomId;
+    let roomName;
+    if (createdRooms.length > 0 && roomIndex < createdRooms.length) {
+      roomId = createdRooms[roomIndex].id;
+      roomName = createdRooms[roomIndex].name;
+      spatialRepo.addEntityToRoom(roomId, itemId);
+    }
+    placedLoot.push({
+      itemId,
+      name: preset.name,
+      count: lootSpec.count || 1,
+      roomId,
+      roomName
+    });
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        poi: {
+          id: poiId,
+          name: parsed.name,
+          category: parsed.category,
+          icon: parsed.icon,
+          position: { x: posX, y: posY },
+          discoveryState: parsed.discoveryState || "unknown",
+          level: parsed.level,
+          population: parsed.population || 0
+        },
+        network: networkId ? {
+          id: networkId,
+          roomCount: createdRooms.length,
+          entranceRoomId
+        } : null,
+        rooms: createdRooms,
+        inhabitants: createdInhabitants,
+        loot: placedLoot,
+        summary: {
+          totalInhabitants: createdInhabitants.length,
+          totalLootItems: placedLoot.reduce((sum, l) => sum + l.count, 0),
+          totalRooms: createdRooms.length
+        },
+        message: `Created ${parsed.name} with ${createdRooms.length} rooms, ${createdInhabitants.length} inhabitants, and ${placedLoot.length} loot items`
+      }, null, 2)
+    }]
+  };
+}
+function generateEncounterMap(encounter, width, height) {
+  const grid = [];
+  for (let y = 0; y < height; y++) {
+    grid[y] = [];
+    for (let x = 0; x < width; x++) {
+      grid[y][x] = "\xB7";
+    }
+  }
+  const terrain = encounter.state.terrain || {};
+  for (const obs of terrain.obstacles || []) {
+    const [x, y] = obs.split(",").map(Number);
+    if (x >= 0 && x < width && y >= 0 && y < height) {
+      grid[y][x] = "\u2588";
+    }
+  }
+  for (const dt of terrain.difficultTerrain || []) {
+    const [x, y] = dt.split(",").map(Number);
+    if (x >= 0 && x < width && y >= 0 && y < height && grid[y][x] === "\xB7") {
+      grid[y][x] = "\u2591";
+    }
+  }
+  for (const w of terrain.water || []) {
+    const [x, y] = w.split(",").map(Number);
+    if (x >= 0 && x < width && y >= 0 && y < height && grid[y][x] === "\xB7") {
+      grid[y][x] = "~";
+    }
+  }
+  let friendlyIdx = 0;
+  let enemyIdx = 0;
+  for (const p of encounter.state.participants) {
+    if (!p.position)
+      continue;
+    const { x, y } = p.position;
+    if (x >= 0 && x < width && y >= 0 && y < height) {
+      if (p.hp <= 0) {
+        grid[y][x] = "\u2620";
+      } else if (p.isEnemy) {
+        grid[y][x] = String(enemyIdx % 9 + 1);
+        enemyIdx++;
+      } else {
+        grid[y][x] = String.fromCharCode(65 + friendlyIdx % 26);
+        friendlyIdx++;
+      }
+    }
+  }
+  let output = "";
+  for (let y = 0; y < height; y++) {
+    output += grid[y].join("") + "\n";
+  }
+  return output;
+}
+async function handleSpawnPresetEncounter(args, _ctx) {
+  const parsed = CompositeTools.SPAWN_PRESET_ENCOUNTER.inputSchema.parse(args);
+  const { charRepo, partyRepo } = ensureDb13();
+  let selectedPreset = null;
+  if (parsed.preset) {
+    selectedPreset = getEncounterPreset(parsed.preset);
+    if (!selectedPreset) {
+      const available = listEncounterPresets();
+      throw new Error(`Unknown encounter preset: "${parsed.preset}". Available: ${available.slice(0, 10).join(", ")}...`);
+    }
+  } else if (parsed.random) {
+    let candidates = getEncountersForLevel(parsed.level || 3);
+    if (parsed.difficulty) {
+      candidates = candidates.filter((e) => e.difficulty === parsed.difficulty);
+    }
+    if (parsed.tags && parsed.tags.length > 0) {
+      candidates = candidates.filter((e) => parsed.tags.some((tag) => e.tags.some((t) => t.toLowerCase() === tag.toLowerCase())));
+    }
+    if (candidates.length === 0) {
+      throw new Error("No encounters match the specified criteria");
+    }
+    selectedPreset = candidates[Math.floor(Math.random() * candidates.length)];
+  } else {
+    throw new Error('Must provide either "preset" or "random: true"');
+  }
+  const partySize = parsed.partySize || 4;
+  const partyLevel = parsed.partyLevel || parsed.level || 3;
+  const scaledPreset = scaleEncounter(selectedPreset, partyLevel, partySize);
+  const seed = parsed.seed || `${scaledPreset.id}-${Date.now()}`;
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const combatManager = getCombatManager();
+  const participants = [];
+  const createdCharacterIds = [];
+  for (let i = 0; i < scaledPreset.participants.length; i++) {
+    const p = scaledPreset.participants[i];
+    const count = p.count || 1;
+    for (let c = 0; c < count; c++) {
+      const preset = expandCreatureTemplate(p.template, p.name);
+      if (!preset) {
+        console.warn(`Unknown creature template: ${p.template}, skipping`);
+        continue;
+      }
+      const characterId = (0, import_crypto12.randomUUID)();
+      const displayName = count > 1 && !p.name ? `${preset.name} ${c + 1}` : p.name || preset.name;
+      const [baseX, baseY] = p.position.split(",").map(Number);
+      const pos = { x: baseX + c, y: baseY, z: 0 };
+      const character = buildCharacter({
+        id: characterId,
+        name: displayName,
+        stats: preset.stats,
+        hp: preset.hp,
+        maxHp: preset.maxHp,
+        ac: preset.ac,
+        level: preset.level,
+        characterType: preset.characterType,
+        race: preset.race || "Unknown",
+        characterClass: preset.characterClass || "monster",
+        resistances: preset.resistances || [],
+        vulnerabilities: preset.vulnerabilities || [],
+        immunities: preset.immunities || [],
+        position: { x: pos.x, y: pos.y },
+        createdAt: now,
+        updatedAt: now
+      });
+      charRepo.create(character);
+      createdCharacterIds.push(characterId);
+      const dexMod = Math.floor((preset.stats.dex - 10) / 2);
+      participants.push({
+        id: characterId,
+        name: displayName,
+        initiative: 0,
+        initiativeBonus: dexMod,
+        hp: preset.hp,
+        maxHp: preset.maxHp,
+        conditions: [],
+        position: pos,
+        isEnemy: true,
+        movementSpeed: preset.speed || 30,
+        movementRemaining: preset.speed || 30,
+        size: preset.size || "medium",
+        resistances: preset.resistances || [],
+        vulnerabilities: preset.vulnerabilities || [],
+        immunities: preset.immunities || []
+      });
+    }
+  }
+  const partyMemberIds = [];
+  if (parsed.partyId) {
+    const party = partyRepo.getPartyWithMembers(parsed.partyId);
+    if (party && party.members) {
+      const positions = parsed.partyPositions || scaledPreset.partyPositions || [];
+      for (let i = 0; i < party.members.length; i++) {
+        const member = party.members[i];
+        const char = member.character;
+        partyMemberIds.push(char.id);
+        let pos = { x: 10 + i, y: 12, z: 0 };
+        if (positions[i]) {
+          const [px, py] = positions[i].split(",").map(Number);
+          pos = { x: px, y: py, z: 0 };
+        }
+        const dexMod = Math.floor((char.stats.dex - 10) / 2);
+        participants.push({
+          id: char.id,
+          name: char.name,
+          initiative: 0,
+          initiativeBonus: dexMod,
+          hp: char.hp,
+          maxHp: char.maxHp,
+          conditions: [],
+          position: pos,
+          isEnemy: false,
+          movementSpeed: 30,
+          movementRemaining: 30,
+          size: "medium",
+          resistances: char.resistances || [],
+          vulnerabilities: char.vulnerabilities || [],
+          immunities: char.immunities || []
+        });
+      }
+    }
+  }
+  const terrain = {
+    obstacles: [],
+    difficultTerrain: [],
+    water: []
+  };
+  if (scaledPreset.terrain) {
+    terrain.obstacles = scaledPreset.terrain.obstacles || [];
+    terrain.difficultTerrain = scaledPreset.terrain.difficultTerrain || [];
+    terrain.water = scaledPreset.terrain.water || [];
+  }
+  const encounterId = `encounter-${seed}`;
+  const engine = new CombatEngine(seed);
+  const encounterState = engine.startEncounter(participants);
+  encounterState.terrain = terrain;
+  combatManager.create(encounterId, engine);
+  const mapWidth = 20;
+  const mapHeight = 15;
+  const asciiMap = generateEncounterMap({ state: encounterState }, mapWidth, mapHeight);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        encounterId,
+        preset: {
+          id: scaledPreset.id,
+          name: scaledPreset.name,
+          difficulty: scaledPreset.difficulty,
+          recommendedLevel: scaledPreset.recommendedLevel,
+          narrativeHook: scaledPreset.narrativeHook
+        },
+        scaling: {
+          partySize,
+          partyLevel,
+          originalParticipants: selectedPreset.participants.length,
+          scaledParticipants: participants.filter((p) => p.isEnemy).length
+        },
+        encounter: {
+          round: encounterState.round,
+          turnOrder: encounterState.turnOrder.map((id, idx) => {
+            const p = encounterState.participants.find((pp) => pp.id === id);
+            return {
+              order: idx + 1,
+              id,
+              name: p?.name,
+              initiative: p?.initiative,
+              hp: p ? `${p.hp}/${p.maxHp}` : void 0,
+              position: p?.position,
+              isEnemy: p?.isEnemy
+            };
+          }),
+          currentTurn: encounterState.turnOrder[0]
+        },
+        terrain: {
+          obstacles: terrain.obstacles.length,
+          difficultTerrain: terrain.difficultTerrain?.length || 0,
+          water: terrain.water?.length || 0
+        },
+        partyMembers: partyMemberIds.length > 0 ? partyMemberIds : void 0,
+        createdCharacterIds,
+        asciiMap,
+        message: `Created "${scaledPreset.name}" encounter with ${participants.length} combatants`
+      }, null, 2)
+    }]
+  };
+}
+function rollDie2(sides) {
+  return Math.floor(Math.random() * sides) + 1;
+}
+function getHitDieSize2(characterClass) {
+  const hitDice = {
+    barbarian: 12,
+    fighter: 10,
+    paladin: 10,
+    ranger: 10,
+    bard: 8,
+    cleric: 8,
+    druid: 8,
+    monk: 8,
+    rogue: 8,
+    warlock: 8,
+    sorcerer: 6,
+    wizard: 6
+  };
+  return hitDice[characterClass.toLowerCase()] || 8;
+}
+async function handleRestParty(args, _ctx) {
+  const parsed = CompositeTools.REST_PARTY.inputSchema.parse(args);
+  const { charRepo, partyRepo } = ensureDb13();
+  const party = partyRepo.getPartyWithMembers(parsed.partyId);
+  if (!party) {
+    throw new Error(`Party not found: ${parsed.partyId}`);
+  }
+  if (!party.members || party.members.length === 0) {
+    throw new Error(`Party ${parsed.partyId} has no members`);
+  }
+  const combatManager = getCombatManager();
+  const membersInCombat = [];
+  for (const member of party.members) {
+    if (combatManager.isCharacterInCombat(member.characterId)) {
+      membersInCombat.push(member.character.name);
+    }
+  }
+  if (membersInCombat.length > 0) {
+    throw new Error(`Cannot rest while party members are in combat: ${membersInCombat.join(", ")}`);
+  }
+  const results = [];
+  if (parsed.restType === "long") {
+    for (const member of party.members) {
+      const char = charRepo.findById(member.characterId);
+      if (!char)
+        continue;
+      const previousHp = char.hp;
+      const hpRestored = char.maxHp - char.hp;
+      const charClass = char.characterClass || "fighter";
+      const spellConfig = getSpellcastingConfig(charClass);
+      let spellSlotsRestored = void 0;
+      let updatedChar = { hp: char.maxHp };
+      if (spellConfig.canCast && char.level >= spellConfig.startLevel) {
+        const restoredChar = restoreAllSpellSlots(char);
+        if (spellConfig.pactMagic) {
+          spellSlotsRestored = {
+            type: "pactMagic",
+            slotsRestored: restoredChar.pactMagicSlots?.max || 0,
+            slotLevel: restoredChar.pactMagicSlots?.slotLevel || 0
+          };
+          updatedChar.pactMagicSlots = restoredChar.pactMagicSlots;
+        } else if (restoredChar.spellSlots) {
+          spellSlotsRestored = {
+            type: "standard",
+            restored: true
+          };
+          updatedChar.spellSlots = restoredChar.spellSlots;
+        }
+        updatedChar.concentratingOn = null;
+        updatedChar.activeSpells = [];
+      }
+      charRepo.update(member.characterId, updatedChar);
+      results.push({
+        characterId: member.characterId,
+        name: char.name,
+        previousHp,
+        newHp: char.maxHp,
+        maxHp: char.maxHp,
+        hpRestored,
+        spellSlotsRestored
+      });
+    }
+  } else {
+    for (const member of party.members) {
+      const char = charRepo.findById(member.characterId);
+      if (!char)
+        continue;
+      const hitDiceToSpend = parsed.hitDiceAllocation?.[member.characterId] ?? parsed.hitDicePerMember ?? 1;
+      const hitDieSize = getHitDieSize2(char.characterClass || "fighter");
+      const conMod = Math.floor((char.stats.con - 10) / 2);
+      let totalHealing = 0;
+      const rolls = [];
+      for (let i = 0; i < hitDiceToSpend; i++) {
+        const roll = rollDie2(hitDieSize);
+        rolls.push(roll);
+        totalHealing += Math.max(1, roll + conMod);
+      }
+      const actualHealing = Math.min(totalHealing, char.maxHp - char.hp);
+      const newHp = char.hp + actualHealing;
+      const charClass = char.characterClass || "fighter";
+      const spellConfig = getSpellcastingConfig(charClass);
+      let pactSlotsRestored = void 0;
+      let updatedChar = { hp: newHp };
+      if (spellConfig.pactMagic && spellConfig.canCast && char.level >= spellConfig.startLevel) {
+        const restoredChar = restorePactSlots(char);
+        pactSlotsRestored = {
+          type: "pactMagic",
+          slotsRestored: restoredChar.pactMagicSlots?.max || 0,
+          slotLevel: restoredChar.pactMagicSlots?.slotLevel || 0
+        };
+        updatedChar.pactMagicSlots = restoredChar.pactMagicSlots;
+      }
+      charRepo.update(member.characterId, updatedChar);
+      results.push({
+        characterId: member.characterId,
+        name: char.name,
+        previousHp: char.hp,
+        newHp,
+        maxHp: char.maxHp,
+        hpRestored: actualHealing,
+        hitDiceSpent: hitDiceToSpend,
+        rolls: rolls.length > 0 ? rolls : void 0,
+        spellSlotsRestored: pactSlotsRestored
+      });
+    }
+  }
+  const totalHpRestored = results.reduce((sum, r) => sum + r.hpRestored, 0);
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        partyId: parsed.partyId,
+        partyName: party.name,
+        restType: parsed.restType,
+        memberCount: results.length,
+        totalHpRestored,
+        members: results,
+        message: `${party.name} completed a ${parsed.restType} rest. ${totalHpRestored} total HP restored across ${results.length} members.`
+      }, null, 2)
+    }]
+  };
+}
+async function handleLootEncounter(args, _ctx) {
+  const parsed = CompositeTools.LOOT_ENCOUNTER.inputSchema.parse(args);
+  const { partyRepo, inventoryRepo } = ensureDb13();
+  if (!parsed.looterId && !parsed.partyId) {
+    throw new Error("Must provide either looterId or partyId");
+  }
+  let looterIds = [];
+  if (parsed.looterId) {
+    looterIds = [parsed.looterId];
+  } else if (parsed.partyId) {
+    const party = partyRepo.getPartyWithMembers(parsed.partyId);
+    if (!party || !party.members || party.members.length === 0) {
+      throw new Error(`Party not found or has no members: ${parsed.partyId}`);
+    }
+    looterIds = party.members.map((m) => m.characterId);
+  }
+  const dbPath = process.env.NODE_ENV === "test" ? ":memory:" : "rpg.db";
+  const db = getDb(dbPath);
+  const corpseRepo = new CorpseRepository(db);
+  const corpses = corpseRepo.findByEncounterId(parsed.encounterId);
+  if (corpses.length === 0) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          encounterId: parsed.encounterId,
+          corpseCount: 0,
+          message: "No corpses found for this encounter"
+        }, null, 2)
+      }]
+    };
+  }
+  const lootedItems = [];
+  const currencyCollected = {
+    gold: 0,
+    silver: 0,
+    copper: 0
+  };
+  const harvestedResources = [];
+  let looterIndex = 0;
+  for (const corpse of corpses) {
+    if (corpse.looted && !parsed.includeHarvestable)
+      continue;
+    const availableLoot = corpseRepo.getAvailableLoot(corpse.id);
+    const currentLooter = parsed.distributeEvenly ? looterIds[looterIndex % looterIds.length] : looterIds[0];
+    if (parsed.includeItems && availableLoot.length > 0) {
+      const looted = corpseRepo.lootAll(corpse.id, currentLooter);
+      for (const item of looted) {
+        lootedItems.push({
+          corpseId: corpse.id,
+          corpseName: corpse.characterName,
+          itemId: item.itemId,
+          quantity: item.quantity || 1,
+          receivedBy: currentLooter
+        });
+      }
+    }
+    if (parsed.includeCurrency && corpse.currency) {
+      const currency = corpse.currency;
+      currencyCollected.gold += currency.gold || 0;
+      currencyCollected.silver += currency.silver || 0;
+      currencyCollected.copper += currency.copper || 0;
+    }
+    if (parsed.includeHarvestable && corpse.harvestable && corpse.harvestableResources) {
+      const harvestables = corpse.harvestableResources;
+      for (const resource of harvestables) {
+        if (resource.harvested)
+          continue;
+        const result = corpseRepo.harvestResource(corpse.id, resource.resourceType, currentLooter);
+        harvestedResources.push({
+          corpseId: corpse.id,
+          resourceType: resource.resourceType,
+          quantity: result.quantity || 0,
+          success: result.success
+        });
+      }
+    }
+    if (parsed.distributeEvenly) {
+      looterIndex++;
+    }
+  }
+  if (parsed.includeCurrency && parsed.partyId && currencyCollected.gold + currencyCollected.silver + currencyCollected.copper > 0) {
+    const totalCopper = currencyCollected.gold * 100 + currencyCollected.silver * 10 + currencyCollected.copper;
+    const shareCopper = Math.floor(totalCopper / looterIds.length);
+    const shareGold = Math.floor(shareCopper / 100);
+    const shareSilver = Math.floor(shareCopper % 100 / 10);
+    const sharecopperRemainder = shareCopper % 10;
+    for (const looterId of looterIds) {
+      if (shareGold > 0 || shareSilver > 0 || sharecopperRemainder > 0) {
+        inventoryRepo.addCurrency(looterId, {
+          gold: shareGold,
+          silver: shareSilver,
+          copper: sharecopperRemainder
+        });
+      }
+    }
+  } else if (parsed.includeCurrency && parsed.looterId && currencyCollected.gold + currencyCollected.silver + currencyCollected.copper > 0) {
+    inventoryRepo.addCurrency(parsed.looterId, currencyCollected);
+  }
+  const totalItems = lootedItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCurrency = currencyCollected.gold * 100 + currencyCollected.silver * 10 + currencyCollected.copper;
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        encounterId: parsed.encounterId,
+        corpseCount: corpses.length,
+        lootedBy: parsed.partyId ? `party:${parsed.partyId}` : parsed.looterId,
+        distributeEvenly: parsed.distributeEvenly,
+        items: {
+          count: totalItems,
+          details: lootedItems
+        },
+        currency: parsed.includeCurrency ? {
+          gold: currencyCollected.gold,
+          silver: currencyCollected.silver,
+          copper: currencyCollected.copper,
+          totalCopperValue: totalCurrency,
+          distributedTo: parsed.partyId ? looterIds : [parsed.looterId]
+        } : void 0,
+        harvestedResources: parsed.includeHarvestable ? harvestedResources : void 0,
+        message: `Looted ${corpses.length} corpses: ${totalItems} items, ${currencyCollected.gold}gp ${currencyCollected.silver}sp ${currencyCollected.copper}cp`
+      }, null, 2)
+    }]
+  };
+}
+async function handleTravelToLocation(args, _ctx) {
+  const parsed = CompositeTools.TRAVEL_TO_LOCATION.inputSchema.parse(args);
+  const db = getDb();
+  const partyRepo = new PartyRepository(db);
+  const poiRepo = new POIRepository(db);
+  const charRepo = new CharacterRepository(db);
+  const spatialRepo = new SpatialRepository(db);
+  const party = partyRepo.findById(parsed.partyId);
+  if (!party) {
+    throw new Error(`Party not found: ${parsed.partyId}`);
+  }
+  const partyWithMembers = partyRepo.getPartyWithMembers(parsed.partyId);
+  if (!partyWithMembers || partyWithMembers.members.length === 0) {
+    throw new Error("Party has no members");
+  }
+  const poi = poiRepo.findById(parsed.poiId);
+  if (!poi) {
+    throw new Error(`POI not found: ${parsed.poiId}`);
+  }
+  const leader = partyWithMembers.members.find((m) => m.role === "leader") || partyWithMembers.members[0];
+  const discovererId = parsed.discoveringCharacterId || leader.characterId;
+  const result = {
+    partyId: parsed.partyId,
+    poiId: parsed.poiId,
+    poiName: poi.name,
+    moved: false,
+    discovered: poi.discoveryState !== "unknown",
+    enteredRoom: false,
+    position: { x: poi.x, y: poi.y },
+    message: ""
+  };
+  if (poi.discoveryState === "unknown") {
+    const discoverer = charRepo.findById(discovererId);
+    if (!discoverer) {
+      throw new Error(`Discovering character not found: ${discovererId}`);
+    }
+    if (parsed.autoDiscover || !poi.discoveryDC) {
+      poiRepo.discoverPOI(parsed.poiId, discovererId);
+      result.discovered = true;
+    } else {
+      const perceptionBonus = discoverer.perceptionBonus || 0;
+      const roll = Math.floor(Math.random() * 20) + 1;
+      const total = roll + perceptionBonus;
+      const success = total >= poi.discoveryDC;
+      result.discoveryCheck = {
+        roll: total,
+        dc: poi.discoveryDC,
+        success
+      };
+      if (success) {
+        poiRepo.discoverPOI(parsed.poiId, discovererId);
+        result.discovered = true;
+      } else {
+        result.message = `${discoverer.name} rolled ${total} (DC ${poi.discoveryDC}) - failed to find the hidden location`;
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      }
+    }
+  }
+  partyRepo.updatePartyPosition(parsed.partyId, poi.x, poi.y, poi.name, poi.id);
+  result.moved = true;
+  if (parsed.enterLocation && poi.networkId) {
+    let entranceRoomId = poi.entranceRoomId;
+    if (!entranceRoomId) {
+      const allRooms = spatialRepo.findRoomsByNetwork(poi.networkId);
+      const entranceRoom = allRooms.find((room) => room.name.toLowerCase().includes("entrance") || room.name.toLowerCase().includes("entry") || room.name.toLowerCase().includes("door") || room.name.toLowerCase().includes("gate")) || allRooms[0];
+      if (entranceRoom) {
+        entranceRoomId = entranceRoom.id;
+      }
+    }
+    if (entranceRoomId) {
+      const leaderChar = charRepo.findById(leader.characterId);
+      if (leaderChar) {
+        charRepo.update(leader.characterId, {
+          ...leaderChar,
+          currentRoomId: entranceRoomId,
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+        });
+        spatialRepo.incrementVisitCount(entranceRoomId);
+        result.enteredRoom = true;
+        result.entranceRoomId = entranceRoomId;
+      }
+    }
+  }
+  const messages = [];
+  messages.push(`Party "${party.name}" traveled to ${poi.name}`);
+  if (result.discoveryCheck) {
+    messages.push(`Discovery check: ${result.discoveryCheck.roll} vs DC ${result.discoveryCheck.dc} - SUCCESS`);
+  }
+  if (result.enteredRoom) {
+    messages.push(`Entered location`);
+  }
+  result.message = messages.join(". ");
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify(result, null, 2)
+    }]
+  };
+}
+async function handleSpawnPresetLocation(args, _ctx) {
+  const parsed = CompositeTools.SPAWN_PRESET_LOCATION.inputSchema.parse(args);
+  const db = getDb();
+  const poiRepo = new POIRepository(db);
+  const spatialRepo = new SpatialRepository(db);
+  const charRepo = new CharacterRepository(db);
+  const preset = getLocationPreset(parsed.preset);
+  if (!preset) {
+    const available = listLocationPresets();
+    throw new Error(`Unknown location preset: ${parsed.preset}. Available: ${available.map((p) => p.id).join(", ")}`);
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const locationName = parsed.customName || preset.name;
+  const networkId = (0, import_crypto12.randomUUID)();
+  spatialRepo.createNetwork({
+    id: networkId,
+    name: locationName,
+    type: preset.networkType,
+    worldId: parsed.worldId,
+    centerX: parsed.x,
+    centerY: parsed.y,
+    createdAt: now,
+    updatedAt: now
+  });
+  const roomIdMap = {};
+  const createdRooms = [];
+  for (const presetRoom of preset.rooms) {
+    const roomId = (0, import_crypto12.randomUUID)();
+    roomIdMap[presetRoom.id] = roomId;
+    spatialRepo.create({
+      id: roomId,
+      networkId,
+      name: presetRoom.name,
+      baseDescription: presetRoom.description,
+      biomeContext: presetRoom.biome,
+      atmospherics: [],
+      localX: presetRoom.localX ?? 0,
+      localY: presetRoom.localY ?? 0,
+      exits: [],
+      // Will be connected after all rooms created
+      entityIds: [],
+      createdAt: now,
+      updatedAt: now,
+      visitedCount: 0
+    });
+    createdRooms.push({
+      id: roomId,
+      name: presetRoom.name,
+      presetId: presetRoom.id
+    });
+  }
+  for (const presetRoom of preset.rooms) {
+    const roomId = roomIdMap[presetRoom.id];
+    const exits = presetRoom.exits.map((exit) => ({
+      direction: exit.direction,
+      targetNodeId: roomIdMap[exit.targetRoomId],
+      type: exit.exitType || "OPEN",
+      dc: exit.lockDC
+    }));
+    spatialRepo.update(roomId, { exits });
+  }
+  const entrancePresetRoom = preset.rooms.find((r) => r.name.toLowerCase().includes("entrance") || r.name.toLowerCase().includes("entry") || r.id === "entrance") || preset.rooms[0];
+  const entranceRoomId = roomIdMap[entrancePresetRoom.id];
+  const poiId = (0, import_crypto12.randomUUID)();
+  poiRepo.create({
+    id: poiId,
+    worldId: parsed.worldId,
+    x: parsed.x,
+    y: parsed.y,
+    name: locationName,
+    description: preset.description,
+    category: preset.category,
+    icon: preset.icon,
+    discoveryState: parsed.discoveryState,
+    discoveredBy: [],
+    childPOIIds: [],
+    population: 0,
+    networkId,
+    entranceRoomId,
+    tags: preset.tags,
+    createdAt: now,
+    updatedAt: now
+  });
+  const createdNpcs = [];
+  if (parsed.spawnNpcs && preset.npcs) {
+    for (const presetNpc of preset.npcs) {
+      const npcTemplate = expandCreatureTemplate(presetNpc.template, presetNpc.name);
+      if (!npcTemplate) {
+        continue;
+      }
+      const npcId = (0, import_crypto12.randomUUID)();
+      const roomId = roomIdMap[presetNpc.roomId];
+      const npc = buildCharacter({
+        id: npcId,
+        name: presetNpc.name || npcTemplate.name,
+        stats: npcTemplate.stats,
+        hp: npcTemplate.hp,
+        maxHp: npcTemplate.maxHp,
+        ac: npcTemplate.ac,
+        level: npcTemplate.level,
+        characterType: "npc",
+        race: npcTemplate.race || "Human",
+        characterClass: npcTemplate.characterClass || "commoner",
+        currentRoomId: roomId,
+        createdAt: now,
+        updatedAt: now
+      });
+      charRepo.create(npc);
+      const room = spatialRepo.findById(roomId);
+      if (room) {
+        spatialRepo.update(roomId, {
+          entityIds: [...room.entityIds, npcId]
+        });
+      }
+      createdNpcs.push({
+        id: npcId,
+        name: npc.name,
+        room: presetNpc.roomId,
+        role: presetNpc.role
+      });
+    }
+  }
+  return {
+    content: [{
+      type: "text",
+      text: JSON.stringify({
+        preset: preset.id,
+        locationName,
+        poiId,
+        networkId,
+        entranceRoomId,
+        position: { x: parsed.x, y: parsed.y },
+        discoveryState: parsed.discoveryState,
+        rooms: {
+          count: createdRooms.length,
+          list: createdRooms
+        },
+        npcs: parsed.spawnNpcs ? {
+          count: createdNpcs.length,
+          list: createdNpcs
+        } : void 0,
+        narrativeHook: preset.narrativeHook,
+        message: `Spawned "${locationName}" at (${parsed.x}, ${parsed.y}) with ${createdRooms.length} rooms${parsed.spawnNpcs ? ` and ${createdNpcs.length} NPCs` : ""}`
+      }, null, 2)
     }]
   };
 }
@@ -76469,6 +84077,52 @@ function buildToolRegistry() {
       metadata: meta(SkillCheckTools.ROLL_SAVING_THROW.name, SkillCheckTools.ROLL_SAVING_THROW.description, "math", ["save", "saving", "throw", "roll", "d20", "reflex", "fortitude", "will"], ["Saving throws", "Save proficiency handling", "DC comparison"], false, "low", false),
       schema: SkillCheckTools.ROLL_SAVING_THROW.inputSchema,
       handler: handleRollSavingThrow
+    },
+    // === COMPOSITE TOOLS (TIER 1 - Token Efficiency Optimization) ===
+    [CompositeTools.SETUP_TACTICAL_ENCOUNTER.name]: {
+      metadata: meta(CompositeTools.SETUP_TACTICAL_ENCOUNTER.name, CompositeTools.SETUP_TACTICAL_ENCOUNTER.description, "composite", ["encounter", "combat", "spawn", "tactical", "creature", "preset", "terrain", "goblin", "skeleton", "wolf", "setup"], ["Multi-creature spawning from presets", "Terrain configuration", "Position shorthand", "Party positioning"], true, "medium", false),
+      schema: CompositeTools.SETUP_TACTICAL_ENCOUNTER.inputSchema,
+      handler: handleSetupTacticalEncounter
+    },
+    [CompositeTools.SPAWN_EQUIPPED_CHARACTER.name]: {
+      metadata: meta(CompositeTools.SPAWN_EQUIPPED_CHARACTER.name, CompositeTools.SPAWN_EQUIPPED_CHARACTER.description, "composite", ["character", "create", "spawn", "equipment", "preset", "weapon", "armor", "gear", "longsword", "chain_mail"], ["Character creation with equipment", "Item presets", "AC calculation", "Party assignment"], false, "medium", false),
+      schema: CompositeTools.SPAWN_EQUIPPED_CHARACTER.inputSchema,
+      handler: handleSpawnEquippedCharacter
+    },
+    [CompositeTools.INITIALIZE_SESSION.name]: {
+      metadata: meta(CompositeTools.INITIALIZE_SESSION.name, CompositeTools.INITIALIZE_SESSION.description, "composite", ["session", "initialize", "start", "party", "world", "setup", "campaign", "begin"], ["Session initialization", "Party creation", "Character batch creation", "Starting location"], true, "high", false),
+      schema: CompositeTools.INITIALIZE_SESSION.inputSchema,
+      handler: handleInitializeSession
+    },
+    [CompositeTools.SPAWN_POPULATED_LOCATION.name]: {
+      metadata: meta(CompositeTools.SPAWN_POPULATED_LOCATION.name, CompositeTools.SPAWN_POPULATED_LOCATION.description, "composite", ["location", "poi", "spawn", "populate", "dungeon", "cave", "inn", "tavern", "room", "network", "npc", "creature", "loot"], ["POI creation", "Room network generation", "NPC spawning", "Loot placement", "Location setup"], false, "medium", false),
+      schema: CompositeTools.SPAWN_POPULATED_LOCATION.inputSchema,
+      handler: handleSpawnPopulatedLocation
+    },
+    [CompositeTools.SPAWN_PRESET_ENCOUNTER.name]: {
+      metadata: meta(CompositeTools.SPAWN_PRESET_ENCOUNTER.name, CompositeTools.SPAWN_PRESET_ENCOUNTER.description, "composite", ["encounter", "preset", "combat", "goblin", "orc", "undead", "bandit", "ambush", "random", "scale", "difficulty"], ["Preset encounter spawning", "Combat setup", "Enemy scaling", "Random encounters"], false, "low", false),
+      schema: CompositeTools.SPAWN_PRESET_ENCOUNTER.inputSchema,
+      handler: handleSpawnPresetEncounter
+    },
+    [CompositeTools.REST_PARTY.name]: {
+      metadata: meta(CompositeTools.REST_PARTY.name, CompositeTools.REST_PARTY.description, "composite", ["rest", "party", "heal", "long", "short", "spell", "slots", "hit", "dice", "recovery"], ["Party rest", "HP restoration", "Spell slot recovery", "Hit dice healing"], false, "low", false),
+      schema: CompositeTools.REST_PARTY.inputSchema,
+      handler: handleRestParty
+    },
+    [CompositeTools.LOOT_ENCOUNTER.name]: {
+      metadata: meta(CompositeTools.LOOT_ENCOUNTER.name, CompositeTools.LOOT_ENCOUNTER.description, "composite", ["loot", "encounter", "corpse", "gold", "items", "currency", "harvest", "distribute", "party"], ["Encounter looting", "Corpse management", "Loot distribution", "Currency collection"], false, "low", false),
+      schema: CompositeTools.LOOT_ENCOUNTER.inputSchema,
+      handler: handleLootEncounter
+    },
+    [CompositeTools.TRAVEL_TO_LOCATION.name]: {
+      metadata: meta(CompositeTools.TRAVEL_TO_LOCATION.name, CompositeTools.TRAVEL_TO_LOCATION.description, "composite", ["travel", "move", "party", "poi", "location", "discover", "enter", "room", "world", "map"], ["Party travel", "POI discovery", "Location entry", "World map navigation"], false, "low", false),
+      schema: CompositeTools.TRAVEL_TO_LOCATION.inputSchema,
+      handler: handleTravelToLocation
+    },
+    [CompositeTools.SPAWN_PRESET_LOCATION.name]: {
+      metadata: meta(CompositeTools.SPAWN_PRESET_LOCATION.name, CompositeTools.SPAWN_PRESET_LOCATION.description, "composite", ["spawn", "location", "preset", "tavern", "dungeon", "cave", "town", "forest", "poi", "rooms", "network", "npc"], ["Location generation", "Preset spawning", "Room networks", "POI creation"], false, "medium", false),
+      schema: CompositeTools.SPAWN_PRESET_LOCATION.inputSchema,
+      handler: handleSpawnPresetLocation
     }
     // Note: search_tools and load_tool_schema are registered separately in index.ts with full handlers
   };
