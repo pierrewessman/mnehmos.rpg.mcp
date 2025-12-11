@@ -3,8 +3,8 @@
 [![License: ISC](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)]()
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)]()
-[![Tests](https://img.shields.io/badge/tests-746%20passing-brightgreen.svg)]()
-[![Tools](https://img.shields.io/badge/MCP%20tools-135-blue.svg)]()
+[![Tests](https://img.shields.io/badge/tests-800%2B%20passing-brightgreen.svg)]()
+[![Tools](https://img.shields.io/badge/MCP%20tools-145+-blue.svg)]()
 
 **A deterministic, schema-driven, multi-world simulation engine for embodied AI agents.**
 
@@ -12,10 +12,19 @@ RPG-MCP is not a game—it's a **world kernel**. It provides the physics, constr
 
 ---
 
-## What's New (December 6, 2025)
+## What's New (December 2025)
 
-- **135 MCP Tools** - Complete RPG mechanics coverage (up from 122)
-- **746 Passing Tests** - Comprehensive test coverage (up from 659)
+### Latest Release
+- **145+ MCP Tools** - Complete RPG mechanics coverage with new composite tools
+- **800+ Passing Tests** - Comprehensive test coverage across all systems
+- **Composite Tools (TIER 1)** - Reduce token overhead by 80-95% for common workflows
+- **Preset Systems** - 1100+ creature presets, 50+ encounter presets, 30+ location presets
+- **Schema Shorthand (TIER 2)** - Token-efficient position/stats parsing
+- **Batch Repository Methods** - Optimized for world generation workflows
+- **Location Presets** - Tavern, dungeon, temple, market presets with full population
+- **Encounter Presets** - Level-scaled encounters (goblin ambush, undead crypt, dragon's lair)
+
+### Core Systems
 - **Full Spellcasting System** - 15+ SRD spells, class progression, slot tracking
 - **Theft & Fence System** - Heat decay, witness tracking, black market economy
 - **Corpse & Loot System** - Decay states, harvestable resources, loot tables
@@ -24,7 +33,7 @@ RPG-MCP is not a game—it's a **world kernel**. It provides the physics, constr
 - **Legendary Creatures** - Lair actions, legendary resistances, boss mechanics
 - **Death Saving Throws** - Full D&D 5e rules with stabilization
 - **Spatial Navigation** - Room networks, terrain-aware POI placement
-- **Expanded Party System** - World positioning, region queries
+- **Narrative Memory Layer** - Session notes, plot threads, NPC voices, foreshadowing
 - **Currency System** - Gold/silver/copper with auto-conversion
 
 ---
@@ -100,6 +109,7 @@ This engine implements the **Event-Driven Agentic AI Architecture**:
 - **Death saving throws** (D&D 5e rules)
 - **Damage resistance/vulnerability/immunity**
 - **Legendary creatures** with lair actions and legendary resistances
+- **Encounter presets** - Pre-balanced encounters by party level
 
 ### Magic System
 
@@ -145,26 +155,36 @@ This engine implements the **Event-Driven Agentic AI Architecture**:
 ```
 src/
 ├── schema/           # Zod schemas: entities, actions, world state, constraints
+│   └── base-schemas.ts  # Reusable field definitions for token efficiency
 ├── engine/
 │   ├── combat/       # Encounters, initiative, damage, death saves
 │   ├── spatial/      # Grid, collision, movement, opportunity attacks
 │   ├── worldgen/     # Procedural generation (28+ biomes)
 │   ├── magic/        # Spell database, validation, resolution
 │   └── strategy/     # Nation simulation (grand strategy mode)
+├── data/
+│   ├── creature-presets.ts   # 1100+ creature templates
+│   ├── encounter-presets.ts  # 50+ balanced encounters
+│   ├── location-presets.ts   # 30+ location templates
+│   └── items/               # PHB weapons, armor, magic items
 ├── storage/
 │   ├── migrations.ts # SQLite schema definitions
 │   └── repos/        # Repository pattern for persistence
 ├── server/           # MCP tool handlers
+│   ├── composite-tools.ts    # TIER 1: High-level workflow tools
 │   ├── combat-tools.ts
 │   ├── corpse-tools.ts
 │   ├── improvisation-tools.ts
 │   ├── inventory-tools.ts
 │   ├── npc-memory-tools.ts
+│   ├── narrative-tools.ts
 │   ├── theft-tools.ts
-│   └── ... (14 tool modules)
+│   └── ... (20+ tool modules)
+├── utils/
+│   └── schema-shorthand.ts   # TIER 2: Token-efficient parsing
 └── api/              # MCP server entry point
 
-tests/                # 659 tests mirroring src/ structure
+tests/                # 800+ tests mirroring src/ structure
 Agents/               # Development docs, playtest logs, discovery log
 ```
 
@@ -206,7 +226,7 @@ git clone https://github.com/Mnehmos/rpg-mcp.git
 cd rpg-mcp
 npm install
 npm run build
-npm test  # 746 tests should pass
+npm test  # 800+ tests should pass
 ```
 
 To build binaries yourself:
@@ -244,7 +264,19 @@ To use with an MCP-compatible client (Claude Desktop, etc.), add to your client'
 
 ---
 
-## MCP Tools Reference (135 Tools)
+## MCP Tools Reference (145+ Tools)
+
+### 🚀 Composite Tools - TIER 1 (NEW)
+*Reduce token overhead by 80-95% for common workflows*
+
+| Tool | Description |
+|------|-------------|
+| `spawn_preset_encounter` | Spawn balanced combat with enemies, terrain, initiative |
+| `spawn_populated_location` | Create location with NPCs, items, terrain in one call |
+| `spawn_preset_location` | Create from preset (tavern, dungeon, temple, etc.) |
+| `loot_encounter` | Handle all encounter loot distribution |
+| `rest_party` | Party-wide short/long rest with HP/slot recovery |
+| `travel_to_location` | Move party to location with travel events |
 
 ### World Management (12 tools)
 | Tool | Description |
@@ -296,7 +328,7 @@ To use with an MCP-compatible client (Claude Desktop, etc.), add to your client'
 | `get_inventory_detailed` | Full item info, sorted |
 | `transfer_currency` | Transfer gold/silver/copper with auto-conversion |
 
-### Combat & Encounters (7 tools)
+### Combat & Encounters (8 tools)
 | Tool | Description |
 |------|-------------|
 | `create_encounter` | Initialize combat with participants |
@@ -360,7 +392,19 @@ To use with an MCP-compatible client (Claude Desktop, etc.), add to your client'
 | `get_conversation_history` | Get memories with NPC |
 | `get_recent_interactions` | Recent memories across NPCs |
 | `get_npc_context` | Full context for LLM injection |
-| `interact_socially` | PHASE-2: Spatial-aware conversations |
+| `interact_socially` | Spatial-aware conversations |
+
+### Narrative Memory System (8 tools)
+| Tool | Description |
+|------|-------------|
+| `create_narrative_note` | Create plot threads, NPC voices, canonical moments |
+| `get_narrative_note` | Get single note |
+| `update_narrative_note` | Update note content/status |
+| `delete_narrative_note` | Remove note |
+| `search_narrative_notes` | Query by type/tags/status |
+| `get_narrative_context_notes` | Get notes for LLM context |
+| `archive_narrative_note` | Archive completed threads |
+| `get_narrative_context` | Full narrative context bundle |
 
 ### Improvisation System (8 tools)
 | Tool | Description |
@@ -453,6 +497,38 @@ To use with an MCP-compatible client (Claude Desktop, etc.), add to your client'
 
 ---
 
+## Preset Systems
+
+### Creature Presets (1100+ templates)
+```typescript
+// Quick spawn with preset
+const goblin = expandCreatureTemplate('goblin');
+const dragon = expandCreatureTemplate('adult_red_dragon');
+```
+
+Categories: Humanoids, Undead, Beasts, Dragons, Demons, Elementals, and more.
+
+### Encounter Presets (50+ balanced encounters)
+```typescript
+// Get encounters for party level
+const encounters = getEncountersForLevel(3); // Level 3 party
+// Returns: goblin_ambush, kobold_den, bandit_highway, etc.
+
+// Scale encounter to party size
+const scaled = scaleEncounter('goblin_ambush', 5); // 5 players
+```
+
+### Location Presets (30+ templates)
+```typescript
+// Create populated tavern
+const result = await spawnPresetLocation('rustic_tavern', worldId, x, y);
+// Returns: NPCs, items, terrain, description
+```
+
+Types: Taverns, Temples, Dungeons, Markets, Camps, Ruins, Lairs.
+
+---
+
 ## Use Cases
 
 **Tabletop RPG Backend**
@@ -495,14 +571,17 @@ Fork worlds, run thousands of parallel scenarios, collect structured action/outc
 7. **Anti-hallucination by design**
    LLMs cannot cast spells they don't know or claim damage they didn't roll.
 
+8. **Token efficiency**
+   Composite tools and schema shorthand reduce LLM context overhead.
+
 ---
 
 ## Test Coverage
 
 ```bash
 npm test
-# 746 tests passing
-# 85 test files
+# 800+ tests passing
+# 90+ test files
 # Coverage across all major systems
 ```
 
@@ -514,6 +593,8 @@ Key test areas:
 - Corpse/loot system with decay states
 - NPC memory and relationship tracking
 - Improvisation system (stunts, effects, synthesis)
+- Composite tool workflows
+- Preset system expansion and validation
 
 ---
 
@@ -538,6 +619,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 - [x] Corpse and loot mechanics
 - [x] NPC memory and relationships
 - [x] Improvisation engine
+- [x] Composite tools (TIER 1)
+- [x] Preset systems (creatures, encounters, locations)
+- [x] Narrative memory layer
 - [ ] WebSocket real-time subscriptions
 - [ ] Dialogue tree system
 - [ ] Cover mechanics in combat
@@ -555,7 +639,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 ## Related
 
 - [Model Context Protocol Specification](https://modelcontextprotocol.io)
-- [Quest Keeper](https://github.com/Mnehmos/quest-keeper) — Browser-based AI dungeon master using this engine
+- [Quest Keeper AI](https://github.com/Mnehmos/QuestKeeperAI-v2) — Desktop AI dungeon master using this engine
 
 ---
 
