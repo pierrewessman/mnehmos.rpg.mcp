@@ -17,6 +17,7 @@ import { InventoryRepository } from '../storage/repos/inventory.repo.js';
 import { PartyRepository } from '../storage/repos/party.repo.js';
 import { POIRepository } from '../storage/repos/poi.repo.js';
 import { SpatialRepository } from '../storage/repos/spatial.repo.js';
+import { EncounterRepository } from '../storage/repos/encounter.repo.js';
 import { POICategory, POIIcon } from '../schema/poi.js';
 import { BiomeType } from '../schema/spatial.js';
 import { expandCreatureTemplate } from '../data/creature-presets.js';
@@ -171,7 +172,8 @@ function ensureDb() {
         inventoryRepo: new InventoryRepository(db),
         partyRepo: new PartyRepository(db),
         poiRepo: new POIRepository(db),
-        spatialRepo: new SpatialRepository(db)
+        spatialRepo: new SpatialRepository(db),
+        encounterRepo: new EncounterRepository(db)
     };
 }
 
@@ -716,7 +718,7 @@ Available presets:
 /**
  * Handle setup_tactical_encounter
  */
-export async function handleSetupTacticalEncounter(args: unknown, _ctx: SessionContext) {
+export async function handleSetupTacticalEncounter(args: unknown, ctx: SessionContext) {
     const parsed = CompositeTools.SETUP_TACTICAL_ENCOUNTER.inputSchema.parse(args);
     const { charRepo } = ensureDb();
 
@@ -768,6 +770,9 @@ export async function handleSetupTacticalEncounter(args: unknown, _ctx: SessionC
             name: preset.name,
             hp: preset.hp,
             maxHp: preset.maxHp,
+            ac: preset.ac,
+            attackDamage: preset.defaultAttack?.damage,
+            attackBonus: preset.defaultAttack?.toHit,
             initiative: 0, // Will be rolled
             initiativeBonus: dexMod,
             isEnemy: p.isEnemy ?? true,
@@ -840,39 +845,93 @@ export async function handleSetupTacticalEncounter(args: unknown, _ctx: SessionC
 
     // Create encounter using CombatEngine and CombatManager
     const encounterId = `encounter-${parsed.seed}-${Date.now()}`;
+    // CRITICAL FIX: Use session-namespaced ID so other combat tools can find it
+    const namespacedId = `${ctx.sessionId}:${encounterId}`;
     const engine = new CombatEngine(parsed.seed);
     const encounterState = engine.startEncounter(participants);
     // Add terrain to the state (CRIT-003 pattern from combat-tools.ts)
     (encounterState as any).terrain = terrain;
-    combatManager.create(encounterId, engine);
+    combatManager.create(namespacedId, engine);
 
-    // Generate ASCII map
+    // Get grid dimensions for database and ASCII map
     const width = parsed.gridSize?.width || 20;
     const height = parsed.gridSize?.height || 20;
+
+    // CRIT-005: Save encounter to database for persistence
+    const { encounterRepo } = ensureDb();
+    encounterRepo.create({
+        id: encounterId,
+        tokens: encounterState.participants.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            initiativeBonus: p.initiativeBonus,
+            initiative: p.initiative,
+            isEnemy: p.isEnemy,
+            hp: p.hp,
+            maxHp: p.maxHp,
+            conditions: p.conditions,
+            abilityScores: p.abilityScores,
+            position: p.position,
+            movementSpeed: p.movementSpeed ?? 30,
+            size: p.size ?? 'medium'
+        })),
+        round: encounterState.round,
+        activeTokenId: encounterState.turnOrder[encounterState.currentTurnIndex],
+        status: 'active',
+        terrain: terrain,
+        props: [],
+        gridBounds: { minX: 0, maxX: width, minY: 0, maxY: height },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
+
+    // Generate ASCII map
     const asciiMap = generateEncounterMap({ state: encounterState }, width, height);
+
+    // Build state JSON for frontend parsing (same structure as create_encounter)
+    const stateJson = {
+        encounterId,
+        sessionId: ctx.sessionId, // Include sessionId for frontend sync match
+        round: encounterState.round,
+        currentTurnIndex: encounterState.currentTurnIndex || 0,
+        turnOrder: encounterState.turnOrder,
+        participants: encounterState.participants.map((p: CombatParticipant) => ({
+            id: p.id,
+            name: p.name,
+            hp: p.hp,
+            maxHp: p.maxHp,
+            ac: p.ac || 10,
+            initiative: p.initiative,
+            isEnemy: p.isEnemy,
+            conditions: p.conditions || [],
+            position: p.position
+        })),
+        participantCount: participants.length,
+        enemyCount: participants.filter(p => p.isEnemy).length,
+        friendlyCount: participants.filter(p => !p.isEnemy).length,
+        createdCharacterIds,
+        terrain: {
+            obstacleCount: terrain.obstacles.length,
+            difficultTerrainCount: terrain.difficultTerrain?.length || 0,
+            waterCount: terrain.water?.length || 0
+        },
+        asciiMap
+    };
+
+    // CRITICAL: Use STATE_JSON markers for frontend parsing (same as create_encounter)
+    let output = `⚔️ TACTICAL ENCOUNTER STARTED\n`;
+    output += `Encounter ID: ${encounterId}\n`;
+    output += `Round: ${encounterState.round}\n`;
+    output += `Participants: ${participants.length} (${stateJson.friendlyCount} allies, ${stateJson.enemyCount} enemies)\n`;
+    output += `\n${asciiMap}\n`;
+    
+    // Append JSON for frontend parsing
+    output += `\n<!-- STATE_JSON\n${JSON.stringify(stateJson)}\nSTATE_JSON -->`;
 
     return {
         content: [{
             type: 'text' as const,
-            text: JSON.stringify({
-                encounterId,
-                round: encounterState.round,
-                participantCount: participants.length,
-                enemyCount: participants.filter(p => p.isEnemy).length,
-                friendlyCount: participants.filter(p => !p.isEnemy).length,
-                createdCharacterIds,
-                turnOrder: encounterState.turnOrder.map((id: string) => {
-                    const p = encounterState.participants.find((pp: CombatParticipant) => pp.id === id);
-                    return { id, name: p?.name, initiative: p?.initiative };
-                }),
-                currentTurn: encounterState.turnOrder[0],
-                terrain: {
-                    obstacleCount: terrain.obstacles.length,
-                    difficultTerrainCount: terrain.difficultTerrain?.length || 0,
-                    waterCount: terrain.water?.length || 0
-                },
-                asciiMap
-            }, null, 2)
+            text: output
         }]
     };
 }

@@ -1,8 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
 import { handleCreateCharacter, handleGetCharacter } from '../../src/server/crud-tools.js';
 import { handleTakeLongRest, handleTakeShortRest } from '../../src/server/rest-tools.js';
 import { closeDb, getDb } from '../../src/storage/index.js';
 
+
+// Helper to extract embedded JSON from formatted responses
+function extractEmbeddedJson(responseText: string, tag: string = "DATA"): any {
+    const regex = new RegExp(`<!--\\s*${tag}_JSON\\s*\n([\\s\\S]*?)\n${tag}_JSON\\s*-->`);
+    const match = responseText.match(regex);
+    if (match) {
+        return JSON.parse(match[1]);
+    }
+    throw new Error(`Could not extract ${tag}_JSON from response`);
+}
 const mockCtx = { sessionId: 'test-session' };
 
 /**
@@ -31,7 +40,7 @@ describe('CRIT-002: Rest Mechanics', () => {
                 ac: 15,
                 level: 5
             }, mockCtx);
-            const character = JSON.parse(createResult.content[0].text);
+            const character = extractEmbeddedJson(createResult.content[0].text, "CHARACTER");
             expect(character.hp).toBe(20);
             expect(character.maxHp).toBe(50);
 
@@ -47,7 +56,7 @@ describe('CRIT-002: Rest Mechanics', () => {
 
             // Verify character record updated
             const reloadedResult = await handleGetCharacter({ id: character.id }, mockCtx);
-            const reloaded = JSON.parse(reloadedResult.content[0].text);
+            const reloaded = extractEmbeddedJson(reloadedResult.content[0].text, "CHARACTER");
             expect(reloaded.hp).toBe(50);
         });
 
@@ -61,7 +70,7 @@ describe('CRIT-002: Rest Mechanics', () => {
                 ac: 15,
                 level: 5
             }, mockCtx);
-            const character = JSON.parse(createResult.content[0].text);
+            const character = extractEmbeddedJson(createResult.content[0].text, "CHARACTER");
 
             // Take long rest
             const restResult = await handleTakeLongRest({
@@ -91,7 +100,7 @@ describe('CRIT-002: Rest Mechanics', () => {
                 ac: 15,
                 level: 5
             }, mockCtx);
-            const character = JSON.parse(createResult.content[0].text);
+            const character = extractEmbeddedJson(createResult.content[0].text, "CHARACTER");
 
             // Take short rest spending 2 hit dice
             const restResult = await handleTakeShortRest({
@@ -116,7 +125,7 @@ describe('CRIT-002: Rest Mechanics', () => {
                 ac: 15,
                 level: 5
             }, mockCtx);
-            const character = JSON.parse(createResult.content[0].text);
+            const character = extractEmbeddedJson(createResult.content[0].text, "CHARACTER");
 
             // Take short rest
             const restResult = await handleTakeShortRest({
@@ -138,7 +147,7 @@ describe('CRIT-002: Rest Mechanics', () => {
                 ac: 15,
                 level: 5
             }, mockCtx);
-            const character = JSON.parse(createResult.content[0].text);
+            const character = extractEmbeddedJson(createResult.content[0].text, "CHARACTER");
 
             // Take short rest without specifying dice
             const restResult = await handleTakeShortRest({

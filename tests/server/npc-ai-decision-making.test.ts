@@ -16,7 +16,6 @@
  * Run: npm test -- tests/server/npc-ai-decision-making.test.ts
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { v4 as uuid } from 'uuid';
 import { migrate } from '../../src/storage/migrations.js';
@@ -59,6 +58,14 @@ let spatialRepo: SpatialRepository;
 let worldRepo: WorldRepository;
 
 const mockCtx = { sessionId: 'test-session' };
+
+function extractStateJson(responseText: string): any {
+    const match = responseText.match(/<!-- STATE_JSON\n([\s\S]*?)\nSTATE_JSON -->/);
+    if (match) {
+        return JSON.parse(match[1]);
+    }
+    throw new Error('Could not extract state JSON from response');
+}
 
 beforeEach(() => {
     db = new Database(':memory:');
@@ -232,7 +239,8 @@ describe('Category 1: Combat AI Decision-Making', () => {
             const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Get encounter state to analyze AI decisions
-            const state = await handleGetEncounterState({ encounterId }, mockCtx);
+            const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
+        const state = extractStateJson(stateResult.content[0].text);
 
             // Test: Aggressive AI should analyze threat levels
             expect(state.participants).toBeDefined();
@@ -304,7 +312,8 @@ describe('Category 1: Combat AI Decision-Making', () => {
             const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test defensive AI decision-making
-            const state = await handleGetEncounterState({ encounterId }, mockCtx);
+            const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
+        const state = extractStateJson(stateResult.content[0].text);
             
             // Defensive AI should prioritize ally protection over personal glory
             const defenderParticipant = state.participants.find((p: any) => p.id === defender.id);
@@ -356,7 +365,8 @@ describe('Category 1: Combat AI Decision-Making', () => {
             const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test tactical AI considers positioning, flanking, environmental factors
-            const state = await handleGetEncounterState({ encounterId }, mockCtx);
+            const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
+        const state = extractStateJson(stateResult.content[0].text);
             
             const tacticianParticipant = state.participants.find((p: any) => p.id === tactician.id);
             expect(tacticianParticipant).toBeDefined();
@@ -424,7 +434,8 @@ describe('Category 1: Combat AI Decision-Making', () => {
             const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test: AI should analyze spell effectiveness vs targets
-            const state = await handleGetEncounterState({ encounterId }, mockCtx);
+            const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
+        const state = extractStateJson(stateResult.content[0].text);
             
             // Intelligent AI would choose between AoE (fireball) vs single target (lightning bolt)
             // vs defensive spells (shield) based on situation
@@ -475,7 +486,8 @@ describe('Category 1: Combat AI Decision-Making', () => {
 
             // Test: AI should prefer low-level spells when appropriate
             // vs saving high-level spells for tougher opponents
-            const state = await handleGetEncounterState({ encounterId }, mockCtx);
+            const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
+        const state = extractStateJson(stateResult.content[0].text);
             
             const mageParticipant = state.participants.find((p: any) => p.id === frugalMage.id);
             expect(mageParticipant).toBeDefined();
@@ -541,7 +553,8 @@ describe('Category 1: Combat AI Decision-Making', () => {
             const encounterId = extractJsonFromResponse(encounterResult.content[0].text).encounterId;
 
             // Test: Ranged AI should maintain distance, use kiting tactics
-            const state = await handleGetEncounterState({ encounterId }, mockCtx);
+            const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
+        const state = extractStateJson(stateResult.content[0].text);
             
             // Strategic AI should consider flanking, cover, positioning advantages
             expect(state.participants).toBeDefined();
@@ -1111,9 +1124,10 @@ describe('Category 4: Adaptive AI Behavior', () => {
                 ]
             }, mockCtx);
 
-            const state2 = await handleGetEncounterState({
+            const stateResult2 = await handleGetEncounterState({
                 encounterId: extractJsonFromResponse(encounter2.content[0].text).encounterId
             }, mockCtx);
+            const state2 = extractStateJson(stateResult2.content[0].text);
 
             expect(state2.participants).toBeDefined();
         });
