@@ -5,6 +5,16 @@ import { handleCreateItemTemplate, handleGetInventory } from '../../src/server/i
 import { closeDb, getDb } from '../../src/storage';
 import { Quest } from '../../src/schema/quest';
 
+
+// Helper to extract embedded JSON from formatted responses
+function extractEmbeddedJson(responseText: string, tag: string = "DATA"): any {
+    const regex = new RegExp(`<!-- ${tag}_JSON\n([\s\S]*?)\n${tag}_JSON -->`);
+    const match = responseText.match(regex);
+    if (match) {
+        return JSON.parse(match[1]);
+    }
+    throw new Error(`Could not extract ${tag}_JSON from response`);
+}
 describe('Quest System', () => {
     let worldId: string;
     let characterId: string;

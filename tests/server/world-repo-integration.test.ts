@@ -1,6 +1,16 @@
 import { handleGenerateWorld, clearWorld } from '../../src/server/tools';
 import { handleListWorlds, handleDeleteWorld, closeTestDb } from '../../src/server/crud-tools';
 
+
+// Helper to extract embedded JSON from formatted responses
+function extractEmbeddedJson(responseText: string, tag: string = "DATA"): any {
+    const regex = new RegExp(`<!-- ${tag}_JSON\n([\s\S]*?)\n${tag}_JSON -->`);
+    const match = responseText.match(regex);
+    if (match) {
+        return JSON.parse(match[1]);
+    }
+    throw new Error(`Could not extract ${tag}_JSON from response`);
+}
 describe('World Repository Integration', () => {
     afterEach(() => {
         closeTestDb();

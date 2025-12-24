@@ -1,6 +1,16 @@
 import { handleCreateEncounter, clearCombatState } from '../../src/server/combat-tools';
 import { handleCreateWorld, handleDeleteWorld, getTestDb, closeTestDb } from '../../src/server/crud-tools';
 
+
+// Helper to extract embedded JSON from formatted responses
+function extractEmbeddedJson(responseText: string, tag: string = "DATA"): any {
+    const regex = new RegExp(`<!-- ${tag}_JSON\n([\s\S]*?)\n${tag}_JSON -->`);
+    const match = responseText.match(regex);
+    if (match) {
+        return JSON.parse(match[1]);
+    }
+    throw new Error(`Could not extract ${tag}_JSON from response`);
+}
 // Helper to extract embedded JSON from human-readable output
 function extractStateJson(text: string): Record<string, any> {
     const match = text.match(/<!-- STATE_JSON\n([\s\S]*?)\nSTATE_JSON -->/);
