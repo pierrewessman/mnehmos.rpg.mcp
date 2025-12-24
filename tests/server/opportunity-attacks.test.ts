@@ -3,6 +3,14 @@ import { closeDb, getDb } from '../../src/storage/index.js';
 
 const mockCtx = { sessionId: 'test-session' };
 
+function extractStateJson(responseText: string): any {
+    const match = responseText.match(/<!-- STATE_JSON\n([\s\S]*?)\nSTATE_JSON -->/);
+    if (match) {
+        return JSON.parse(match[1]);
+    }
+    throw new Error('Could not extract state JSON from response');
+}
+
 /**
  * HIGH-003: No Opportunity Attacks
  *

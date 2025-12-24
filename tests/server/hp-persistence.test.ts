@@ -15,6 +15,14 @@ import { closeDb, getDb } from '../../src/storage';
 
 const mockCtx = { sessionId: 'test-session' };
 
+function extractStateJson(responseText: string): any {
+    const match = responseText.match(/<!-- STATE_JSON\n([\s\S]*?)\nSTATE_JSON -->/);
+    if (match) {
+        return JSON.parse(match[1]);
+    }
+    throw new Error('Could not extract state JSON from response');
+}
+
 /**
  * CRIT-001: HP Desynchronization After Combat
  *
@@ -99,7 +107,8 @@ describe('CRIT-001: HP Persistence After Combat', () => {
 
         // 4. Verify HP changed in encounter state
         const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
-        const heroInEncounter = stateResult.participants.find(
+        const state = extractStateJson(stateResult.content[0].text);
+        const heroInEncounter = state.participants.find(
             (p: any) => p.id === character.id
         );
 
@@ -207,8 +216,9 @@ describe('CRIT-001: HP Persistence After Combat', () => {
 
         // Get HP values after combat (before ending encounter)
         const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
-        const hero1InEncounter = stateResult.participants.find((p: any) => p.id === hero1.id);
-        const hero2InEncounter = stateResult.participants.find((p: any) => p.id === hero2.id);
+        const state = extractStateJson(stateResult.content[0].text);
+        const hero1InEncounter = state.participants.find((p: any) => p.id === hero1.id);
+        const hero2InEncounter = state.participants.find((p: any) => p.id === hero2.id);
 
         expect(hero1InEncounter.hp).toBeLessThan(40); // Took damage
         expect(hero2InEncounter.hp).toBeLessThan(25); // Took damage
@@ -284,7 +294,8 @@ describe('CRIT-001: HP Persistence After Combat', () => {
 
         // Get hero HP after combat
         const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
-        const heroInEncounter = stateResult.participants.find((p: any) => p.id === hero.id);
+        const state = extractStateJson(stateResult.content[0].text);
+        const heroInEncounter = state.participants.find((p: any) => p.id === hero.id);
         expect(heroInEncounter.hp).toBeLessThan(30); // Took damage
         const hpAfterCombat = heroInEncounter.hp;
 

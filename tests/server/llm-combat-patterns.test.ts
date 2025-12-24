@@ -446,8 +446,7 @@ describe('LLM Turn Inquiry Patterns', () => {
         const encounterId = extractEncounterId(createResult.content[0].text);
 
         const result = await handleGetEncounterState({ encounterId }, getTestContext() as any);
-        // handleGetEncounterState returns stateJson directly, not wrapped in content
-        const state = result as any;
+        const state = extractStateJson(result.content[0].text);
 
         expect(state).toBeDefined();
         expect(state.currentTurn).toBeDefined();
@@ -492,8 +491,7 @@ describe('LLM Turn Inquiry Patterns', () => {
 
         // Get state
         const result = await handleGetEncounterState({ encounterId }, getTestContext() as any);
-        // handleGetEncounterState returns stateJson directly
-        const state = result as any;
+        const state = extractStateJson(result.content[0].text);
 
         const enemy = state.participants.find((p: any) => p.id === 'enemy-1');
         expect(enemy.hp).toBeLessThan(enemy.maxHp);

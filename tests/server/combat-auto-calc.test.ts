@@ -95,7 +95,8 @@ describe('Combat Auto-Calculation', () => {
         const encounterId = extractStateJson(result.content[0].text).encounterId;
         
         // Fetch full state to verify participants
-        const state = await handleGetEncounterState({ encounterId }, mockCtx);
+        const stateResult = await handleGetEncounterState({ encounterId }, mockCtx);
+        const state = extractStateJson(stateResult.content[0].text);
         const bugbear = state.participants.find((p: any) => p.id === 'bugbear-1') as any;
         
         expect(bugbear).toBeDefined();
